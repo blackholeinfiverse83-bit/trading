@@ -1,257 +1,212 @@
 import axios from 'axios';
+import { config } from '../config';
 
-// Base URL for the backend API
-const BASE_URL = 'http://localhost:8002';
-
-// Centralized request manager to prevent rate limiting
-const REQUEST_DELAY = 1000; // 1 second between requests
-let lastRequestTime = 0;
-let pendingRequests: Array<() => void> = [];
-let isProcessingQueue = false;
-
-// Simple in-memory cache
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5000; // 5 seconds cache duration
-
-const processRequestQueue = async () => {
-  if (isProcessingQueue || pendingRequests.length === 0) {
-    return;
-  }
-  
-  isProcessingQueue = true;
-  
-  while (pendingRequests.length > 0) {
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTime;
-    
-    if (timeSinceLastRequest < REQUEST_DELAY) {
-      const delay = REQUEST_DELAY - timeSinceLastRequest;
-      console.log(`Throttling request for ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    
-    const requestFn = pendingRequests.shift();
-    if (requestFn) {
-      console.log(`Processing request at ${new Date().toISOString()}`);
-      lastRequestTime = Date.now();
-      requestFn();
-    }
-    
-    // Small buffer between requests
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  isProcessingQueue = false;
-};
-
-const throttledRequest = async <T>(requestFn: () => Promise<T>, cacheKey?: string): Promise<T> => {
-  // Check cache first
-  if (cacheKey) {
-    const cached = cache.get(cacheKey);
-    const now = Date.now();
-    
-    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-      console.log(`Returning cached data for key: ${cacheKey}`);
-      return cached.data;
-    }
-  }
-  
-  console.log(`Queueing request at ${new Date().toISOString()}`);
-  return new Promise<T>((resolve, reject) => {
-    pendingRequests.push(async () => {
-      try {
-        const result = await requestFn();
-        // Cache the result
-        if (cacheKey) {
-          cache.set(cacheKey, { data: result, timestamp: Date.now() });
-        }
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
-    });
-    
-    processRequestQueue();
-  });
-};
-
-// Create axios instance with default config
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: config.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 second timeout
+  timeout: 30000, // 30 seconds timeout - faster feedback
 });
 
-// API response interfaces
-export interface PredictionResponse {
-  symbol: string;
-  direction: 'long' | 'short';
-  confidence: number;
-  entry_price: number;
-  timestamp: string;
-  timeframe: string;
-}
+// Add token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-export interface ScanResult {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  change_percent: number;
-  volume: string;
-  direction?: 'long' | 'short';
-  confidence?: number;
-}
-
-export interface AnalysisResponse {
-  symbol: string;
-  horizons: {
-    [key: string]: {
-      price_data: {
-        time: string;
-        open: number;
-        high: number;
-        low: number;
-        close: number;
-        volume: number;
-      }[];
-      indicators?: {
-        rsi?: number;
-        macd?: number;
-        bollinger?: string;
-      };
-    };
-  };
-}
-
-export interface ChatResponse {
-  message: string;
-  timestamp: string;
-}
-
-export interface TradeConfirmation {
-  success: boolean;
-  trade_id?: string;
-  message: string;
-}
-
-// API Service - No mock data, only real API calls
-export const apiService = {
-  // Health check
-  async health() {
-    return throttledRequest(async () => {
-      const response = await api.get('/tools/health');
-      return response.data;
-    }, 'health');
-  },
-
-  // Status check
-  async status() {
-    return throttledRequest(async () => {
-      const response = await api.get('/tools/health');
-      return response.data;
-    }, 'status');
-  },
-
-  // Auth status check
-  async authStatus() {
-    return throttledRequest(async () => {
-      const response = await api.get('/auth/status');
-      return response.data;
-    }, 'authStatus');
-  },
-
-  // Get predictions for specific symbols
-  async predict(params: { symbols: string[]; horizon: string; risk_profile?: string; stop_loss_pct: number; capital_risk_pct: number; drawdown_limit_pct: number }): Promise<PredictionResponse[]> {
-    const cacheKey = `predict_${params.symbols.sort().join(',')}_${params.horizon}`;
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/predict', params);
-      return response.data.predictions || response.data;
-    }, cacheKey);
-  },
-
-  // Scan all symbols for market overview
-  async scanAll(params: { symbols: string[]; horizon: string; min_confidence: number; stop_loss_pct: number; capital_risk_pct: number }): Promise<ScanResult[]> {
-    const cacheKey = `scanAll_${params.symbols.sort().join(',')}_${params.horizon}`;
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/scan_all', params);
-      return response.data.results || response.data;
-    }, cacheKey);
-  },
-
-  // Analyze specific symbol with multiple horizons
-  async analyze(params: { symbol: string; horizons: string[]; stop_loss_pct: number; capital_risk_pct: number; drawdown_limit_pct: number }): Promise<AnalysisResponse> {
-    const cacheKey = `analyze_${params.symbol}_${params.horizons.sort().join(',')}`;
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/analyze', params);
-      return response.data;
-    }, cacheKey);
-  },
-
-  // Confirm trade parameters
-  async confirmTrade(params: {
-    stopLoss: number;
-    targetProfit: number;
-    amount: number;
-    riskMode: boolean;
-  }): Promise<TradeConfirmation> {
-    // Don't cache trade confirmations as they should always be fresh
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/confirm', params);
-      return response.data;
-    });
-  },
-
-  // Chat query
-  async chatQuery(message: string): Promise<ChatResponse> {
-    // Don't cache chat queries as they should always be fresh
-    return throttledRequest(async () => {
-      const response = await api.post('/chat/query', { message });
-      return response.data;
-    });
-  },
-
-  // Send human feedback
-  async sendFeedback(feedback: { symbol: string; predicted_action: string; user_feedback: string; actual_return?: number; message?: string }): Promise<any> {
-    // Don't cache feedback as they should always be fresh
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/feedback', feedback);
-      return response.data;
-    });
-  },
-
-  // Train RL agent
-  async trainRL(params: { symbol: string; horizon: string; n_episodes: number; force_retrain: boolean }): Promise<any> {
-    // Don't cache training requests as they should always be fresh
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/train_rl', params);
-      return response.data;
-    });
-  },
-
-  // Fetch batch data
-  async fetchData(params: { symbols: string[]; period: string; include_features: boolean; refresh: boolean }): Promise<any> {
-    // Don't cache data fetching as they should always be fresh
-    return throttledRequest(async () => {
-      const response = await api.post('/tools/fetch_data', params);
-      return response.data;
-    });
-  },
-};
-
-// Error handling interceptor
+// Handle response errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log rate limit errors for debugging
-    if (error.response?.status === 429) {
-      console.warn('Rate limit exceeded:', error.response.data);
+    if (error.response) {
+      // Server responded with error status
+      const message = error.response.data?.detail || error.response.data?.error || 'An error occurred';
+      return Promise.reject(new Error(message));
+    } else if (error.request) {
+      // Request made but no response received
+      return Promise.reject(new Error('Unable to connect to server. Please check if the backend is running.'));
+    } else {
+      // Something else happened
+      return Promise.reject(error);
     }
-    console.error('API Error:', error);
-    throw error;
   }
 );
 
+// Auth API
+export const authAPI = {
+  login: async (username: string, password: string) => {
+    const response = await api.post('/auth/login', { username, password });
+    return response.data;
+  },
+  signup: async (_username: string, _password: string, _email: string) => {
+    // Note: Backend doesn't have signup endpoint, so we'll simulate it
+    // In production, you'd add this endpoint to backend
+    return { success: true, message: 'Signup successful. Please login.' };
+  },
+};
+
+// Stock Data API
+export const stockAPI = {
+  predict: async (
+    symbols: string[], 
+    horizon: string = 'intraday', 
+    riskProfile?: string,
+    stopLossPct?: number,
+    capitalRiskPct?: number,
+    drawdownLimitPct?: number
+  ) => {
+    const payload: any = {
+      symbols,
+      horizon,
+    };
+    if (riskProfile) payload.risk_profile = riskProfile;
+    if (stopLossPct !== undefined) payload.stop_loss_pct = stopLossPct;
+    if (capitalRiskPct !== undefined) payload.capital_risk_pct = capitalRiskPct;
+    if (drawdownLimitPct !== undefined) payload.drawdown_limit_pct = drawdownLimitPct;
+    
+    const response = await api.post('/tools/predict', payload);
+    return response.data;
+  },
+  
+  scanAll: async (
+    symbols: string[], 
+    horizon: string = 'intraday', 
+    minConfidence: number = 0.3,
+    stopLossPct?: number,
+    capitalRiskPct?: number
+  ) => {
+    const payload: any = {
+      symbols,
+      horizon,
+      min_confidence: minConfidence,
+    };
+    if (stopLossPct !== undefined) payload.stop_loss_pct = stopLossPct;
+    if (capitalRiskPct !== undefined) payload.capital_risk_pct = capitalRiskPct;
+    
+    const response = await api.post('/tools/scan_all', payload);
+    return response.data;
+  },
+  
+  analyze: async (
+    symbol: string, 
+    horizons: string[] = ['intraday'], 
+    stopLossPct: number = 2.0,
+    capitalRiskPct: number = 1.0,
+    drawdownLimitPct: number = 5.0
+  ) => {
+    const response = await api.post('/tools/analyze', {
+      symbol,
+      horizons,
+      stop_loss_pct: stopLossPct,
+      capital_risk_pct: capitalRiskPct,
+      drawdown_limit_pct: drawdownLimitPct,
+    });
+    return response.data;
+  },
+  
+  fetchData: async (
+    symbols: string[], 
+    period: string = '2y', 
+    includeFeatures: boolean = false,
+    refresh: boolean = false
+  ) => {
+    const response = await api.post('/tools/fetch_data', {
+      symbols,
+      period,
+      include_features: includeFeatures,
+      refresh,
+    });
+    return response.data;
+  },
+  
+  feedback: async (
+    symbol: string,
+    predictedAction: string,
+    userFeedback: 'correct' | 'incorrect',
+    actualReturn?: number
+  ) => {
+    const payload: any = {
+      symbol,
+      predicted_action: predictedAction,
+      user_feedback: userFeedback,
+    };
+    if (actualReturn !== undefined) payload.actual_return = actualReturn;
+    
+    const response = await api.post('/tools/feedback', payload);
+    return response.data;
+  },
+  
+  trainRL: async (
+    symbol: string,
+    horizon: string = 'intraday',
+    nEpisodes: number = 10,
+    forceRetrain: boolean = false
+  ) => {
+    const response = await api.post('/tools/train_rl', {
+      symbol,
+      horizon,
+      n_episodes: nEpisodes,
+      force_retrain: forceRetrain,
+    });
+    return response.data;
+  },
+  
+  health: async () => {
+    const response = await api.get('/tools/health');
+    return response.data;
+  },
+  
+  getRateLimitStatus: async () => {
+    const response = await api.get('/auth/status');
+    return response.data;
+  },
+};
+
+// Popular stock symbols for search autocomplete
+export const POPULAR_STOCKS = [
+  // US Stocks
+  'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'JNJ',
+  'WMT', 'PG', 'MA', 'UNH', 'DIS', 'HD', 'BAC', 'PYPL', 'NFLX', 'ADBE',
+  // Indian Stocks (NSE)
+  'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'HINDUNILVR.NS',
+  'ICICIBANK.NS', 'BHARTIARTL.NS', 'SBIN.NS', 'BAJFINANCE.NS', 'LICI.NS',
+  'ITC.NS', 'SUNPHARMA.NS', 'HCLTECH.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
+  'LT.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS', 'ULTRACEMCO.NS',
+  'NESTLEIND.NS', 'WIPRO.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS',
+  'TATAMOTORS.NS', 'TATASTEEL.NS', 'JSWSTEEL.NS', 'ADANIPORTS.NS', 'TECHM.NS',
+];
+
+// Popular crypto symbols (Yahoo Finance format)
+export const POPULAR_CRYPTO = [
+  'BTC-USD', 'ETH-USD', 'BNB-USD', 'SOL-USD', 'XRP-USD',
+  'ADA-USD', 'DOGE-USD', 'DOT-USD', 'MATIC-USD', 'AVAX-USD',
+  'LINK-USD', 'UNI-USD', 'LTC-USD', 'ATOM-USD', 'ETC-USD',
+  'XLM-USD', 'ALGO-USD', 'VET-USD', 'ICP-USD', 'FIL-USD',
+  'TRX-USD', 'EOS-USD', 'AAVE-USD', 'MKR-USD', 'COMP-USD',
+];
+
+// Popular commodities symbols (Yahoo Finance format)
+export const POPULAR_COMMODITIES = [
+  'GC=F',      // Gold Futures
+  'SI=F',      // Silver Futures
+  'CL=F',      // Crude Oil Futures
+  'NG=F',      // Natural Gas Futures
+  'HG=F',      // Copper Futures
+  'ZC=F',      // Corn Futures
+  'ZS=F',      // Soybean Futures
+  'ZW=F',      // Wheat Futures
+  'KC=F',      // Coffee Futures
+  'SB=F',      // Sugar Futures
+  'CT=F',      // Cotton Futures
+  'CC=F',      // Cocoa Futures
+  'OJ=F',      // Orange Juice Futures
+  'LE=F',      // Live Cattle Futures
+  'HE=F',      // Lean Hogs Futures
+];
+
 export default api;
+
