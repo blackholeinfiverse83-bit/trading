@@ -122,23 +122,16 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
   };
 
   return (
-    <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 card-hover">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-500/20 rounded-lg">
-            <Shield className="w-6 h-6 text-red-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-white">Stop-Loss Calculator</h2>
-            <p className="text-sm text-gray-400">Calculate risk parameters for your trades</p>
-          </div>
-        </div>
+    <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-4 border border-slate-700/50">
+      <div className="flex items-center gap-2 mb-4">
+        <Shield className="w-5 h-5 text-red-400" />
+        <h2 className="text-lg font-semibold text-white">Stop-Loss Calculator</h2>
       </div>
 
-      <form onSubmit={calculateStopLoss} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={calculateStopLoss} className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1">
               Symbol <span className="text-red-400">*</span>
             </label>
             <input
@@ -146,14 +139,14 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               placeholder="AAPL"
-              className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Entry Price ($) <span className="text-red-400">*</span>
+            <label className="block text-xs font-medium text-gray-400 mb-1">
+              Entry ($) <span className="text-red-400">*</span>
             </label>
             <input
               type="number"
@@ -161,13 +154,13 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
               value={entryPrice}
               onChange={(e) => setEntryPrice(e.target.value)}
               placeholder="150.00"
-              className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1">
               Capital ($) <span className="text-red-400">*</span>
             </label>
             <input
@@ -175,15 +168,15 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
               step="0.01"
               value={capital}
               onChange={(e) => setCapital(e.target.value)}
-              placeholder="10000.00"
-              className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="10000"
+              className="w-full px-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Risk Percentage (%) <span className="text-red-400">*</span>
+            <label className="block text-xs font-medium text-gray-400 mb-1">
+              Risk (%) <span className="text-red-400">*</span>
             </label>
             <input
               type="number"
@@ -193,35 +186,34 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
               value={riskPercentage}
               onChange={(e) => setRiskPercentage(e.target.value)}
               placeholder="2.0"
-              className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Recommended: 1-5% for conservative, 5-10% for moderate</p>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
-            <AlertTriangle className="w-5 h-5" />
-            <span className="text-sm">{error}</span>
+          <div className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{error}</span>
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Calculating...</span>
               </>
             ) : (
               <>
-                <Calculator className="w-5 h-5" />
-                <span>Calculate Stop-Loss</span>
+                <Calculator className="w-4 h-4" />
+                <span>Calculate</span>
               </>
             )}
           </button>
@@ -229,7 +221,7 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-all"
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition-all"
             >
               Reset
             </button>
@@ -238,41 +230,112 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
       </form>
 
       {result && (
-        <div className="mt-6 space-y-4 animate-fadeIn">
-          {/* Stop-Loss Chart Visualization */}
-          <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
-            <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-red-400" />
-              Price Chart with Stop-Loss
-            </h3>
-            <ResponsiveContainer width="100%" height={200}>
+        <div className="mt-4 space-y-3 animate-fadeIn">
+          {/* Compact Results - Single Row */}
+          <div className={`p-3 rounded-lg border ${
+            result.riskLevel === 'safe' ? 'bg-green-500/10 border-green-500/30' :
+            result.riskLevel === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
+            'bg-red-500/10 border-red-500/30'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {result.riskLevel === 'safe' ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                ) : result.riskLevel === 'warning' ? (
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+                <span className={`text-sm font-bold ${
+                  result.riskLevel === 'safe' ? 'text-green-400' :
+                  result.riskLevel === 'warning' ? 'text-yellow-400' :
+                  'text-red-400'
+                }`}>
+                  {result.riskLevel.toUpperCase()} Risk
+                </span>
+              </div>
+            </div>
+
+            {/* Compact Metrics Grid */}
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-slate-900/50 rounded p-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <TrendingDown className="w-3 h-3 text-red-400" />
+                  <span className="text-xs text-gray-400">Stop-Loss</span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  ${result.stopLossPrice.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 rounded p-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3 h-3 text-yellow-400" />
+                  <span className="text-xs text-gray-400">Risk</span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  ${result.riskAmount.toFixed(0)}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 rounded p-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <Calculator className="w-3 h-3 text-blue-400" />
+                  <span className="text-xs text-gray-400">Shares</span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  {result.positionSize.toFixed(0)}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 rounded p-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <Shield className="w-3 h-3 text-purple-400" />
+                  <span className="text-xs text-gray-400">Entry</span>
+                </div>
+                <p className="text-sm font-bold text-white">
+                  ${result.entryPrice.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Compact Chart - Smaller */}
+          <div className="bg-slate-900/50 rounded-lg p-2 border border-slate-700/50">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingDown className="w-3 h-3 text-red-400" />
+              <span className="text-xs font-semibold text-gray-300">Price Levels</span>
+            </div>
+            <ResponsiveContainer width="100%" height={120}>
               <LineChart
                 data={[
                   { name: 'Entry', price: result.entryPrice },
                   { name: 'Current', price: result.entryPrice },
                 ]}
-                margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+                margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                 <XAxis 
                   dataKey="name" 
                   stroke="#9CA3AF" 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  tick={{ fill: '#9CA3AF', fontSize: 10 }}
                 />
                 <YAxis 
                   stroke="#9CA3AF"
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  tick={{ fill: '#9CA3AF', fontSize: 10 }}
                   domain={[result.stopLossPrice * 0.98, result.entryPrice * 1.02]}
-                  tickFormatter={(value) => `$${value.toFixed(2)}`}
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  width={50}
                 />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1E293B', 
                     border: '1px solid #475569',
-                    borderRadius: '8px',
-                    padding: '8px'
+                    borderRadius: '6px',
+                    padding: '6px',
+                    fontSize: '11px'
                   }}
-                  labelStyle={{ color: '#E2E8F0', fontWeight: 'bold' }}
+                  labelStyle={{ color: '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
                   formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
                 />
                 <Line 
@@ -280,118 +343,34 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
                   dataKey="price" 
                   stroke="#3B82F6" 
                   strokeWidth={2}
-                  dot={{ fill: '#3B82F6', r: 5 }}
-                  activeDot={{ r: 7 }}
+                  dot={{ fill: '#3B82F6', r: 3 }}
                 />
-                {/* Stop-Loss Reference Line */}
                 <ReferenceLine 
                   y={result.stopLossPrice} 
                   stroke="#EF4444" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
                   label={{ 
-                    value: `Stop-Loss: $${result.stopLossPrice.toFixed(2)}`, 
+                    value: `SL: $${result.stopLossPrice.toFixed(0)}`, 
                     position: 'right',
                     fill: '#EF4444',
-                    fontSize: 12,
-                    fontWeight: 'bold'
+                    fontSize: 9
                   }}
                 />
-                {/* Entry Price Reference Line */}
                 <ReferenceLine 
                   y={result.entryPrice} 
                   stroke="#22C55E" 
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   strokeDasharray="3 3"
                   label={{ 
-                    value: `Entry: $${result.entryPrice.toFixed(2)}`, 
+                    value: `Entry: $${result.entryPrice.toFixed(0)}`, 
                     position: 'left',
                     fill: '#22C55E',
-                    fontSize: 12,
-                    fontWeight: 'bold'
+                    fontSize: 9
                   }}
                 />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-
-          <div className={`p-4 rounded-lg border-2 ${
-            result.riskLevel === 'safe' ? 'bg-green-500/10 border-green-500/30' :
-            result.riskLevel === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
-            'bg-red-500/10 border-red-500/30'
-          }`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {result.riskLevel === 'safe' ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-400" />
-                ) : result.riskLevel === 'warning' ? (
-                  <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-400" />
-                )}
-                <span className={`font-bold text-lg ${
-                  result.riskLevel === 'safe' ? 'text-green-400' :
-                  result.riskLevel === 'warning' ? 'text-yellow-400' :
-                  'text-red-400'
-                }`}>
-                  Risk Level: {result.riskLevel.toUpperCase()}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingDown className="w-4 h-4 text-red-400" />
-                  <span className="text-sm text-gray-400">Stop-Loss Price</span>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  ${result.stopLossPrice.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {((result.entryPrice - result.stopLossPrice) / result.entryPrice * 100).toFixed(2)}% below entry
-                </p>
-              </div>
-
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm text-gray-400">Risk Amount</span>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  ${result.riskAmount.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {riskPercentage}% of ${parseFloat(capital).toLocaleString()}
-                </p>
-              </div>
-
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calculator className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-gray-400">Position Size</span>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  {result.positionSize.toFixed(2)} shares
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  At ${result.entryPrice.toFixed(2)} per share
-                </p>
-              </div>
-
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm text-gray-400">Entry Price</span>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  ${result.entryPrice.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Symbol: {result.symbol}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       )}
