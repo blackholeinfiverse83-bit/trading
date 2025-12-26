@@ -57,27 +57,27 @@ const WatchListPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Watch List</h1>
-          <p className="text-gray-400">Monitor your favorite stocks</p>
+          <h1 className="text-xl font-bold text-white mb-1">Watch List</h1>
+          <p className="text-gray-400 text-xs">Monitor your favorite stocks</p>
         </div>
 
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-          <div className="flex items-center space-x-4 mb-4">
+        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+          <div className="flex items-center gap-2 mb-3">
             <input
               type="text"
               value={newSymbol}
               onChange={(e) => setNewSymbol(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addToWatchlist()}
               placeholder="Enter symbol (e.g., AAPL)"
-              className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-1.5 text-sm bg-slate-700 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
               onClick={addToWatchlist}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors flex items-center space-x-2"
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1.5"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               <span>Add</span>
             </button>
           </div>

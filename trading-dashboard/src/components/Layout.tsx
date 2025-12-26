@@ -52,7 +52,7 @@ const LayoutContent = ({ children }: LayoutProps) => {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         <Navbar onSearch={handleSearch} activeTab={assetType} onTabChange={handleTabChange} />
-        <main className="flex-1 overflow-y-auto p-6 relative z-10">
+        <main className="flex-1 overflow-y-auto p-4 relative z-10">
           {children}
         </main>
       </div>

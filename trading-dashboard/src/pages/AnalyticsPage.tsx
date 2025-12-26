@@ -139,10 +139,10 @@ const AnalyticsPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Analytics</h1>
+            <h1 className="text-xl font-bold text-white mb-1">Analytics</h1>
             <p className="text-gray-400">Detailed analysis and insights</p>
           </div>
           <select
@@ -160,31 +160,31 @@ const AnalyticsPage = () => {
           <div className="text-center py-8 text-gray-400">Loading analytics...</div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <p className="text-gray-400 text-sm mb-1">Total Predictions</p>
-                <p className="text-3xl font-bold text-white">{analytics?.predictions?.length || 0}</p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                <p className="text-gray-400 text-xs mb-1">Total Predictions</p>
+                <p className="text-xl font-bold text-white">{analytics?.predictions?.length || 0}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <p className="text-gray-400 text-sm mb-1">Buy Signals</p>
-                <p className="text-3xl font-bold text-green-400">{analytics?.buyCount || 0}</p>
+              <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                <p className="text-gray-400 text-xs mb-1">Buy Signals</p>
+                <p className="text-xl font-bold text-green-400">{analytics?.buyCount || 0}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <p className="text-gray-400 text-sm mb-1">Sell Signals</p>
-                <p className="text-3xl font-bold text-red-400">{analytics?.sellCount || 0}</p>
+              <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                <p className="text-gray-400 text-xs mb-1">Sell Signals</p>
+                <p className="text-xl font-bold text-red-400">{analytics?.sellCount || 0}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <p className="text-gray-400 text-sm mb-1">Avg Confidence</p>
-                <p className="text-3xl font-bold text-blue-400">
+              <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                <p className="text-gray-400 text-xs mb-1">Avg Confidence</p>
+                <p className="text-xl font-bold text-blue-400">
                   {analytics ? (analytics.avgConfidence * 100).toFixed(1) : 0}%
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-blue-400" />
                     Performance Trend
                   </h2>

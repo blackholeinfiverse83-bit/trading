@@ -27,19 +27,19 @@ const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
   }, [externalSearchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
-          <TrendingUp className="w-8 h-8 text-blue-400" />
+        <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-blue-400" />
           Stocks Market
         </h2>
-        <p className="text-gray-400">Search and analyze stocks with AI-powered predictions</p>
+        <p className="text-gray-400 text-xs">Search and analyze stocks with AI-powered predictions</p>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <div className="flex gap-4 mb-4">
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50">
+        <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               value={searchQuery}
@@ -49,14 +49,14 @@ const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
               }}
               onKeyPress={(e) => e.key === 'Enter' && searchQuery && onSearch(searchQuery)}
               placeholder="Enter stock symbol (e.g., AAPL, GOOGL, MSFT)"
-              className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           {onHorizonChange && (
             <select
               value={horizon}
               onChange={(e) => onHorizonChange(e.target.value as any)}
-              className="px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              className="px-2.5 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
             >
               <option value="intraday">📈 Intraday</option>
               <option value="short">📅 Short (5 days)</option>
@@ -66,18 +66,18 @@ const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
           <button
             onClick={() => searchQuery && onSearch(searchQuery)}
             disabled={loading || !searchQuery}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
+            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-1.5"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             <span>Search</span>
           </button>
           {searchQuery && onAnalyze && (
             <button
               onClick={() => onAnalyze(searchQuery)}
               disabled={loading}
-              className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BarChart3 className="w-5 h-5" />}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               <span>Deep Analyze</span>
             </button>
           )}

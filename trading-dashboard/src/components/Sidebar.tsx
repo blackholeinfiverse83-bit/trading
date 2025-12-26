@@ -36,21 +36,21 @@ const Sidebar = () => {
           ? 'bg-transparent border-r border-purple-900/20' // Transparent so background shows through
           : 'bg-slate-900 border-r border-slate-700'
     }`}>
-      <div className={`p-6 border-b ${
+      <div className={`p-3 border-b ${
         isLight 
           ? 'border-gray-200' 
           : isSpace 
             ? 'border-purple-900/20' 
             : 'border-slate-700'
       }`}>
-        <h1 className={`text-2xl font-bold ${
+        <h1 className={`text-lg font-bold ${
           isLight 
             ? 'text-gray-900' 
             : isSpace 
               ? 'text-white drop-shadow-lg' 
               : 'text-white'
         }`}>Trading Hub</h1>
-        <p className={`text-sm mt-1 ${
+        <p className={`text-xs mt-0.5 ${
           isLight 
             ? 'text-gray-600' 
             : isSpace 
@@ -59,7 +59,7 @@ const Sidebar = () => {
         }`}>Welcome, {user?.username || 'anonymous'}</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -67,7 +67,7 @@ const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded transition-colors ${
                 isActive
                   ? 'bg-blue-500 text-white'
                   : isLight
@@ -77,14 +77,14 @@ const Sidebar = () => {
                       : 'text-gray-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              <Icon className="w-4 h-4" />
+              <span className="font-medium text-sm">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className={`p-4 border-t ${
+      <div className={`p-3 border-t ${
         isLight 
           ? 'border-gray-200' 
           : isSpace 
@@ -93,7 +93,7 @@ const Sidebar = () => {
       }`}>
         <button
           onClick={logout}
-          className={`flex items-center space-x-3 px-4 py-3 w-full rounded-lg transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2 w-full rounded transition-colors ${
             isLight
               ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
               : isSpace
@@ -101,8 +101,8 @@ const Sidebar = () => {
                 : 'text-gray-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
+          <LogOut className="w-4 h-4" />
+          <span className="font-medium text-sm">Logout</span>
         </button>
       </div>
     </div>

@@ -158,41 +158,41 @@ const PortfolioPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Portfolio</h1>
-            <p className="text-gray-400">Manage your holdings</p>
+            <h1 className="text-xl font-bold text-white mb-1">Portfolio</h1>
+            <p className="text-gray-400 text-xs">Manage your holdings</p>
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors flex items-center space-x-2"
+            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1.5"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             <span>Add Position</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <p className="text-gray-400 text-sm mb-1">Total Value</p>
-            <p className="text-3xl font-bold text-white">${totalValue.toLocaleString()}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+            <p className="text-gray-400 text-xs mb-1">Total Value</p>
+            <p className="text-xl font-bold text-white">${totalValue.toLocaleString()}</p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <p className="text-gray-400 text-sm mb-1">Total Gain/Loss</p>
-            <p className={`text-3xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+            <p className="text-gray-400 text-xs mb-1">Total Gain/Loss</p>
+            <p className={`text-xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               ${totalGain >= 0 ? '+' : ''}{totalGain.toLocaleString()}
             </p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <p className="text-gray-400 text-sm mb-1">Holdings</p>
-            <p className="text-3xl font-bold text-white">{holdings.length}</p>
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+            <p className="text-gray-400 text-xs mb-1">Holdings</p>
+            <p className="text-xl font-bold text-white">{holdings.length}</p>
           </div>
         </div>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="p-6 border-b border-slate-700">
-            <h2 className="text-xl font-semibold text-white">Holdings</h2>
+          <div className="p-3 border-b border-slate-700">
+            <h2 className="text-sm font-semibold text-white">Holdings</h2>
           </div>
           {loading ? (
             <div className="p-8 text-center text-gray-400">Loading...</div>
@@ -201,13 +201,13 @@ const PortfolioPage = () => {
               <table className="w-full">
                 <thead className="bg-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Symbol</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Shares</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Avg Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Current Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Value</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Gain/Loss</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Symbol</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Shares</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Avg Price</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Current Price</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Value</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Gain/Loss</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
@@ -215,14 +215,14 @@ const PortfolioPage = () => {
                     const { gain, gainPercent } = calculateGain(holding);
                     return (
                       <tr key={index} className="hover:bg-slate-700/50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <span className="text-white font-semibold">{holding.symbol}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-300">{holding.shares}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-300">${holding.avgPrice.toFixed(2)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-white">${holding.currentPrice.toFixed(2)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-white">${holding.value.toLocaleString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             {gain >= 0 ? (
                               <TrendingUp className="w-4 h-4 text-green-400" />
@@ -234,7 +234,7 @@ const PortfolioPage = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex space-x-2">
                             <button 
                               onClick={() => {

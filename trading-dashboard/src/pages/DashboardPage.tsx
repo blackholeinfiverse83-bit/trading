@@ -163,12 +163,12 @@ const DashboardPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-fadeIn">
+      <div className="space-y-4 animate-fadeIn">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2 gradient-text">Dashboard</h1>
-            <p className="text-gray-400 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white mb-1 gradient-text">Dashboard</h1>
+            <p className="text-xs text-gray-400 flex items-center gap-2">
               <span>Overview of your trading portfolio</span>
               {lastUpdated && (
                 <span className="text-xs text-gray-500">
@@ -180,7 +180,7 @@ const DashboardPage = () => {
           <button
             onClick={loadDashboardData}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -189,11 +189,11 @@ const DashboardPage = () => {
 
         {/* Health Status Banner */}
         {healthStatus && (
-          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30 rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30 rounded p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-green-400 font-semibold">System Healthy</span>
-              <span className="text-gray-400 text-sm">
+              <span className="text-green-400 font-semibold text-sm">System Healthy</span>
+              <span className="text-gray-400 text-xs">
                 CPU: {healthStatus.system?.cpu_usage_percent?.toFixed(1) || 'N/A'}% • 
                 Memory: {healthStatus.system?.memory_percent?.toFixed(1) || 'N/A'}%
               </span>
@@ -202,7 +202,7 @@ const DashboardPage = () => {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {loading && topStocks.length === 0 ? (
             // Show skeleton loaders while loading
             [1, 2, 3].map((i) => (
@@ -224,31 +224,31 @@ const DashboardPage = () => {
               return (
                 <div 
                   key={index} 
-                  className={`bg-gradient-to-br ${stat.bgGradient} rounded-xl p-6 border border-slate-700/50 card-hover shine relative overflow-hidden group`}
+                  className={`bg-gradient-to-br ${stat.bgGradient} rounded-lg p-3 border border-slate-700/50 card-hover shine relative overflow-hidden group`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-white/5 rounded-lg group-hover:bg-white/10 transition-colors">
-                      <Icon className="w-6 h-6 text-blue-400" />
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 bg-white/5 rounded group-hover:bg-white/10 transition-colors">
+                      <Icon className="w-4 h-4 text-blue-400" />
                     </div>
-                    <span className={`${stat.changeColor} text-sm font-semibold bg-white/5 px-2 py-1 rounded-md`}>
+                    <span className={`${stat.changeColor} text-xs font-semibold bg-white/5 px-1.5 py-0.5 rounded`}>
                       {stat.change}
                     </span>
                   </div>
-                  <p className="text-gray-400 text-sm mb-2">{stat.label}</p>
-                  <p className="text-3xl font-bold text-white">{stat.value}</p>
+                  <p className="text-gray-400 text-xs mb-1">{stat.label}</p>
+                  <p className="text-xl font-bold text-white">{stat.value}</p>
                 </div>
               );
             })
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* Portfolio Performance Chart */}
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 card-hover">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 card-hover">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-yellow-400" />
                 Portfolio Performance
               </h2>
             </div>
@@ -308,9 +308,9 @@ const DashboardPage = () => {
           </div>
 
           {/* Top Performers */}
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 card-hover">
-            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-400" />
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 card-hover">
+            <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-400" />
               Top Performers
             </h2>
             {loading ? (
@@ -331,18 +331,18 @@ const DashboardPage = () => {
                 </button>
               </div>
             ) : topStocks.length > 0 ? (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {topStocks.map((stock, index) => {
                   const isPositive = (stock.predicted_return || 0) > 0;
                   const confidence = (stock.confidence || 0) * 100;
                   return (
                     <div 
                       key={index} 
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/30 rounded-lg border border-slate-600/50 hover:border-blue-500/50 transition-all card-hover group"
+                      className="flex items-center justify-between p-2 bg-gradient-to-r from-slate-700/50 to-slate-600/30 rounded border border-slate-600/50 hover:border-blue-500/50 transition-all card-hover group"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold text-white ${
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded flex items-center justify-center font-bold text-white text-xs ${
                           stock.action === 'LONG' ? 'bg-green-500/20 border border-green-500/50' :
                           stock.action === 'SHORT' ? 'bg-red-500/20 border border-red-500/50' :
                           'bg-yellow-500/20 border border-yellow-500/50'
@@ -350,9 +350,9 @@ const DashboardPage = () => {
                           {stock.symbol.slice(0, 2)}
                         </div>
                         <div>
-                          <p className="text-white font-bold text-lg">{stock.symbol}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                          <p className="text-white font-bold text-sm">{stock.symbol}</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                               stock.action === 'LONG' ? 'bg-green-500/20 text-green-400' :
                               stock.action === 'SHORT' ? 'bg-red-500/20 text-red-400' :
                               'bg-yellow-500/20 text-yellow-400'
@@ -366,12 +366,12 @@ const DashboardPage = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-white font-bold text-lg">
+                        <p className="text-white font-bold text-sm">
                           ${(stock.predicted_price || stock.current_price || 0).toFixed(2)}
                         </p>
-                        <div className="flex items-center gap-2 justify-end">
+                        <div className="flex items-center gap-1.5 justify-end">
                           <div className="flex items-center gap-1">
-                            <div className={`w-2 h-2 rounded-full ${
+                            <div className={`w-1.5 h-1.5 rounded-full ${
                               confidence > 70 ? 'bg-green-400' :
                               confidence > 50 ? 'bg-yellow-400' :
                               'bg-red-400'
@@ -386,8 +386,8 @@ const DashboardPage = () => {
                           </div>
                         </div>
                         {stock.predicted_return !== undefined && (
-                          <p className={`text-sm font-bold mt-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                            {isPositive ? <TrendingUp className="w-4 h-4 inline mr-1" /> : <TrendingDown className="w-4 h-4 inline mr-1" />}
+                          <p className={`text-xs font-bold mt-0.5 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                            {isPositive ? <TrendingUp className="w-3 h-3 inline mr-0.5" /> : <TrendingDown className="w-3 h-3 inline mr-0.5" />}
                             {isPositive ? '+' : ''}{stock.predicted_return.toFixed(2)}%
                           </p>
                         )}
@@ -407,39 +407,39 @@ const DashboardPage = () => {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-400" />
+        <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50">
+          <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-blue-400" />
             Recent Activity
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {topStocks.slice(0, 3).map((stock, index) => {
               const isPositive = (stock.predicted_return || 0) > 0;
               const actionType = stock.action === 'LONG' ? 'BUY' : stock.action === 'SHORT' ? 'SELL' : 'HOLD';
               return (
                 <div 
                   key={index}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/30 rounded-lg border border-slate-600/50 hover:border-blue-500/50 transition-all group"
+                  className="flex items-center justify-between p-2 bg-gradient-to-r from-slate-700/50 to-slate-600/30 rounded border border-slate-600/50 hover:border-blue-500/50 transition-all group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded ${
                       stock.action === 'LONG' ? 'bg-green-500/20' :
                       stock.action === 'SHORT' ? 'bg-red-500/20' :
                       'bg-yellow-500/20'
                     }`}>
                       {stock.action === 'LONG' ? (
-                        <TrendingUp className={`w-5 h-5 ${stock.action === 'LONG' ? 'text-green-400' : 'text-yellow-400'}`} />
+                        <TrendingUp className={`w-4 h-4 ${stock.action === 'LONG' ? 'text-green-400' : 'text-yellow-400'}`} />
                       ) : stock.action === 'SHORT' ? (
-                        <TrendingDown className="w-5 h-5 text-red-400" />
+                        <TrendingDown className="w-4 h-4 text-red-400" />
                       ) : (
-                        <Activity className="w-5 h-5 text-yellow-400" />
+                        <Activity className="w-4 h-4 text-yellow-400" />
                       )}
                     </div>
                     <div>
-                      <p className="text-white font-semibold">
+                      <p className="text-white font-semibold text-sm">
                         {actionType} {stock.symbol}
                       </p>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-400 text-xs">
                         ${(stock.predicted_price || stock.current_price || 0).toFixed(2)} • 
                         Confidence: {((stock.confidence || 0) * 100).toFixed(0)}%
                       </p>
@@ -447,11 +447,11 @@ const DashboardPage = () => {
                   </div>
                   <div className="text-right">
                     {stock.predicted_return !== undefined && (
-                      <span className={`font-bold text-lg ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-bold text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
                         {isPositive ? '+' : ''}{stock.predicted_return.toFixed(2)}%
                       </span>
                     )}
-                    <p className="text-gray-400 text-xs mt-1">{new Date().toLocaleTimeString()}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{new Date().toLocaleTimeString()}</p>
                   </div>
                 </div>
               );

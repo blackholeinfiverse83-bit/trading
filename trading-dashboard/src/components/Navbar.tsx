@@ -102,7 +102,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
   const isSpace = theme === 'space';
 
   return (
-    <div className={`px-6 py-4 border-b relative z-30 ${
+    <div className={`px-4 py-3 border-b relative z-30 ${
       isLight 
         ? 'bg-white border-gray-200' 
         : isSpace
@@ -113,7 +113,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
         {/* Search Container - Fixed z-index and positioning */}
         <div ref={searchContainerRef} className="flex-1 max-w-2xl relative z-40">
           <form onSubmit={handleSubmit} className="relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 pointer-events-none ${
+            <Search className={`absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
               isLight ? 'text-gray-500' : isSpace ? 'text-gray-300' : 'text-gray-400'
             }`} />
             <input
@@ -126,7 +126,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
               placeholder="Search stocks, crypto, commodities..."
-              className={`w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full pl-8 pr-3 py-1.5 text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                 isLight
                   ? 'bg-gray-100 border border-gray-300 text-gray-900 placeholder-gray-500'
                   : isSpace
@@ -160,7 +160,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                       e.preventDefault();
                       handleSelectStock(symbol);
                     }}
-                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-opacity-80 ${
+                    className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-opacity-80 ${
                       isLight
                         ? 'text-gray-900 hover:bg-blue-50'
                         : 'text-white hover:bg-slate-600'
@@ -174,8 +174,8 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
           </form>
         </div>
 
-        <div className="flex items-center space-x-6 ml-6">
-          <div className={`flex space-x-1 rounded-lg p-1 ${
+        <div className="flex items-center gap-3 ml-4">
+          <div className={`flex gap-1 rounded p-0.5 ${
             isLight ? 'bg-gray-100' : isSpace ? 'bg-slate-800/60 backdrop-blur-sm' : 'bg-slate-700'
           }`}>
             {(['stocks', 'crypto', 'commodities'] as const).map((tab) => (
@@ -187,7 +187,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                   e.stopPropagation();
                   onTabChange(tab);
                 }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer relative z-10 ${
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer relative z-10 ${
                   activeTab === tab
                     ? 'bg-blue-500 text-white shadow-lg'
                     : isLight
@@ -200,14 +200,14 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
             ))}
           </div>
 
-          <button className={`p-2 rounded-lg transition-colors ${
+          <button className={`p-1.5 rounded transition-colors ${
             isLight
               ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               : isSpace
                 ? 'text-white/90 hover:text-white hover:bg-white/10 drop-shadow'
                 : 'text-gray-300 hover:text-white hover:bg-slate-700'
           }`}>
-            <Bell className="w-5 h-5" />
+            <Bell className="w-4 h-4" />
           </button>
 
           {/* Theme Switcher - Completely rewritten */}
@@ -219,7 +219,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                 e.stopPropagation();
                 setShowThemeMenu(!showThemeMenu);
               }}
-              className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`p-1.5 rounded transition-colors flex items-center gap-1.5 ${
                 isLight
                   ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   : isSpace
@@ -228,9 +228,9 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
               }`}
               title="Theme Switcher"
             >
-              {theme === 'light' && <Sun className="w-5 h-5" />}
-              {theme === 'dark' && <Moon className="w-5 h-5" />}
-              {theme === 'space' && <Sparkles className="w-5 h-5" />}
+              {theme === 'light' && <Sun className="w-4 h-4" />}
+              {theme === 'dark' && <Moon className="w-4 h-4" />}
+              {theme === 'space' && <Sparkles className="w-4 h-4" />}
             </button>
             
             {showThemeMenu && (

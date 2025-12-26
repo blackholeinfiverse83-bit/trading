@@ -281,12 +281,12 @@ const MarketScanContent = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn">
       {/* Loading Indicator - Visible at top */}
       {loading && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-center justify-center gap-3">
-          <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
-          <span className="text-blue-400 font-semibold">Fetching data from backend...</span>
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3 flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+          <span className="text-blue-400 font-semibold text-sm">Fetching data from backend...</span>
         </div>
       )}
       
@@ -298,17 +298,17 @@ const MarketScanContent = () => {
         
       {/* Detailed Predictions Section (shown for all asset types when predictions exist) */}
         {predictions.length > 0 && (
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-yellow-400" />
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-yellow-400" />
                 Predictions
-                <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm font-semibold">
+                <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full text-xs font-semibold">
                   {predictions.length}
                 </span>
               </h2>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {predictions.map((pred, index) => {
                 const confidence = (pred.confidence || 0) * 100;
                 const isPositive = (pred.predicted_return || 0) > 0;
@@ -320,13 +320,13 @@ const MarketScanContent = () => {
                 return (
                   <div 
                     key={index} 
-                    className="bg-gradient-to-br from-slate-700/50 to-slate-600/30 rounded-xl p-5 border border-slate-600/50 hover:border-blue-500/50 transition-all card-hover group"
+                    className="bg-gradient-to-br from-slate-700/50 to-slate-600/30 rounded-lg p-3 border border-slate-600/50 hover:border-blue-500/50 transition-all card-hover group"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     {/* Main Prediction Card */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-xl ${
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start gap-2">
+                        <div className={`p-2 rounded ${
                           pred.action === 'LONG' ? 'bg-green-500/20 border border-green-500/50' :
                           pred.action === 'SHORT' ? 'bg-red-500/20 border border-red-500/50' :
                           'bg-yellow-500/20 border border-yellow-500/50'
@@ -334,7 +334,7 @@ const MarketScanContent = () => {
                           {getActionIcon(pred.action)}
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-bold text-xl mb-1">{pred.symbol}</p>
+                          <p className="text-white font-bold text-sm mb-1">{pred.symbol}</p>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
                               pred.action === 'LONG' ? 'bg-green-500/20 text-green-400' :
@@ -366,16 +366,16 @@ const MarketScanContent = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-white font-bold text-xl mb-1">
+                        <p className="text-white font-bold text-sm mb-1">
                           ${(pred.predicted_price || pred.current_price || 0).toFixed(2)}
                         </p>
-                        <div className="flex items-center gap-2 justify-end mb-2">
-                          <div className={`w-2 h-2 rounded-full ${
+                        <div className="flex items-center gap-1.5 justify-end mb-1">
+                          <div className={`w-1.5 h-1.5 rounded-full ${
                             confidence > 70 ? 'bg-green-400' :
                             confidence > 50 ? 'bg-yellow-400' :
                             'bg-red-400'
                           } animate-pulse`}></div>
-                          <p className={`text-sm font-semibold ${
+                          <p className={`text-xs font-semibold ${
                             confidence > 70 ? 'text-green-400' :
                             confidence > 50 ? 'text-yellow-400' :
                             'text-red-400'
@@ -464,12 +464,12 @@ const MarketScanContent = () => {
                         
                         {/* Individual Model Predictions */}
                         {Object.keys(individualPreds).length > 0 && (
-                          <div className="bg-slate-800/50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                              <Cpu className="w-4 h-4 text-blue-400" />
+                          <div className="bg-slate-800/50 rounded p-2">
+                            <h4 className="text-xs font-semibold text-white mb-2 flex items-center gap-1.5">
+                              <Cpu className="w-3 h-3 text-blue-400" />
                               Individual Model Predictions
                             </h4>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-2">
                               {individualPreds.random_forest && (
                                 <div className="bg-slate-700/50 rounded p-2">
                                   <p className="text-xs text-gray-400 mb-1">Random Forest</p>
@@ -579,27 +579,27 @@ const MarketScanContent = () => {
         )}
 
         {analyzeResults && analyzeResults.metadata && (
-          <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/20 backdrop-blur-sm rounded-xl p-6 border-2 border-blue-500/30 shadow-xl">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-blue-400" />
+          <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/20 backdrop-blur-sm rounded-lg p-3 border border-blue-500/30 shadow-xl">
+            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-400" />
               Deep Analysis Summary
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-gray-400 text-sm mb-2 font-medium">Consensus</p>
-                <p className="text-white font-bold text-lg">{analyzeResults.metadata.consensus || 'N/A'}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
+                <p className="text-gray-400 text-xs mb-1 font-medium">Consensus</p>
+                <p className="text-white font-bold text-sm">{analyzeResults.metadata.consensus || 'N/A'}</p>
               </div>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-gray-400 text-sm mb-2 font-medium">Average Confidence</p>
-                <p className="text-white font-bold text-lg">
+              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
+                <p className="text-gray-400 text-xs mb-1 font-medium">Average Confidence</p>
+                <p className="text-white font-bold text-sm">
                   {analyzeResults.metadata.average_confidence 
                     ? (analyzeResults.metadata.average_confidence * 100).toFixed(1) + '%'
                     : 'N/A'}
                 </p>
               </div>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-gray-400 text-sm mb-2 font-medium">Horizons Analyzed</p>
-                <p className="text-white font-bold text-lg capitalize">
+              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
+                <p className="text-gray-400 text-xs mb-1 font-medium">Horizons Analyzed</p>
+                <p className="text-white font-bold text-sm capitalize">
                   {analyzeResults.metadata.horizons?.join(', ') || 'N/A'}
                 </p>
               </div>
@@ -609,10 +609,10 @@ const MarketScanContent = () => {
 
         {showFeedbackModal && selectedPrediction && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn p-4">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-2 border-slate-700 max-w-md w-full shadow-2xl animate-slideIn">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <ThumbsUp className="w-6 h-6 text-blue-400" />
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 border border-slate-700 max-w-md w-full shadow-2xl animate-slideIn">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <ThumbsUp className="w-4 h-4 text-blue-400" />
                   Provide Feedback
                 </h3>
                 <button
@@ -625,8 +625,8 @@ const MarketScanContent = () => {
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
-              <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
-                <p className="text-gray-300 mb-2">
+              <div className="bg-slate-700/50 rounded p-3 mb-3">
+                <p className="text-gray-300 text-sm mb-1">
                   <span className="font-semibold text-white">{selectedPrediction.symbol}</span> - 
                   <span className={`font-semibold ml-2 ${
                     selectedPrediction.action === 'LONG' ? 'text-green-400' :
@@ -636,23 +636,23 @@ const MarketScanContent = () => {
                     {selectedPrediction.action}
                   </span>
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-400 text-xs">
                   Predicted: ${(selectedPrediction.predicted_price || selectedPrediction.current_price || 0).toFixed(2)}
                 </p>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <button
                   onClick={() => handleFeedback('correct')}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl flex items-center justify-center gap-2 font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                  className="w-full px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-green-500/50"
                 >
-                  <ThumbsUp className="w-5 h-5" />
+                  <ThumbsUp className="w-4 h-4" />
                   <span>Correct Prediction</span>
                 </button>
                 <button
                   onClick={() => handleFeedback('incorrect')}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-xl flex items-center justify-center gap-2 font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-red-500/50"
+                  className="w-full px-3 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-red-500/50"
                 >
-                  <ThumbsDown className="w-5 h-5" />
+                  <ThumbsDown className="w-4 h-4" />
                   <span>Incorrect Prediction</span>
                 </button>
                 <button
@@ -660,7 +660,7 @@ const MarketScanContent = () => {
                     setShowFeedbackModal(false);
                     setSelectedPrediction(null);
                   }}
-                  className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all font-medium"
+                  className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all text-sm font-medium"
                 >
                   Cancel
                 </button>
