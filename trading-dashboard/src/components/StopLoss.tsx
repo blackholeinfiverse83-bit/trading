@@ -265,152 +265,153 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
             </button>
           )}
         </form>
+      </div>
 
-        {result && (
-          <div className={`mt-3 space-y-2 animate-fadeIn border-t border-slate-700/50 pt-3 ${!isExpanded ? 'max-h-0 overflow-hidden' : ''}`}>
-            {/* Compact Results */}
-            <div className={`p-2 rounded border ${
-              result.riskLevel === 'safe' ? 'bg-green-500/10 border-green-500/30' :
-              result.riskLevel === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
-              'bg-red-500/10 border-red-500/30'
-            }`}>
-              <div className="flex items-center gap-1.5 mb-2">
-                {result.riskLevel === 'safe' ? (
-                  <CheckCircle2 className="w-3 h-3 text-green-400" />
-                ) : result.riskLevel === 'warning' ? (
-                  <AlertTriangle className="w-3 h-3 text-yellow-400" />
-                ) : (
-                  <XCircle className="w-3 h-3 text-red-400" />
-                )}
-                <span className={`text-xs font-bold ${
-                  result.riskLevel === 'safe' ? 'text-green-400' :
-                  result.riskLevel === 'warning' ? 'text-yellow-400' :
-                  'text-red-400'
-                }`}>
-                  {result.riskLevel.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Compact Metrics - 2x2 Grid */}
-              <div className="grid grid-cols-2 gap-1.5">
-                <div className="bg-slate-900/50 rounded p-1.5">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <TrendingDown className="w-2.5 h-2.5 text-red-400" />
-                    <span className="text-xs text-gray-400">Stop-Loss</span>
-                  </div>
-                  <p className="text-xs font-bold text-white">
-                    ${result.stopLossPrice.toFixed(2)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-900/50 rounded p-1.5">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <DollarSign className="w-2.5 h-2.5 text-yellow-400" />
-                    <span className="text-xs text-gray-400">Risk</span>
-                  </div>
-                  <p className="text-xs font-bold text-white">
-                    ${result.riskAmount.toFixed(0)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-900/50 rounded p-1.5">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <Calculator className="w-2.5 h-2.5 text-blue-400" />
-                    <span className="text-xs text-gray-400">Shares</span>
-                  </div>
-                  <p className="text-xs font-bold text-white">
-                    {result.positionSize.toFixed(0)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-900/50 rounded p-1.5">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <Shield className="w-2.5 h-2.5 text-purple-400" />
-                    <span className="text-xs text-gray-400">Entry</span>
-                  </div>
-                  <p className="text-xs font-bold text-white">
-                    ${result.entryPrice.toFixed(2)}
-                  </p>
-                </div>
-              </div>
+      {result && (
+        <div className={`border-t border-slate-700/50 p-3 space-y-2 animate-fadeIn ${!isExpanded ? 'max-h-0 overflow-hidden' : ''}`}>
+          {/* Compact Results */}
+          <div className={`p-2 rounded border ${
+            result.riskLevel === 'safe' ? 'bg-green-500/10 border-green-500/30' :
+            result.riskLevel === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
+            'bg-red-500/10 border-red-500/30'
+          }`}>
+            <div className="flex items-center gap-1.5 mb-2">
+              {result.riskLevel === 'safe' ? (
+                <CheckCircle2 className="w-3 h-3 text-green-400" />
+              ) : result.riskLevel === 'warning' ? (
+                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+              ) : (
+                <XCircle className="w-3 h-3 text-red-400" />
+              )}
+              <span className={`text-xs font-bold ${
+                result.riskLevel === 'safe' ? 'text-green-400' :
+                result.riskLevel === 'warning' ? 'text-yellow-400' :
+                'text-red-400'
+              }`}>
+                {result.riskLevel.toUpperCase()}
+              </span>
             </div>
 
-            {/* Compact Chart - Only when expanded */}
-            {isExpanded && (
-              <div className="bg-slate-900/50 rounded p-2 border border-slate-700/50">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <TrendingDown className="w-3 h-3 text-red-400" />
-                  <span className="text-xs font-semibold text-gray-300">Price Levels</span>
+            {/* Compact Metrics - 2x2 Grid */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="bg-slate-900/50 rounded p-1.5">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <TrendingDown className="w-2.5 h-2.5 text-red-400" />
+                  <span className="text-xs text-gray-400">Stop-Loss</span>
                 </div>
-                <ResponsiveContainer width="100%" height={100}>
-                  <LineChart
-                    data={[
-                      { name: 'Entry', price: result.entryPrice },
-                      { name: 'Current', price: result.entryPrice },
-                    ]}
-                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="#9CA3AF" 
-                      tick={{ fill: '#9CA3AF', fontSize: 9 }}
-                    />
-                    <YAxis 
-                      stroke="#9CA3AF"
-                      tick={{ fill: '#9CA3AF', fontSize: 9 }}
-                      domain={[result.stopLossPrice * 0.98, result.entryPrice * 1.02]}
-                      tickFormatter={(value) => `$${value.toFixed(0)}`}
-                      width={40}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1E293B', 
-                        border: '1px solid #475569',
-                        borderRadius: '4px',
-                        padding: '4px',
-                        fontSize: '10px'
-                      }}
-                      labelStyle={{ color: '#E2E8F0', fontWeight: 'bold', fontSize: '10px' }}
-                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="price" 
-                      stroke="#3B82F6" 
-                      strokeWidth={1.5}
-                      dot={{ fill: '#3B82F6', r: 2 }}
-                    />
-                    <ReferenceLine 
-                      y={result.stopLossPrice} 
-                      stroke="#EF4444" 
-                      strokeWidth={1.5}
-                      strokeDasharray="4 4"
-                      label={{ 
-                        value: `SL: $${result.stopLossPrice.toFixed(0)}`, 
-                        position: 'right',
-                        fill: '#EF4444',
-                        fontSize: 8
-                      }}
-                    />
-                    <ReferenceLine 
-                      y={result.entryPrice} 
-                      stroke="#22C55E" 
-                      strokeWidth={1.5}
-                      strokeDasharray="3 3"
-                      label={{ 
-                        value: `$${result.entryPrice.toFixed(0)}`, 
-                        position: 'left',
-                        fill: '#22C55E',
-                        fontSize: 8
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <p className="text-xs font-bold text-white">
+                  ${result.stopLossPrice.toFixed(2)}
+                </p>
               </div>
-            )}
+
+              <div className="bg-slate-900/50 rounded p-1.5">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <DollarSign className="w-2.5 h-2.5 text-yellow-400" />
+                  <span className="text-xs text-gray-400">Risk</span>
+                </div>
+                <p className="text-xs font-bold text-white">
+                  ${result.riskAmount.toFixed(0)}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 rounded p-1.5">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Calculator className="w-2.5 h-2.5 text-blue-400" />
+                  <span className="text-xs text-gray-400">Shares</span>
+                </div>
+                <p className="text-xs font-bold text-white">
+                  {result.positionSize.toFixed(0)}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 rounded p-1.5">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Shield className="w-2.5 h-2.5 text-purple-400" />
+                  <span className="text-xs text-gray-400">Entry</span>
+                </div>
+                <p className="text-xs font-bold text-white">
+                  ${result.entryPrice.toFixed(2)}
+                </p>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Compact Chart - Only when expanded */}
+          {isExpanded && (
+            <div className="bg-slate-900/50 rounded p-2 border border-slate-700/50">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <TrendingDown className="w-3 h-3 text-red-400" />
+                <span className="text-xs font-semibold text-gray-300">Price Levels</span>
+              </div>
+              <ResponsiveContainer width="100%" height={100}>
+                <LineChart
+                  data={[
+                    { name: 'Entry', price: result.entryPrice },
+                    { name: 'Current', price: result.entryPrice },
+                  ]}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#9CA3AF" 
+                    tick={{ fill: '#9CA3AF', fontSize: 9 }}
+                  />
+                  <YAxis 
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF', fontSize: 9 }}
+                    domain={[result.stopLossPrice * 0.98, result.entryPrice * 1.02]}
+                    tickFormatter={(value) => `$${value.toFixed(0)}`}
+                    width={40}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1E293B', 
+                      border: '1px solid #475569',
+                      borderRadius: '4px',
+                      padding: '4px',
+                      fontSize: '10px'
+                    }}
+                    labelStyle={{ color: '#E2E8F0', fontWeight: 'bold', fontSize: '10px' }}
+                    formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Price']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="price" 
+                    stroke="#3B82F6" 
+                    strokeWidth={1.5}
+                    dot={{ fill: '#3B82F6', r: 2 }}
+                  />
+                  <ReferenceLine 
+                    y={result.stopLossPrice} 
+                    stroke="#EF4444" 
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                    label={{ 
+                      value: `SL: $${result.stopLossPrice.toFixed(0)}`, 
+                      position: 'right',
+                      fill: '#EF4444',
+                      fontSize: 8
+                    }}
+                  />
+                  <ReferenceLine 
+                    y={result.entryPrice} 
+                    stroke="#22C55E" 
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                    label={{ 
+                      value: `$${result.entryPrice.toFixed(0)}`, 
+                      position: 'left',
+                      fill: '#22C55E',
+                      fontSize: 8
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
