@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { stockAPI, POPULAR_STOCKS, POPULAR_CRYPTO, POPULAR_COMMODITIES } from '../services/api';
+import { stockAPI } from '../services/api';
 import { useAssetType } from '../contexts/AssetTypeContext';
 import StocksView from '../components/StocksView';
 import CryptoView from '../components/CryptoView';
 import CommoditiesView from '../components/CommoditiesView';
-import { Search, TrendingUp, TrendingDown, Minus, BarChart3, ThumbsUp, ThumbsDown, Sparkles, Loader2, AlertCircle, X, ChevronDown, ChevronUp, Brain, Cpu, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, ThumbsUp, ThumbsDown, Sparkles, Loader2, X, ChevronDown, ChevronUp, Brain, Cpu, Zap } from 'lucide-react';
 import StopLoss from '../components/StopLoss';
+import CandlestickChart from '../components/CandlestickChart';
 
 // Inner component that uses the context (wrapped by Layout)
 const MarketScanContent = () => {
@@ -15,7 +16,7 @@ const MarketScanContent = () => {
   
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
+  // Removed selectedSymbols - not currently used in UI
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +25,8 @@ const MarketScanContent = () => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState<any>(null);
   const [expandedPredictions, setExpandedPredictions] = useState<Set<number>>(new Set());
+  const [showChart, setShowChart] = useState(false);
+  const [chartSymbol, setChartSymbol] = useState<string | null>(null);
 
   // Load search query from URL params on mount and when params change
   useEffect(() => {
@@ -108,54 +111,7 @@ const MarketScanContent = () => {
     }
   };
 
-  const handleScanAll = async () => {
-    setLoading(true);
-    setError(null);
-    setAnalyzeResults(null);
-    setPredictions([]); // Clear previous results immediately
-    try {
-      // Reduced symbols for faster loading
-      let defaultSymbols: string[] = [];
-      if (assetType === 'stocks') {
-        defaultSymbols = POPULAR_STOCKS.slice(0, 10); // Reduced from 20 to 10
-      } else if (assetType === 'crypto') {
-        defaultSymbols = POPULAR_CRYPTO.slice(0, 10); // Reduced from 20 to 10
-      } else if (assetType === 'commodities') {
-        defaultSymbols = POPULAR_COMMODITIES.slice(0, 8); // Reduced from 15 to 8
-      }
-      
-      const symbols = selectedSymbols.length > 0 ? selectedSymbols : defaultSymbols;
-      const response = await stockAPI.scanAll(symbols, horizon, 0.3);
-      
-      // Check for errors in metadata
-      if (response.metadata?.error) {
-        throw new Error(response.metadata.error);
-      }
-      
-      // Backend returns: { metadata, shortlist, all_predictions }
-      // Filter out predictions with errors
-      const validPredictions = (response.all_predictions || []).filter((p: any) => !p.error);
-      
-      if (response.shortlist && response.shortlist.length > 0) {
-        setPredictions(response.shortlist);
-      } else if (validPredictions.length > 0) {
-        setPredictions(validPredictions);
-      } else {
-        setPredictions([]);
-        if (response.metadata?.predictions_generated === 0) {
-          setError('No predictions generated. The backend may be processing data or models may need training.');
-        } else {
-          setError('No predictions found. Try selecting different symbols.');
-        }
-      }
-    } catch (error: any) {
-      console.error('Scan failed:', error);
-      setPredictions([]);
-      setError(error.message || 'Failed to scan stocks. Please ensure the backend is running.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed handleScanAll - not currently used in UI
 
   const handleAnalyze = async (symbol: string) => {
     if (!symbol) return;
@@ -203,11 +159,7 @@ const MarketScanContent = () => {
     }
   };
 
-  const toggleSymbol = (symbol: string) => {
-    setSelectedSymbols((prev) =>
-      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
-    );
-  };
+  // Removed toggleSymbol - not currently used in UI
 
   const getActionIcon = (action: string) => {
     switch (action?.toUpperCase()) {
@@ -292,6 +244,18 @@ const MarketScanContent = () => {
       
       {/* Asset Type Specific View */}
       {renderAssetView()}
+      
+      {/* Candlestick Chart */}
+      {showChart && chartSymbol && (
+        <CandlestickChart 
+          symbol={chartSymbol} 
+          exchange={assetType === 'stocks' ? 'NSE' : assetType === 'crypto' ? 'CRYPTO' : 'COMMODITY'}
+          onClose={() => {
+            setShowChart(false);
+            setChartSymbol(null);
+          }}
+        />
+      )}
       
       {/* Stop-Loss Calculator */}
       <StopLoss />
@@ -560,6 +524,16 @@ const MarketScanContent = () => {
                     )}
                     
                     <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => {
+                          setChartSymbol(pred.symbol);
+                          setShowChart(true);
+                        }}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500/20 to-green-600/20 hover:from-green-500/30 hover:to-green-600/30 border border-green-500/50 text-green-400 text-sm rounded-lg transition-all font-medium flex items-center justify-center gap-2 hover:scale-105"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        <span>View Chart</span>
+                      </button>
                       <button
                         onClick={() => {
                           setSelectedPrediction(pred);

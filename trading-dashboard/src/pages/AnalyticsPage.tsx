@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { stockAPI } from '../services/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend } from 'recharts';
-import { Brain, Cpu, TrendingUp, TrendingDown, AlertCircle, Zap, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { Brain, Cpu, TrendingUp, Zap, BarChart3 } from 'lucide-react';
 
 const AnalyticsPage = () => {
   const [analytics, setAnalytics] = useState<any>(null);
@@ -19,7 +19,7 @@ const AnalyticsPage = () => {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'META'];
+      const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA','RELIANCE.NS'];
       const response = await stockAPI.scanAll(symbols, 'intraday', 0.3);
       
       // Check for errors in metadata
@@ -363,7 +363,7 @@ const AnalyticsPage = () => {
                           cy="50%"
                           labelLine={false}
                           label={({ name, percent, value }) => 
-                            value > 0 ? `${name}\n${(percent * 100).toFixed(0)}%` : ''
+                            value > 0 && percent !== undefined ? `${name}\n${(percent * 100).toFixed(0)}%` : ''
                           }
                           outerRadius={90}
                           innerRadius={40}

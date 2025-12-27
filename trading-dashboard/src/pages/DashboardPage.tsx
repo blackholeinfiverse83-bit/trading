@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { stockAPI } from '../services/api';
-import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 const DashboardPage = () => {
   const [portfolioValue, setPortfolioValue] = useState(0);
@@ -126,7 +126,7 @@ const DashboardPage = () => {
   };
 
   // Generate chart data from top stocks (only real data, no fallback)
-  const chartData = topStocks.length > 0 ? topStocks.map((stock, index) => ({
+  const chartData = topStocks.length > 0 ? topStocks.map((stock) => ({
     name: stock.symbol,
     value: stock.predicted_price || stock.current_price || 0,
     confidence: (stock.confidence || 0) * 100,
@@ -219,13 +219,13 @@ const DashboardPage = () => {
               </div>
             ))
           ) : (
-            stats.map((stat, index) => {
+            stats.map((stat, idx) => {
               const Icon = stat.icon;
               return (
                 <div 
-                  key={index} 
+                  key={stat.label} 
                   className={`bg-gradient-to-br ${stat.bgGradient} rounded-lg p-3 border border-slate-700/50 card-hover shine relative overflow-hidden group`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  style={{ animationDelay: `${idx * 0.1}s` }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="p-2 bg-white/5 rounded group-hover:bg-white/10 transition-colors">

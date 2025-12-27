@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, TrendingUp, TrendingDown, Sparkles, Loader2, BarChart3 } from 'lucide-react';
-import { stockAPI, POPULAR_STOCKS } from '../services/api';
+import { POPULAR_STOCKS } from '../services/api';
 
 interface StocksViewProps {
   onSearch: (symbol: string) => void;

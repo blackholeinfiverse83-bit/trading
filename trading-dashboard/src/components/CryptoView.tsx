@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, Coins, TrendingUp, TrendingDown, Sparkles, Loader2, Zap, BarChart3 } from 'lucide-react';
-import { stockAPI, POPULAR_CRYPTO } from '../services/api';
+import { Search, Coins, Loader2, Zap, BarChart3 } from 'lucide-react';
+import { POPULAR_CRYPTO } from '../services/api';
 
 interface CryptoViewProps {
   onSearch: (symbol: string) => void;
