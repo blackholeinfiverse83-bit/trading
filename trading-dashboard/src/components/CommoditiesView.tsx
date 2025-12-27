@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Package, Loader2, BarChart3 } from 'lucide-react';
 import { POPULAR_COMMODITIES } from '../services/api';
 
@@ -14,6 +14,8 @@ interface CommoditiesViewProps {
 
 const CommoditiesView = ({ onSearch, onAnalyze, predictions, loading, error, horizon = 'intraday', onHorizonChange }: CommoditiesViewProps) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const commodityNames: Record<string, string> = {
     'GC=F': 'Gold',
@@ -33,6 +35,22 @@ const CommoditiesView = ({ onSearch, onAnalyze, predictions, loading, error, hor
     'HE=F': 'Lean Hogs',
   };
 
+  // Generate suggestions based on search query
+  useEffect(() => {
+    if (searchQuery && searchQuery.length > 0) {
+      const query = searchQuery.toUpperCase();
+      const filtered = POPULAR_COMMODITIES.filter(symbol => 
+        symbol.toUpperCase().includes(query) ||
+        (commodityNames[symbol] && commodityNames[symbol].toUpperCase().includes(query))
+      ).slice(0, 8);
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery]);
+
   return (
     <div className="space-y-4">
       <div>
@@ -46,15 +64,57 @@ const CommoditiesView = ({ onSearch, onAnalyze, predictions, loading, error, hor
       <div className="bg-gradient-to-br from-orange-900/20 to-red-900/20 backdrop-blur-sm rounded-lg p-3 border border-orange-500/30">
         <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
-              onKeyPress={(e) => e.key === 'Enter' && onSearch(searchQuery)}
+              onFocus={() => {
+                if (suggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && searchQuery) {
+                  setShowSuggestions(false);
+                  onSearch(searchQuery);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setShowSuggestions(false);
+                }
+              }}
               placeholder="Enter commodity symbol (e.g., GC=F for Gold, CL=F for Oil)"
               className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
+            
+            {/* Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                {suggestions.map((symbol) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery(symbol);
+                      setShowSuggestions(false);
+                      onSearch(symbol);
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center justify-between"
+                  >
+                    <span className="font-medium">{symbol}</span>
+                    {commodityNames[symbol] && (
+                      <span className="text-xs text-gray-500">{commodityNames[symbol]}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {onHorizonChange && (
             <select

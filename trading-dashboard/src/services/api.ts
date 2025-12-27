@@ -166,6 +166,81 @@ export const stockAPI = {
   },
 };
 
+// Risk Management API (Backend-ready contracts, no implementation)
+export const riskAPI = {
+  /**
+   * Set or update stop-loss for a symbol
+   * 
+   * Backend endpoint: POST /api/risk/stop-loss
+   * 
+   * Payload:
+   * {
+   *   symbol: string,
+   *   stopLossPrice: number,
+   *   side: "BUY" | "SELL",
+   *   timeframe: string,
+   *   source: "chart" | "manual"
+   * }
+   * 
+   * Response: { success: boolean, message?: string }
+   */
+  setStopLoss: async (
+    _symbol: string,
+    _stopLossPrice: number,
+    _side: 'BUY' | 'SELL',
+    _timeframe: string,
+    _source: 'chart' | 'manual'
+  ) => {
+    // TODO: Implement when backend is ready
+    // const response = await api.post('/api/risk/stop-loss', {
+    //   symbol: _symbol,
+    //   stopLossPrice: _stopLossPrice,
+    //   side: _side,
+    //   timeframe: _timeframe,
+    //   source: _source,
+    // });
+    // return response.data;
+    throw new Error('Backend API not yet implemented');
+  },
+};
+
+// AI Chat API (Backend-ready contracts, no implementation)
+export const aiAPI = {
+  /**
+   * Send message to AI chat assistant
+   * 
+   * Backend endpoint: POST /api/ai/chat
+   * 
+   * Payload:
+   * {
+   *   message: string,
+   *   context: {
+   *     symbol?: string,
+   *     timeframe?: string,
+   *     activeIndicators?: string[]
+   *   }
+   * }
+   * 
+   * Response: { message: string, context?: any }
+   */
+  chat: async (
+    _message: string,
+    _context?: {
+      symbol?: string;
+      timeframe?: string;
+      activeIndicators?: string[];
+    }
+  ) => {
+    // TODO: Implement when backend is ready
+    // const response = await api.post('/api/ai/chat', {
+    //   message: _message,
+    //   context: _context || {},
+    // });
+    // return response.data;
+    throw new Error('Backend API not yet implemented');
+  },
+};
+
 // Popular stock symbols for search autocomplete
 export const POPULAR_STOCKS = [
   // US Stocks

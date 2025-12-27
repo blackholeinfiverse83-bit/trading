@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { AssetTypeProvider, useAssetType } from '../contexts/AssetTypeContext';
 import { useTheme } from '../contexts/ThemeContext';
 import UniGuruBackground from './UniGuruBackground';
+import FloatingAIButton from './FloatingAIButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -55,6 +56,7 @@ const LayoutContent = ({ children }: LayoutProps) => {
         <main className="flex-1 overflow-y-auto p-4 relative z-10">
           {children}
         </main>
+        <FloatingAIButton />
       </div>
     </div>
   );

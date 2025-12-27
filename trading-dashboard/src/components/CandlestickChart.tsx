@@ -9,8 +9,11 @@ import {
   ZoomIn, 
   ZoomOut, 
   Type,
-  X
+  X,
+  Shield
 } from 'lucide-react';
+import StopLossPanel, { type StopLossState } from './StopLossPanel';
+import StopLossLine from './StopLossLine';
 
 interface CandlestickChartProps {
   symbol: string;
@@ -31,6 +34,13 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
   const [error, setError] = useState<string | null>(null);
   const [showIndicators, setShowIndicators] = useState(false);
   const [showOptionsChain, setShowOptionsChain] = useState(false);
+  const [showStopLossPanel, setShowStopLossPanel] = useState(false);
+  const [stopLossState, setStopLossState] = useState<StopLossState | null>(null);
+  const contextMenuRef = useRef<{ x: number; y: number; visible: boolean }>({
+    x: 0,
+    y: 0,
+    visible: false,
+  });
 
   // Timeframe options
   const timeframes = [
@@ -47,6 +57,17 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
   // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Clean up existing chart if it exists
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      candlestickSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+    }
+
+    // Clear the container
+    chartContainerRef.current.innerHTML = '';
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -88,42 +109,70 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
 
     chartRef.current = chart;
 
-    // Create candlestick series (v4.x API)
-    const candlestickSeries = (chart as any).addCandlestickSeries({
-      upColor: '#10b981',
-      downColor: '#ef4444',
-      borderVisible: false,
-      wickUpColor: '#10b981',
-      wickDownColor: '#ef4444',
-      priceFormat: {
-        type: 'price',
-        precision: 2,
-        minMove: 0.01,
-      },
-    }) as ISeriesApi<'Candlestick'>;
+    // Create candlestick series - use v4.x API (addCandlestickSeries)
+    let candlestickSeries: ISeriesApi<'Candlestick'>;
+    try {
+      // Use v4.x API method
+      if (typeof (chart as any).addCandlestickSeries === 'function') {
+        candlestickSeries = (chart as any).addCandlestickSeries({
+          upColor: '#10b981',
+          downColor: '#ef4444',
+          borderVisible: false,
+          wickUpColor: '#10b981',
+          wickDownColor: '#ef4444',
+          priceFormat: {
+            type: 'price',
+            precision: 2,
+            minMove: 0.01,
+          },
+        }) as ISeriesApi<'Candlestick'>;
+      } else {
+        throw new Error('addCandlestickSeries method not available on chart');
+      }
+    } catch (error) {
+      console.error('Failed to create candlestick series:', error);
+      setError('Failed to initialize chart');
+      return;
+    }
     candlestickSeriesRef.current = candlestickSeries;
 
-    // Create volume series (v4.x API)
-    const volumeSeries = (chart as any).addHistogramSeries({
-      color: '#3b82f6',
-      priceFormat: {
-        type: 'volume',
-      },
-      priceScaleId: 'volume',
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    }) as ISeriesApi<'Histogram'>;
+    // Create volume series - use v4.x API (addHistogramSeries)
+    let volumeSeries: ISeriesApi<'Histogram'>;
+    try {
+      // Use v4.x API method
+      if (typeof (chart as any).addHistogramSeries === 'function') {
+        volumeSeries = (chart as any).addHistogramSeries({
+          color: '#3b82f6',
+          priceFormat: {
+            type: 'volume',
+          },
+          priceScaleId: 'volume',
+          scaleMargins: {
+            top: 0.8,
+            bottom: 0,
+          },
+        }) as ISeriesApi<'Histogram'>;
+      } else {
+        throw new Error('addHistogramSeries method not available on chart');
+      }
+    } catch (error) {
+      console.error('Failed to create volume series:', error);
+      setError('Failed to initialize volume series');
+      return;
+    }
     volumeSeriesRef.current = volumeSeries;
 
     // Set up volume price scale
-    chart.priceScale('volume').applyOptions({
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    });
+    try {
+      chart.priceScale('volume').applyOptions({
+        scaleMargins: {
+          top: 0.8,
+          bottom: 0,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to configure volume price scale:', error);
+    }
 
     // Handle resize
     const handleResize = () => {
@@ -136,11 +185,43 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
 
     window.addEventListener('resize', handleResize);
 
+    // Handle right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      contextMenuRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        visible: true,
+      };
+      // Show context menu (we'll add this UI element)
+      // For now, directly show stop-loss panel
+      setShowStopLossPanel(true);
+    };
+
+    const chartElement = chartContainerRef.current;
+    if (chartElement) {
+      chartElement.addEventListener('contextmenu', handleContextMenu);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
-      chart.remove();
+      if (chartElement) {
+        chartElement.removeEventListener('contextmenu', handleContextMenu);
+      }
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+        candlestickSeriesRef.current = null;
+        volumeSeriesRef.current = null;
+      }
     };
   }, []);
+
+  // Reset stop-loss when symbol changes
+  useEffect(() => {
+    setStopLossState(null);
+    setShowStopLossPanel(false);
+  }, [symbol]);
 
   // Fetch and update chart data
   useEffect(() => {
@@ -231,6 +312,17 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
               className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded text-sm font-medium transition-colors"
             >
               Chain
+            </button>
+            <button
+              onClick={() => setShowStopLossPanel(!showStopLossPanel)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                stopLossState?.isActive
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                  : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Stop-Loss</span>
             </button>
           </div>
           {onClose && (
@@ -369,7 +461,39 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
         )}
 
         <div ref={chartContainerRef} className="w-full" style={{ height: '500px' }} />
+        
+        {/* Stop-Loss Line Overlay */}
+        {stopLossState?.isActive && (
+          <StopLossLine
+            candlestickSeries={candlestickSeriesRef.current}
+            price={stopLossState.price}
+            side={stopLossState.side}
+            isActive={stopLossState.isActive}
+            onPriceChange={(newPrice) => {
+              setStopLossState({
+                ...stopLossState,
+                price: newPrice,
+              });
+            }}
+          />
+        )}
       </div>
+
+      {/* Stop-Loss Panel */}
+      <StopLossPanel
+        symbol={symbol}
+        currentPrice={ohlc.close}
+        timeframe={timeframe}
+        isVisible={showStopLossPanel}
+        stopLossState={stopLossState}
+        onClose={() => setShowStopLossPanel(false)}
+        onStopLossChange={(state) => {
+          setStopLossState(state);
+          // TODO: Backend API call when backend is ready
+          // POST /api/risk/stop-loss
+          // { symbol, stopLossPrice: state.price, side: state.side, timeframe, source: "chart" | "manual" }
+        }}
+      />
 
       {/* Indicators Panel */}
       {showIndicators && (
