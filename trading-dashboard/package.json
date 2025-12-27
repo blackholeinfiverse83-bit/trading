@@ -20,7 +20,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "axios": "^1.13.2",
-    "lightweight-charts": "^4.2.3",
+    "lightweight-charts": "^4.1.1",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
