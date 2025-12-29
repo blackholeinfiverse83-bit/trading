@@ -698,13 +698,55 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
 
           {error && (
             <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
-              <div className="text-center">
-                <p className="text-red-400 mb-2">{error}</p>
+              <div className="text-center max-w-md p-6 bg-slate-800 rounded-lg border border-red-500/50">
+                <p className="text-red-400 mb-4 font-semibold">{error}</p>
+                <div className="space-y-2 text-sm text-gray-300 mb-4">
+                  <p>To fix this issue:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-left">
+                    <li>Check if backend is running (look for "Backend Server" window)</li>
+                    <li>If not running, double-click <code className="bg-slate-700 px-1 rounded">RESTART_BACKEND.bat</code></li>
+                    <li>Wait 5-10 seconds for backend to start</li>
+                    <li>Verify: Open <a href="http://127.0.0.1:8000/docs" target="_blank" className="text-blue-400 hover:underline">http://127.0.0.1:8000/docs</a></li>
+                    <li>Click Retry below once backend is running</li>
+                  </ol>
+                </div>
                 <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+                  onClick={() => {
+                    // Retry fetching data
+                    if (candlestickSeriesRef.current && volumeSeriesRef.current) {
+                      const fetchChartData = async () => {
+                        setLoading(true);
+                        setError(null);
+                        try {
+                          const response = await stockAPI.fetchData([symbol], '1mo', false, false);
+                          if (response.data && response.data[symbol] && response.data[symbol].history) {
+                            const history = response.data[symbol].history;
+                            const candlestickData: CandlestickData[] = history.map((item: any, index: number) => ({
+                              time: (index + 1) as Time,
+                              open: item.open || item.Close || 0,
+                              high: item.high || item.Close || 0,
+                              low: item.low || item.Close || 0,
+                              close: item.close || item.Close || 0,
+                            }));
+                            if (candlestickSeriesRef.current) {
+                              candlestickSeriesRef.current.setData(candlestickData);
+                            }
+                            setError(null);
+                          } else {
+                            setError('No historical data available for this symbol.');
+                          }
+                        } catch (err: any) {
+                          setError(err.message || 'Failed to load chart data. Please ensure backend is running.');
+                        } finally {
+                          setLoading(false);
+                        }
+                      };
+                      fetchChartData();
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-semibold transition-all hover:scale-105"
                 >
-                  Retry
+                  Retry Connection
                 </button>
               </div>
             </div>
