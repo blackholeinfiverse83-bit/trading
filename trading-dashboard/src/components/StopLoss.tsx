@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { stockAPI } from '../services/api';
-import { AlertTriangle, Shield, TrendingDown, DollarSign, Calculator, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { AlertTriangle, Shield, TrendingDown, DollarSign, Calculator, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, X, Minus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 interface StopLossProps {
+  /** Symbol from active chart - when provided, symbol field becomes read-only */
+  chartSymbol?: string | null;
+  /** Current price from chart - used to pre-fill entry price */
+  chartPrice?: number | null;
+  /** Callback when stop-loss is calculated */
   onStopLossCalculated?: (stopLossPrice: number, symbol: string) => void;
+  /** Callback when panel is closed */
+  onClose?: () => void;
 }
 
 interface StopLossResult {
@@ -14,24 +21,76 @@ interface StopLossResult {
   riskLevel: 'safe' | 'warning' | 'danger';
   entryPrice: number;
   symbol: string;
+  backendAdvisory?: {
+    consensus?: string;
+    averageConfidence?: number;
+    riskParameters?: {
+      stop_loss_pct?: number;
+      capital_risk_pct?: number;
+      drawdown_limit_pct?: number;
+    };
+  };
 }
 
-const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
+const StopLoss = ({ chartSymbol, chartPrice, onStopLossCalculated, onClose }: StopLossProps) => {
+  // State management
   const [symbol, setSymbol] = useState('');
   const [entryPrice, setEntryPrice] = useState('');
   const [capital, setCapital] = useState('');
   const [riskPercentage, setRiskPercentage] = useState('2');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backendWarning, setBackendWarning] = useState<string | null>(null);
   const [result, setResult] = useState<StopLossResult | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
+  // Sync with chart symbol - CRITICAL: Only on explicit chart symbol change
+  useEffect(() => {
+    if (chartSymbol) {
+      const newSymbol = chartSymbol.toUpperCase();
+      // Only update if symbol actually changed
+      if (newSymbol !== symbol) {
+        setSymbol(newSymbol);
+        // Reset all stop-loss state when symbol changes
+        setResult(null);
+        setError(null);
+        setBackendWarning(null);
+        setIsExpanded(false);
+        // Pre-fill entry price from chart if available
+        if (chartPrice && chartPrice > 0) {
+          setEntryPrice(chartPrice.toFixed(2));
+        }
+      }
+    }
+  }, [chartSymbol]); // Only depend on chartSymbol, not symbol
+
+  // Sync entry price when chart price changes (only if no manual entry)
+  useEffect(() => {
+    if (chartPrice && chartPrice > 0 && chartSymbol && !entryPrice) {
+      setEntryPrice(chartPrice.toFixed(2));
+    }
+  }, [chartPrice, chartSymbol]);
+
+  // Visibility rule: Hide panel if no chart symbol and no manual symbol
+  const isVisible = chartSymbol || symbol;
+  if (!isVisible) {
+    return null;
+  }
+
+  // Check if symbol is bound from chart (read-only)
+  const isSymbolFromChart = !!chartSymbol && chartSymbol.toUpperCase() === symbol.toUpperCase();
+
+  /**
+   * Calculate stop-loss - ONLY triggered by explicit user action
+   * Backend call is advisory only - calculations are done locally
+   */
   const calculateStopLoss = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation - block calculation if invalid
     if (!symbol || !entryPrice || !capital || !riskPercentage) {
-      setError('Please fill in all fields');
+      setError('Please fill in all required fields');
       return;
     }
 
@@ -39,6 +98,7 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
     const cap = parseFloat(capital);
     const riskPct = parseFloat(riskPercentage);
 
+    // Inline validation errors
     if (isNaN(entry) || entry <= 0) {
       setError('Entry price must be a positive number');
       return;
@@ -48,35 +108,17 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
       return;
     }
     if (isNaN(riskPct) || riskPct <= 0 || riskPct > 100) {
-      setError('Risk percentage must be between 0 and 100');
+      setError('Risk percentage must be between 0.1 and 100');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setBackendWarning(null);
     setResult(null);
 
     try {
-      // Calculate stop-loss percentage from risk percentage
-      // Risk percentage is the % of capital at risk
-      // Stop-loss percentage is the % price drop from entry
-      const stopLossPct = riskPct; // Using risk percentage as stop-loss percentage
-      
-      // Call analyze endpoint with calculated stop-loss
-      const response = await stockAPI.analyze(
-        symbol.toUpperCase(),
-        ['intraday'],
-        stopLossPct,
-        riskPct, // capital_risk_pct
-        5.0 // drawdown_limit_pct (default)
-      );
-
-      // Check for errors in metadata
-      if (response.metadata?.error) {
-        throw new Error(response.metadata.error);
-      }
-
-      // Calculate stop-loss price from entry price and risk percentage
+      // LOCAL CALCULATION (primary) - Never depends on backend
       const stopLossPrice = entry * (1 - riskPct / 100);
       const riskAmount = (cap * riskPct) / 100;
       const positionSize = cap / entry;
@@ -91,6 +133,35 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
         riskLevel = 'danger';
       }
 
+      // BACKEND CALL (advisory only) - Never blocks calculation
+      let backendAdvisory: StopLossResult['backendAdvisory'] | undefined;
+      try {
+        const response = await stockAPI.analyze(
+          symbol.toUpperCase(),
+          ['intraday'],
+          riskPct, // stop_loss_pct
+          riskPct, // capital_risk_pct
+          5.0 // drawdown_limit_pct (default)
+        );
+
+        // Check for errors in metadata
+        if (response.metadata?.error) {
+          // Backend error is advisory only - show warning but continue
+          setBackendWarning(`Backend advisory unavailable: ${response.metadata.error}. Using local calculations.`);
+        } else {
+          // Extract advisory data (not used for calculations)
+          backendAdvisory = {
+            consensus: response.metadata?.consensus,
+            averageConfidence: response.metadata?.average_confidence,
+            riskParameters: response.metadata?.risk_parameters,
+          };
+        }
+      } catch (backendError: any) {
+        // Backend error is non-blocking - show warning but continue
+        setBackendWarning(`Backend advisory unavailable: ${backendError.message || 'Connection failed'}. Using local calculations.`);
+      }
+
+      // Set result with local calculations (backend is advisory only)
       const stopLossResult: StopLossResult = {
         stopLossPrice,
         riskAmount,
@@ -98,6 +169,7 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
         riskLevel,
         entryPrice: entry,
         symbol: symbol.toUpperCase(),
+        backendAdvisory,
       };
 
       setResult(stopLossResult);
@@ -107,20 +179,47 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
         onStopLossCalculated(stopLossPrice, symbol.toUpperCase());
       }
     } catch (error: any) {
+      // This should never happen for local calculations, but handle gracefully
       console.error('Stop-loss calculation failed:', error);
-      setError(error.message || 'Failed to calculate stop-loss. Please ensure the backend is running.');
+      setError(error.message || 'Failed to calculate stop-loss. Please check your inputs.');
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Reset form - clears everything including symbol
+   * If symbol is from chart, it will be re-synced by useEffect
+   */
   const resetForm = () => {
+    if (!isSymbolFromChart) {
+      setSymbol('');
+    }
+    setEntryPrice('');
+    setCapital('');
+    setRiskPercentage('2');
+    setError(null);
+    setBackendWarning(null);
+    setResult(null);
+    setIsExpanded(false);
+  };
+
+  /**
+   * Close panel - resets everything
+   */
+  const handleClose = () => {
     setSymbol('');
     setEntryPrice('');
     setCapital('');
     setRiskPercentage('2');
     setError(null);
+    setBackendWarning(null);
     setResult(null);
+    setIsExpanded(false);
+    setIsMinimized(false);
+    if (onClose) {
+      onClose();
+    }
   };
 
   // If minimized, show compact button
@@ -145,22 +244,36 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-red-400" />
           <h2 className="text-sm font-semibold text-white">Stop-Loss</h2>
+          {isSymbolFromChart && (
+            <span className="text-xs text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">Chart</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-slate-700 rounded transition-colors"
-            title={isExpanded ? "Collapse" : "Expand"}
-          >
-            {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </button>
+          {result && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1 hover:bg-slate-700 rounded transition-colors"
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+          )}
           <button
             onClick={() => setIsMinimized(true)}
             className="p-1 hover:bg-slate-700 rounded transition-colors"
             title="Minimize"
           >
-            <X className="w-4 h-4 text-gray-400" />
+            <Minus className="w-4 h-4 text-gray-400" />
           </button>
+          {onClose && (
+            <button
+              onClick={handleClose}
+              className="p-1 hover:bg-slate-700 rounded transition-colors"
+              title="Close"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,13 +285,22 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1">
                   Symbol <span className="text-red-400">*</span>
+                  {isSymbolFromChart && <span className="text-blue-400 text-xs ml-1">(from chart)</span>}
                 </label>
                 <input
                   type="text"
                   value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    // Allow manual entry only if not bound from chart
+                    if (!isSymbolFromChart) {
+                      setSymbol(e.target.value.toUpperCase());
+                    }
+                  }}
+                  readOnly={isSymbolFromChart}
                   placeholder="AAPL"
-                  className="w-full px-2 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className={`w-full px-2 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    isSymbolFromChart ? 'cursor-not-allowed opacity-75' : ''
+                  }`}
                   required
                 />
               </div>
@@ -231,6 +353,7 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
             </div>
           </div>
 
+          {/* Error Display */}
           {error && (
             <div className="flex items-center gap-1.5 p-1.5 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-xs">
               <AlertTriangle className="w-3 h-3 flex-shrink-0" />
@@ -238,6 +361,15 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
             </div>
           )}
 
+          {/* Backend Warning (non-blocking) */}
+          {backendWarning && (
+            <div className="flex items-center gap-1.5 p-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-400 text-xs">
+              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{backendWarning}</span>
+            </div>
+          )}
+
+          {/* Calculate Button - ONLY way to trigger calculation */}
           <button
             type="submit"
             disabled={loading}
@@ -267,6 +399,7 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
         </form>
       </div>
 
+      {/* Results Section - Only shown after calculation */}
       {result && (
         <div className={`border-t border-slate-700/50 p-3 space-y-2 animate-fadeIn ${!isExpanded ? 'max-h-0 overflow-hidden' : ''}`}>
           {/* Compact Results */}
@@ -334,6 +467,21 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
                 </p>
               </div>
             </div>
+
+            {/* Backend Advisory Info (if available) */}
+            {result.backendAdvisory && (
+              <div className="mt-2 pt-2 border-t border-slate-700/50">
+                <p className="text-xs text-gray-400 mb-1">Backend Advisory:</p>
+                {result.backendAdvisory.consensus && (
+                  <p className="text-xs text-blue-400">Consensus: {result.backendAdvisory.consensus}</p>
+                )}
+                {result.backendAdvisory.averageConfidence !== undefined && (
+                  <p className="text-xs text-gray-400">
+                    Avg Confidence: {(result.backendAdvisory.averageConfidence * 100).toFixed(1)}%
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Compact Chart - Only when expanded */}
@@ -417,4 +565,3 @@ const StopLoss = ({ onStopLossCalculated }: StopLossProps) => {
 };
 
 export default StopLoss;
-

@@ -1,0 +1,295 @@
+{
+  "test_summary": {
+    "total_tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "success_rate": "100.0%",
+    "timestamp": "2025-12-29T13:07:41.312636"
+  },
+  "backend_tests": [
+    {
+      "category": "backend",
+      "name": "Backend Health Check",
+      "status": "PASSED",
+      "details": "Server responding at http://127.0.0.1:8000",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:26.933987"
+    },
+    {
+      "category": "backend",
+      "name": "GET / - API Information",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:26.960754"
+    },
+    {
+      "category": "backend",
+      "name": "GET /auth/status - Rate Limit Status",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:26.977776"
+    },
+    {
+      "category": "backend",
+      "name": "GET /tools/health - System Health",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:27.995549"
+    },
+    {
+      "category": "backend",
+      "name": "POST /tools/predict - Generate Predictions",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:30.196399"
+    },
+    {
+      "category": "backend",
+      "name": "POST /tools/scan_all - Scan and Rank",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:32.801665"
+    },
+    {
+      "category": "backend",
+      "name": "POST /tools/analyze - Deep Analysis",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:34.029820"
+    },
+    {
+      "category": "backend",
+      "name": "POST /tools/feedback - Submit Feedback",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:34.051273"
+    },
+    {
+      "category": "backend",
+      "name": "POST /tools/fetch_data - Fetch Historical Data",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:38.253298"
+    },
+    {
+      "category": "backend",
+      "name": "POST /auth/login - User Authentication",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:38.260268"
+    },
+    {
+      "category": "backend",
+      "name": "Validate /tools/predict Response Structure",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:39.282728"
+    },
+    {
+      "category": "backend",
+      "name": "Predict Response Structure",
+      "status": "PASSED",
+      "details": "Response contains required keys: metadata, predictions",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:39.282842"
+    },
+    {
+      "category": "backend",
+      "name": "Validate /tools/health Response Structure",
+      "status": "PASSED",
+      "details": "Status: 200, Response received",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:40.287026"
+    },
+    {
+      "category": "backend",
+      "name": "Health Response Structure",
+      "status": "PASSED",
+      "details": "Health endpoint returns valid JSON object",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:40.287124"
+    }
+  ],
+  "frontend_tests": [
+    {
+      "category": "frontend",
+      "name": "Frontend Server Accessibility",
+      "status": "PASSED",
+      "details": "Frontend accessible at http://localhost:5173",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:40.301638"
+    }
+  ],
+  "integration_tests": [
+    {
+      "category": "integration",
+      "name": "Frontend-Backend Connectivity",
+      "status": "PASSED",
+      "details": "Frontend can reach backend API",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:41.308750"
+    },
+    {
+      "category": "integration",
+      "name": "CORS Configuration",
+      "status": "PASSED",
+      "details": "CORS preflight request handled",
+      "error": "",
+      "timestamp": "2025-12-29T13:07:41.312568"
+    }
+  ],
+  "detailed_results": {
+    "backend": [
+      {
+        "category": "backend",
+        "name": "Backend Health Check",
+        "status": "PASSED",
+        "details": "Server responding at http://127.0.0.1:8000",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:26.933987"
+      },
+      {
+        "category": "backend",
+        "name": "GET / - API Information",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:26.960754"
+      },
+      {
+        "category": "backend",
+        "name": "GET /auth/status - Rate Limit Status",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:26.977776"
+      },
+      {
+        "category": "backend",
+        "name": "GET /tools/health - System Health",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:27.995549"
+      },
+      {
+        "category": "backend",
+        "name": "POST /tools/predict - Generate Predictions",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:30.196399"
+      },
+      {
+        "category": "backend",
+        "name": "POST /tools/scan_all - Scan and Rank",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:32.801665"
+      },
+      {
+        "category": "backend",
+        "name": "POST /tools/analyze - Deep Analysis",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:34.029820"
+      },
+      {
+        "category": "backend",
+        "name": "POST /tools/feedback - Submit Feedback",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:34.051273"
+      },
+      {
+        "category": "backend",
+        "name": "POST /tools/fetch_data - Fetch Historical Data",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:38.253298"
+      },
+      {
+        "category": "backend",
+        "name": "POST /auth/login - User Authentication",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:38.260268"
+      },
+      {
+        "category": "backend",
+        "name": "Validate /tools/predict Response Structure",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:39.282728"
+      },
+      {
+        "category": "backend",
+        "name": "Predict Response Structure",
+        "status": "PASSED",
+        "details": "Response contains required keys: metadata, predictions",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:39.282842"
+      },
+      {
+        "category": "backend",
+        "name": "Validate /tools/health Response Structure",
+        "status": "PASSED",
+        "details": "Status: 200, Response received",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:40.287026"
+      },
+      {
+        "category": "backend",
+        "name": "Health Response Structure",
+        "status": "PASSED",
+        "details": "Health endpoint returns valid JSON object",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:40.287124"
+      }
+    ],
+    "frontend": [
+      {
+        "category": "frontend",
+        "name": "Frontend Server Accessibility",
+        "status": "PASSED",
+        "details": "Frontend accessible at http://localhost:5173",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:40.301638"
+      }
+    ],
+    "integration": [
+      {
+        "category": "integration",
+        "name": "Frontend-Backend Connectivity",
+        "status": "PASSED",
+        "details": "Frontend can reach backend API",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:41.308750"
+      },
+      {
+        "category": "integration",
+        "name": "CORS Configuration",
+        "status": "PASSED",
+        "details": "CORS preflight request handled",
+        "error": "",
+        "timestamp": "2025-12-29T13:07:41.312568"
+      }
+    ]
+  }
+}

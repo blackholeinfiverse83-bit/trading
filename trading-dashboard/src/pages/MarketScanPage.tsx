@@ -257,8 +257,16 @@ const MarketScanContent = () => {
         />
       )}
       
-      {/* Stop-Loss Calculator */}
-      <StopLoss />
+      {/* Stop-Loss Calculator - Only shown when chart is active */}
+      {chartSymbol && (
+        <StopLoss 
+          chartSymbol={chartSymbol}
+          chartPrice={predictions.find(p => p.symbol === chartSymbol)?.current_price || predictions.find(p => p.symbol === chartSymbol)?.predicted_price || null}
+          onClose={() => {
+            // Stop-loss panel closed - keep chart open
+          }}
+        />
+      )}
         
       {/* Detailed Predictions Section (shown for all asset types when predictions exist) */}
         {predictions.length > 0 && (
