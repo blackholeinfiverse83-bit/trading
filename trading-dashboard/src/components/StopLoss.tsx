@@ -65,27 +65,27 @@ const StopLoss = ({ chartSymbol, chartPrice, onStopLossCalculated, onClose }: St
     }
   }, [chartSymbol]); // Only depend on chartSymbol, not symbol
 
-  // Sync entry price when chart price changes (live updates)
-  useEffect(() => {
-    if (chartPrice && chartPrice > 0 && chartSymbol) {
-      const isSymbolFromChart = !!chartSymbol && chartSymbol.toUpperCase() === symbol.toUpperCase();
-      // Auto-update entry price if it's from chart and user hasn't manually entered a value
-      // Only update if entry price is empty or zero (user hasn't set it manually)
-      if (isSymbolFromChart) {
-        const currentEntry = parseFloat(entryPrice);
-        if (!entryPrice || currentEntry === 0 || Math.abs(currentEntry - chartPrice) < 0.01) {
-          setEntryPrice(chartPrice.toFixed(2));
-        }
-      }
-      // Note: We don't auto-recalculate stop-loss - user must click Calculate
-    }
-  }, [chartPrice, chartSymbol, symbol, entryPrice]);
-
   // Visibility rule: Hide panel if no chart symbol and no manual symbol
   const isVisible = chartSymbol || symbol;
   if (!isVisible) {
     return null;
   }
+
+  // Check if symbol is bound from chart (read-only)
+  const isSymbolFromChart = !!chartSymbol && chartSymbol.toUpperCase() === symbol.toUpperCase();
+
+  // Sync entry price when chart price changes (live updates)
+  useEffect(() => {
+    if (chartPrice && chartPrice > 0 && chartSymbol && isSymbolFromChart) {
+      // Auto-update entry price if it's from chart and user hasn't manually entered a value
+      // Only update if entry price is empty or zero (user hasn't set it manually)
+      const currentEntry = parseFloat(entryPrice);
+      if (!entryPrice || currentEntry === 0 || Math.abs(currentEntry - chartPrice) < 0.01) {
+        setEntryPrice(chartPrice.toFixed(2));
+      }
+      // Note: We don't auto-recalculate stop-loss - user must click Calculate
+    }
+  }, [chartPrice, chartSymbol, isSymbolFromChart, entryPrice]);
 
   /**
    * Calculate stop-loss - ONLY triggered by explicit user action
