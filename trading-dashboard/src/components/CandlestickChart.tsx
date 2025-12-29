@@ -395,8 +395,8 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: isFullscreen ? window.innerHeight - 200 : 500,
+      width: chartContainerRef.current.clientWidth,
+      height: isFullscreen ? window.innerHeight - 120 : 500,
         });
       }
     };
@@ -710,7 +710,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
             </div>
           )}
 
-          <div ref={chartContainerRef} className="w-full" style={{ height: isFullscreen ? window.innerHeight - 200 : '500px' }} />
+          <div ref={chartContainerRef} className="w-full" style={{ height: isFullscreen ? window.innerHeight - 120 : '500px' }} />
         </div>
       </div>
 
