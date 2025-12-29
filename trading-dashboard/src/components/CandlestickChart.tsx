@@ -317,7 +317,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
         secondsVisible: false,
       },
       width: chartContainerRef.current.clientWidth,
-      height: isFullscreen ? window.innerHeight - 200 : 500,
+      height: isFullscreen ? window.innerHeight - 120 : 500,
     });
 
     chartRef.current = chart;
@@ -508,7 +508,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
   }, [symbol, fetchLivePrice]);
 
   return (
-    <div className={`bg-slate-900 rounded-lg border border-slate-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+    <div className={`bg-slate-900 rounded-lg border border-slate-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : ''}`}>
       {/* Header - Groww Terminal Style */}
       <div className="bg-slate-950 border-b border-slate-800 p-3">
         <div className="flex items-center justify-between mb-2">
