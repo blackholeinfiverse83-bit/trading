@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, CrosshairMode } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createChart, ColorType, CrosshairMode, IChartApi, ISeriesApi, CandlestickData, Time, LineData } from 'lightweight-charts';
 import { stockAPI } from '../services/api';
 import { 
   BarChart3, 
@@ -10,22 +9,35 @@ import {
   ZoomOut, 
   Type,
   X,
-  Shield
+  Shield,
+  Move,
+  Minus,
+  Maximize2,
+  Minimize2,
+  Crosshair,
+  Lock,
+  Unlock,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import StopLossPanel, { type StopLossState } from './StopLossPanel';
-import StopLossLine from './StopLossLine';
 
 interface CandlestickChartProps {
   symbol: string;
   exchange?: string;
   onClose?: () => void;
+  onPriceUpdate?: (price: number) => void;
 }
 
-const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChartProps) => {
+const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: CandlestickChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const superTrendSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const macdSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const macdSignalSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const macdHistogramSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   
   const [timeframe, setTimeframe] = useState<string>('5m');
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
@@ -34,13 +46,13 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
   const [error, setError] = useState<string | null>(null);
   const [showIndicators, setShowIndicators] = useState(false);
   const [showOptionsChain, setShowOptionsChain] = useState(false);
-  const [showStopLossPanel, setShowStopLossPanel] = useState(false);
-  const [stopLossState, setStopLossState] = useState<StopLossState | null>(null);
-  const contextMenuRef = useRef<{ x: number; y: number; visible: boolean }>({
-    x: 0,
-    y: 0,
-    visible: false,
-  });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [crosshairPrice, setCrosshairPrice] = useState<number | null>(null);
+  const [crosshairTime, setCrosshairTime] = useState<string | null>(null);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [drawingsLocked, setDrawingsLocked] = useState(false);
+  const [drawingsVisible, setDrawingsVisible] = useState(true);
+  const liveUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timeframe options
   const timeframes = [
@@ -54,29 +66,229 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
     { value: '1mo', label: '1M' },
   ];
 
+  // Drawing tools (Groww Terminal style)
+  const drawingTools = [
+    { id: 'crosshair', icon: Crosshair, label: 'Crosshair' },
+    { id: 'trend', icon: TrendingUp, label: 'Trend Line' },
+    { id: 'fibonacci', icon: BarChart3, label: 'Fibonacci' },
+    { id: 'text', icon: Type, label: 'Text' },
+    { id: 'measure', icon: Move, label: 'Measure' },
+  ];
+
+  // Calculate SuperTrend indicator
+  const calculateSuperTrend = (data: CandlestickData[], period: number = 10, multiplier: number = 3): LineData[] => {
+    if (data.length < period) return [];
+    
+    const result: LineData[] = [];
+    let prevATR = 0;
+    let prevSuperTrend = 0;
+    let prevUpperBand = 0;
+    let prevLowerBand = 0;
+    let trend = 1; // 1 for uptrend, -1 for downtrend
+
+    for (let i = period; i < data.length; i++) {
+      const high = data[i].high;
+      const low = data[i].low;
+      const close = data[i].close;
+      
+      // Calculate ATR (Average True Range)
+      let trueRange = high - low;
+      if (i > 0) {
+        trueRange = Math.max(
+          high - low,
+          Math.abs(high - data[i - 1].close),
+          Math.abs(low - data[i - 1].close)
+        );
+      }
+      
+      const ATR = prevATR === 0 
+        ? trueRange 
+        : (prevATR * (period - 1) + trueRange) / period;
+      
+      // Calculate basic bands
+      const hl2 = (high + low) / 2;
+      const upperBand = hl2 + (multiplier * ATR);
+      const lowerBand = hl2 - (multiplier * ATR);
+      
+      // Adjust bands
+      const finalUpperBand = upperBand < prevUpperBand || data[i - 1].close > prevUpperBand 
+        ? upperBand 
+        : prevUpperBand;
+      const finalLowerBand = lowerBand > prevLowerBand || data[i - 1].close < prevLowerBand 
+        ? lowerBand 
+        : prevLowerBand;
+      
+      // Determine SuperTrend
+      let superTrend = 0;
+      if (close <= finalLowerBand) {
+        trend = -1;
+        superTrend = finalLowerBand;
+      } else if (close >= finalUpperBand) {
+        trend = 1;
+        superTrend = finalUpperBand;
+      } else {
+        superTrend = trend === 1 ? finalLowerBand : finalUpperBand;
+      }
+      
+      result.push({
+        time: data[i].time,
+        value: superTrend,
+      });
+      
+      prevATR = ATR;
+      prevSuperTrend = superTrend;
+      prevUpperBand = finalUpperBand;
+      prevLowerBand = finalLowerBand;
+    }
+    
+    return result;
+  };
+
+  // Calculate MACD indicator
+  const calculateMACD = (data: CandlestickData[], fastPeriod: number = 12, slowPeriod: number = 26, signalPeriod: number = 9) => {
+    if (data.length < slowPeriod) return { macd: [], signal: [], histogram: [] };
+    
+    // Calculate EMAs
+    const calculateEMA = (period: number) => {
+      const multiplier = 2 / (period + 1);
+      const ema: number[] = [];
+      
+      for (let i = 0; i < data.length; i++) {
+        if (i === 0) {
+          ema.push(data[i].close);
+        } else {
+          ema.push((data[i].close - ema[i - 1]) * multiplier + ema[i - 1]);
+        }
+      }
+      return ema;
+    };
+    
+    const fastEMA = calculateEMA(fastPeriod);
+    const slowEMA = calculateEMA(slowPeriod);
+    
+    // Calculate MACD line
+    const macdLine: LineData[] = [];
+    for (let i = 0; i < data.length; i++) {
+      macdLine.push({
+        time: data[i].time,
+        value: fastEMA[i] - slowEMA[i],
+      });
+    }
+    
+    // Calculate Signal line (EMA of MACD)
+    const signalLine: LineData[] = [];
+    const macdValues = macdLine.map(m => m.value);
+    const signalMultiplier = 2 / (signalPeriod + 1);
+    
+    for (let i = 0; i < macdValues.length; i++) {
+      if (i === 0) {
+        signalLine.push({ time: data[i].time, value: macdValues[i] });
+      } else {
+        const prevSignal = signalLine[i - 1].value;
+        const newSignal = (macdValues[i] - prevSignal) * signalMultiplier + prevSignal;
+        signalLine.push({ time: data[i].time, value: newSignal });
+      }
+    }
+    
+    // Calculate Histogram
+    const histogram = macdLine.map((macd, i) => ({
+      time: macd.time,
+      value: macd.value - signalLine[i].value,
+      color: (macd.value - signalLine[i].value) >= 0 ? '#10b981' : '#ef4444',
+    }));
+    
+    return { macd: macdLine, signal: signalLine, histogram };
+  };
+
+  // Fetch live price data
+  const fetchLivePrice = useCallback(async () => {
+    if (!symbol) return;
+    
+    try {
+      const response = await stockAPI.predict([symbol], 'intraday');
+      
+      if (response.predictions && response.predictions.length > 0) {
+        const prediction = response.predictions.find((p: any) => !p.error);
+        if (prediction) {
+          const currentPrice = prediction.predicted_price || prediction.current_price || 0;
+          
+          // Update OHLC (using current price as close)
+          if (currentPrice > 0) {
+            setOhlc(prev => ({
+              ...prev,
+              close: currentPrice,
+              high: Math.max(prev.high, currentPrice),
+              low: prev.low === 0 ? currentPrice : Math.min(prev.low, currentPrice),
+              change: currentPrice - prev.close,
+              changePercent: prev.close > 0 ? ((currentPrice - prev.close) / prev.close) * 100 : 0,
+            }));
+            
+            // Notify parent of price update
+            if (onPriceUpdate) {
+              onPriceUpdate(currentPrice);
+            }
+            
+            // Update chart with latest candle if we have a series
+            if (candlestickSeriesRef.current && chartRef.current) {
+              const now = Math.floor(Date.now() / 1000) as Time;
+              const allData = candlestickSeriesRef.current.data();
+              const lastCandle = allData.length > 0 ? allData[allData.length - 1] : null;
+              
+              if (lastCandle) {
+                // Update last candle with new close price
+                candlestickSeriesRef.current.update({
+                  time: lastCandle.time,
+                  open: lastCandle.open,
+                  high: Math.max(lastCandle.high, currentPrice),
+                  low: Math.min(lastCandle.low, currentPrice),
+                  close: currentPrice,
+                });
+              } else if (allData.length === 0) {
+                // Create new candle if no data exists
+                candlestickSeriesRef.current.update({
+                  time: now,
+                  open: currentPrice,
+                  high: currentPrice,
+                  low: currentPrice,
+                  close: currentPrice,
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch live price:', err);
+      // Don't show error for live updates - silent fail
+    }
+  }, [symbol, onPriceUpdate]);
+
   // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Clean up existing chart if it exists
+    // Clean up existing chart
     if (chartRef.current) {
       chartRef.current.remove();
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      superTrendSeriesRef.current = null;
+      macdSeriesRef.current = null;
+      macdSignalSeriesRef.current = null;
+      macdHistogramSeriesRef.current = null;
     }
 
-    // Clear the container
     chartContainerRef.current.innerHTML = '';
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#1e293b' },
-        textColor: '#9ca3af',
+        background: { type: ColorType.Solid, color: '#0f172a' },
+        textColor: '#94a3b8',
       },
       grid: {
-        vertLines: { color: '#334155', style: 1 },
-        horzLines: { color: '#334155', style: 1 },
+        vertLines: { color: '#1e293b', style: 1 },
+        horzLines: { color: '#1e293b', style: 1 },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
@@ -92,29 +304,27 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
         },
       },
       rightPriceScale: {
-        borderColor: '#475569',
+        borderColor: '#334155',
         scaleMargins: {
           top: 0.1,
           bottom: 0.1,
         },
       },
       timeScale: {
-        borderColor: '#475569',
+        borderColor: '#334155',
         timeVisible: true,
         secondsVisible: false,
       },
       width: chartContainerRef.current.clientWidth,
-      height: 500,
+      height: isFullscreen ? window.innerHeight - 200 : 500,
     });
 
     chartRef.current = chart;
 
-    // Create candlestick series - use v4.x API (addCandlestickSeries)
-    let candlestickSeries: ISeriesApi<'Candlestick'>;
+    // Create candlestick series
     try {
-      // Use v4.x API method
       if (typeof (chart as any).addCandlestickSeries === 'function') {
-        candlestickSeries = (chart as any).addCandlestickSeries({
+        const candlestickSeries = (chart as any).addCandlestickSeries({
           upColor: '#10b981',
           downColor: '#ef4444',
           borderVisible: false,
@@ -126,102 +336,80 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
             minMove: 0.01,
           },
         }) as ISeriesApi<'Candlestick'>;
-      } else {
-        throw new Error('addCandlestickSeries method not available on chart');
+        candlestickSeriesRef.current = candlestickSeries;
       }
     } catch (error) {
       console.error('Failed to create candlestick series:', error);
-      setError('Failed to initialize chart');
-      return;
     }
-    candlestickSeriesRef.current = candlestickSeries;
 
-    // Create volume series - use v4.x API (addHistogramSeries)
-    let volumeSeries: ISeriesApi<'Histogram'>;
+    // Create volume series
     try {
-      // Use v4.x API method
       if (typeof (chart as any).addHistogramSeries === 'function') {
-        volumeSeries = (chart as any).addHistogramSeries({
+        const volumeSeries = (chart as any).addHistogramSeries({
           color: '#3b82f6',
-          priceFormat: {
-            type: 'volume',
-          },
+          priceFormat: { type: 'volume' },
           priceScaleId: 'volume',
-          scaleMargins: {
-            top: 0.8,
-            bottom: 0,
-          },
+          scaleMargins: { top: 0.8, bottom: 0 },
         }) as ISeriesApi<'Histogram'>;
-      } else {
-        throw new Error('addHistogramSeries method not available on chart');
+        volumeSeriesRef.current = volumeSeries;
       }
     } catch (error) {
       console.error('Failed to create volume series:', error);
-      setError('Failed to initialize volume series');
-      return;
     }
-    volumeSeriesRef.current = volumeSeries;
 
-    // Set up volume price scale
+    // Create SuperTrend line
     try {
-      chart.priceScale('volume').applyOptions({
-        scaleMargins: {
-          top: 0.8,
-          bottom: 0,
-        },
-      });
+      if (typeof (chart as any).addLineSeries === 'function') {
+        const superTrendSeries = (chart as any).addLineSeries({
+          color: '#f59e0b',
+          lineWidth: 2,
+          priceFormat: { type: 'price', precision: 2 },
+        }) as ISeriesApi<'Line'>;
+        superTrendSeriesRef.current = superTrendSeries;
+      }
     } catch (error) {
-      console.error('Failed to configure volume price scale:', error);
+      console.error('Failed to create SuperTrend series:', error);
     }
+
+    // Handle crosshair move for price/time display
+    chart.subscribeCrosshairMove((param) => {
+      if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) {
+        setCrosshairPrice(null);
+        setCrosshairTime(null);
+        return;
+      }
+
+      if (candlestickSeriesRef.current && param.seriesData) {
+        const data = param.seriesData.get(candlestickSeriesRef.current);
+        if (data && 'close' in data) {
+          setCrosshairPrice(data.close);
+          // Format time
+          const date = new Date(Number(param.time) * 1000);
+          setCrosshairTime(date.toLocaleString());
+        }
+      }
+    });
 
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
+          height: isFullscreen ? window.innerHeight - 200 : 500,
         });
       }
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Handle right-click context menu
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      contextMenuRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        visible: true,
-      };
-      // Show context menu (we'll add this UI element)
-      // For now, directly show stop-loss panel
-      setShowStopLossPanel(true);
-    };
-
-    const chartElement = chartContainerRef.current;
-    if (chartElement) {
-      chartElement.addEventListener('contextmenu', handleContextMenu);
-    }
-
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (chartElement) {
-        chartElement.removeEventListener('contextmenu', handleContextMenu);
-      }
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
-        candlestickSeriesRef.current = null;
-        volumeSeriesRef.current = null;
       }
     };
-  }, []);
-
-  // Reset stop-loss when symbol changes
-  useEffect(() => {
-    setStopLossState(null);
-    setShowStopLossPanel(false);
-  }, [symbol]);
+  }, [isFullscreen]);
 
   // Fetch and update chart data
   useEffect(() => {
@@ -232,7 +420,6 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
       setError(null);
       
       try {
-        // Fetch historical data from backend
         const response = await stockAPI.fetchData([symbol], '1mo', false, false);
         
         if (response.data && response.data[symbol] && response.data[symbol].history) {
@@ -247,7 +434,6 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
             close: item.close || item.Close || 0,
           }));
 
-          // Calculate volume data (if available)
           const volumeData = history.map((item: any, index: number) => ({
             time: (index + 1) as Time,
             value: item.volume || 0,
@@ -261,6 +447,16 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
           if (volumeSeriesRef.current) {
             volumeSeriesRef.current.setData(volumeData);
           }
+
+          // Calculate and add SuperTrend
+          if (superTrendSeriesRef.current) {
+            const superTrendData = calculateSuperTrend(candlestickData);
+            superTrendSeriesRef.current.setData(superTrendData);
+          }
+
+          // Calculate and add MACD (for separate chart pane - we'll add this later)
+          const macdData = calculateMACD(candlestickData);
+          // Store for MACD chart pane
 
           // Calculate OHLC from latest data
           if (candlestickData.length > 0) {
@@ -277,14 +473,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
             });
           }
         } else {
-          // No data available from backend
-          setError('No historical data available for this symbol. Please ensure the backend is running and the symbol is valid.');
-          if (candlestickSeriesRef.current) {
-            candlestickSeriesRef.current.setData([]);
-          }
-          if (volumeSeriesRef.current) {
-            volumeSeriesRef.current.setData([]);
-          }
+          setError('No historical data available for this symbol.');
         }
       } catch (err: any) {
         console.error('Failed to fetch chart data:', err);
@@ -297,74 +486,93 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
     fetchChartData();
   }, [symbol, timeframe]);
 
+  // Start live updates (every 1 second)
+  useEffect(() => {
+    if (!symbol) return;
+
+    // Initial fetch
+    fetchLivePrice();
+
+    // Set up interval for live updates
+    liveUpdateIntervalRef.current = setInterval(() => {
+      fetchLivePrice();
+    }, 1000); // Update every 1 second
+
+    return () => {
+      if (liveUpdateIntervalRef.current) {
+        clearInterval(liveUpdateIntervalRef.current);
+        liveUpdateIntervalRef.current = null;
+      }
+    };
+  }, [symbol, fetchLivePrice]);
+
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-      {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-700 p-3">
+    <div className={`bg-slate-900 rounded-lg border border-slate-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+      {/* Header - Groww Terminal Style */}
+      <div className="bg-slate-950 border-b border-slate-800 p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <div>
               <h3 className="text-lg font-bold text-white">{symbol}</h3>
               <p className="text-xs text-gray-400">{exchange} • {timeframe}</p>
             </div>
-            <button
-              onClick={() => setShowOptionsChain(!showOptionsChain)}
-              className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded text-sm font-medium transition-colors"
-            >
-              Chain
-            </button>
-            <button
-              onClick={() => setShowStopLossPanel(!showStopLossPanel)}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
-                stopLossState?.isActive
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/50'
-                  : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>Stop-Loss</span>
-            </button>
+            {/* OHLC Display - Groww Terminal Style */}
+            <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-800 rounded border border-slate-700">
+              <div>
+                <span className="text-xs text-gray-400">O</span>
+                <p className="text-sm font-semibold text-white">{ohlc.open.toFixed(2)}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">H</span>
+                <p className="text-sm font-semibold text-white">{ohlc.high.toFixed(2)}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">L</span>
+                <p className="text-sm font-semibold text-white">{ohlc.low.toFixed(2)}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">C</span>
+                <p className="text-sm font-semibold text-white">{ohlc.close.toFixed(2)}</p>
+              </div>
+              <div className="border-l border-slate-700 pl-4">
+                <span className="text-xs text-gray-400">Change</span>
+                <p className={`text-sm font-semibold ${ohlc.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {ohlc.change >= 0 ? '+' : ''}{ohlc.change.toFixed(2)} ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+                </p>
+              </div>
+            </div>
+            {/* Crosshair Price/Time Display */}
+            {crosshairPrice && crosshairTime && (
+              <div className="px-3 py-1.5 bg-slate-800 rounded border border-slate-700">
+                <p className="text-xs text-gray-400">Price</p>
+                <p className="text-sm font-semibold text-white">${crosshairPrice.toFixed(2)}</p>
+                <p className="text-xs text-gray-500">{crosshairTime}</p>
+              </div>
+            )}
           </div>
-          {onClose && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={onClose}
-              className="p-1 hover:bg-slate-700 rounded transition-colors"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 hover:bg-slate-800 rounded transition-colors"
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
-              <X className="w-5 h-5 text-gray-400" />
+              {isFullscreen ? <Minimize2 className="w-4 h-4 text-gray-400" /> : <Maximize2 className="w-4 h-4 text-gray-400" />}
             </button>
-          )}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 hover:bg-slate-800 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* OHLC Display */}
-        <div className="grid grid-cols-5 gap-2 text-xs">
-          <div>
-            <p className="text-gray-400">O</p>
-            <p className="text-white font-semibold">{ohlc.open.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">H</p>
-            <p className="text-white font-semibold">{ohlc.high.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">L</p>
-            <p className="text-white font-semibold">{ohlc.low.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">C</p>
-            <p className="text-white font-semibold">{ohlc.close.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Change</p>
-            <p className={`font-semibold ${ohlc.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {ohlc.change >= 0 ? '+' : ''}{ohlc.change.toFixed(2)} ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
-            </p>
-          </div>
-        </div>
-
-        {/* Toolbar */}
+        {/* Toolbar - Groww Terminal Style */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">
           {/* Timeframe Selector */}
-          <div className="flex items-center gap-1 bg-slate-700 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
             {timeframes.map((tf) => (
               <button
                 key={tf.value}
@@ -372,7 +580,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
                 className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                   timeframe === tf.value
                     ? 'bg-blue-500 text-white'
-                    : 'text-gray-300 hover:text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-slate-700'
                 }`}
               >
                 {tf.label}
@@ -381,14 +589,15 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
           </div>
 
           {/* Chart Type Selector */}
-          <div className="flex items-center gap-1 bg-slate-700 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
             <button
               onClick={() => setChartType('candlestick')}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 chartType === 'candlestick'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-300 hover:text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-slate-700'
               }`}
+              title="Candlestick"
             >
               <BarChart3 className="w-4 h-4" />
             </button>
@@ -397,135 +606,126 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 chartType === 'line'
                   ? 'bg-blue-500 text-white'
-                  : 'text-gray-300 hover:text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-slate-700'
               }`}
+              title="Line"
             >
               <TrendingUp className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setChartType('area')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                chartType === 'area'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <Type className="w-4 h-4" />
             </button>
           </div>
 
           {/* Indicators Button */}
           <button
             onClick={() => setShowIndicators(!showIndicators)}
-            className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded text-xs font-medium transition-colors flex items-center gap-1"
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1 border ${
+              showIndicators
+                ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                : 'bg-slate-800 border-slate-700 text-gray-300 hover:text-white hover:bg-slate-700'
+            }`}
           >
             <Settings className="w-4 h-4" />
             <span>Indicators</span>
           </button>
 
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-1 bg-slate-700 rounded-lg p-1">
-            <button className="p-1 text-gray-300 hover:text-white transition-colors">
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button className="p-1 text-gray-300 hover:text-white transition-colors">
-              <ZoomIn className="w-4 h-4" />
-            </button>
+          {/* Live Indicator */}
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/20 border border-green-500/50 rounded">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-xs text-green-400 font-medium">LIVE</span>
           </div>
         </div>
       </div>
 
-      {/* Chart Container */}
-      <div className="relative">
-        {loading && (
-          <div className="absolute inset-0 bg-slate-800/80 flex items-center justify-center z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-2"></div>
-              <p className="text-gray-400 text-sm">Loading chart data...</p>
-            </div>
-          </div>
-        )}
+      {/* Main Content Area */}
+      <div className="flex">
+        {/* Drawing Tools Sidebar - Groww Terminal Style */}
+        <div className="w-12 bg-slate-950 border-r border-slate-800 flex flex-col items-center py-2 gap-1">
+          {drawingTools.map((tool) => (
+            <button
+              key={tool.id}
+              onClick={() => setSelectedTool(selectedTool === tool.id ? null : tool.id)}
+              className={`p-2 rounded transition-colors ${
+                selectedTool === tool.id
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                  : 'text-gray-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title={tool.label}
+            >
+              <tool.icon className="w-4 h-4" />
+            </button>
+          ))}
+          <div className="border-t border-slate-800 my-1 w-full"></div>
+          <button
+            onClick={() => setDrawingsLocked(!drawingsLocked)}
+            className={`p-2 rounded transition-colors ${
+              drawingsLocked
+                ? 'bg-yellow-500/20 text-yellow-400'
+                : 'text-gray-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title={drawingsLocked ? "Unlock Drawings" : "Lock Drawings"}
+          >
+            {drawingsLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => setDrawingsVisible(!drawingsVisible)}
+            className={`p-2 rounded transition-colors ${
+              !drawingsVisible
+                ? 'bg-gray-500/20 text-gray-400'
+                : 'text-gray-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title={drawingsVisible ? "Hide Drawings" : "Show Drawings"}
+          >
+            {drawingsVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+          <button
+            className="p-2 rounded text-gray-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+            title="Delete All Drawings"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
 
-        {error && (
-          <div className="absolute inset-0 bg-slate-800/80 flex items-center justify-center z-10">
-            <div className="text-center">
-              <p className="text-red-400 mb-2">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-              >
-                Retry
-              </button>
+        {/* Chart Container */}
+        <div className="flex-1 relative">
+          {loading && (
+            <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-gray-400 text-sm">Loading chart data...</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div ref={chartContainerRef} className="w-full" style={{ height: '500px' }} />
-        
-        {/* Stop-Loss Line Overlay */}
-        {stopLossState?.isActive && (
-          <StopLossLine
-            candlestickSeries={candlestickSeriesRef.current}
-            price={stopLossState.price}
-            side={stopLossState.side}
-            isActive={stopLossState.isActive}
-            onPriceChange={(newPrice) => {
-              setStopLossState({
-                ...stopLossState,
-                price: newPrice,
-              });
-            }}
-          />
-        )}
+          {error && (
+            <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
+              <div className="text-center">
+                <p className="text-red-400 mb-2">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div ref={chartContainerRef} className="w-full" style={{ height: isFullscreen ? window.innerHeight - 200 : '500px' }} />
+        </div>
       </div>
-
-      {/* Stop-Loss Panel */}
-      <StopLossPanel
-        symbol={symbol}
-        currentPrice={ohlc.close}
-        timeframe={timeframe}
-        isVisible={showStopLossPanel}
-        stopLossState={stopLossState}
-        onClose={() => setShowStopLossPanel(false)}
-        onStopLossChange={(state) => {
-          setStopLossState(state);
-          // TODO: Backend API call when backend is ready
-          // POST /api/risk/stop-loss
-          // { symbol, stopLossPrice: state.price, side: state.side, timeframe, source: "chart" | "manual" }
-        }}
-      />
 
       {/* Indicators Panel */}
       {showIndicators && (
-        <div className="bg-slate-900 border-t border-slate-700 p-3">
+        <div className="bg-slate-950 border-t border-slate-800 p-3">
           <h4 className="text-sm font-semibold text-white mb-2">Technical Indicators</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {['SMA', 'EMA', 'RSI', 'MACD', 'Bollinger Bands', 'Volume SMA'].map((indicator) => (
+            {['SuperTrend', 'MACD', 'RSI', 'SMA', 'EMA', 'Bollinger Bands', 'Volume SMA', 'Stochastic'].map((indicator) => (
               <button
                 key={indicator}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded text-xs font-medium transition-colors"
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded text-xs font-medium transition-colors border border-slate-700"
               >
                 {indicator}
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Options Chain Panel (Simplified) */}
-      {showOptionsChain && (
-        <div className="bg-slate-900 border-t border-slate-700 p-3 max-h-64 overflow-y-auto">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-white">Options Chain</h4>
-            <button
-              onClick={() => setShowOptionsChain(false)}
-              className="text-gray-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="text-xs text-gray-400 text-center py-4">
-            Options chain data will be displayed here. Integration with options API needed.
           </div>
         </div>
       )}
@@ -534,4 +734,3 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose }: CandlestickChar
 };
 
 export default CandlestickChart;
-

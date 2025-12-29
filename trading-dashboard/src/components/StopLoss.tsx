@@ -65,21 +65,29 @@ const StopLoss = ({ chartSymbol, chartPrice, onStopLossCalculated, onClose }: St
     }
   }, [chartSymbol]); // Only depend on chartSymbol, not symbol
 
-  // Sync entry price when chart price changes (only if no manual entry)
+  // Check if symbol is bound from chart (read-only) - moved before useEffect
+  const isSymbolFromChart = !!chartSymbol && chartSymbol.toUpperCase() === symbol.toUpperCase();
+
+  // Sync entry price when chart price changes (live updates)
   useEffect(() => {
-    if (chartPrice && chartPrice > 0 && chartSymbol && !entryPrice) {
-      setEntryPrice(chartPrice.toFixed(2));
+    if (chartPrice && chartPrice > 0 && chartSymbol) {
+      // Auto-update entry price if it's from chart and user hasn't manually entered
+      if (isSymbolFromChart && (!entryPrice || parseFloat(entryPrice) === 0)) {
+        setEntryPrice(chartPrice.toFixed(2));
+      }
+      // If we have a calculated result, update it with new price (but don't recalculate)
+      if (result && isSymbolFromChart) {
+        // Just update the display price, don't recalculate stop-loss
+        // User must click Calculate again if they want to recalculate
+      }
     }
-  }, [chartPrice, chartSymbol]);
+  }, [chartPrice, chartSymbol, isSymbolFromChart, entryPrice, result]);
 
   // Visibility rule: Hide panel if no chart symbol and no manual symbol
   const isVisible = chartSymbol || symbol;
   if (!isVisible) {
     return null;
   }
-
-  // Check if symbol is bound from chart (read-only)
-  const isSymbolFromChart = !!chartSymbol && chartSymbol.toUpperCase() === symbol.toUpperCase();
 
   /**
    * Calculate stop-loss - ONLY triggered by explicit user action

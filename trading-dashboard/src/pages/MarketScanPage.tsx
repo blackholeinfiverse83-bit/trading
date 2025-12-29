@@ -254,6 +254,14 @@ const MarketScanContent = () => {
             setShowChart(false);
             setChartSymbol(null);
           }}
+          onPriceUpdate={(price) => {
+            // Update predictions with live price for stop-loss panel
+            setPredictions(prev => prev.map(p => 
+              p.symbol === chartSymbol 
+                ? { ...p, current_price: price, predicted_price: price }
+                : p
+            ));
+          }}
         />
       )}
       
