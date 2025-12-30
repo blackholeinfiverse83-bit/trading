@@ -1,38 +1,122 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { config } from '../config';
+
+// Connection state management
+let isBackendOnline = true;
+let connectionCheckInProgress = false;
 
 const api = axios.create({
   baseURL: config.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000, // 60 seconds timeout for long-running requests
+  timeout: 120000, // 120 seconds (2 minutes) - predictions can take 60-90 seconds on first run
+  withCredentials: false, // CORS is handled by backend
 });
 
 // Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Handle response errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      // Server responded with error status
-      const message = error.response.data?.detail || error.response.data?.error || 'An error occurred';
-      return Promise.reject(new Error(message));
-    } else if (error.request) {
-      // Request made but no response received
-      return Promise.reject(new Error('Unable to connect to server. Please check if the backend is running.'));
-    } else {
-      // Something else happened
-      return Promise.reject(error);
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    // Only add token if it's a valid JWT (not 'no-auth-required')
+    if (token && token !== 'no-auth-required' && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Enhanced error handling with retry logic
+api.interceptors.response.use(
+  (response) => {
+    // Mark backend as online on successful response
+    isBackendOnline = true;
+    return response;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
+
+    // Handle network errors (no response from server)
+    if (!error.response && error.request) {
+      isBackendOnline = false;
+      
+      // Retry logic for connection errors (only once)
+      if (!originalRequest._retry && originalRequest) {
+        originalRequest._retry = true;
+        
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+          return await api(originalRequest);
+        } catch (retryError) {
+          // Retry failed, return original error
+        }
+      }
+      
+      const baseURL = config.API_BASE_URL;
+      return Promise.reject(new Error(
+        `Unable to connect to backend server at ${baseURL}. ` +
+        `Please ensure the backend is running.`
+      ));
+    }
+
+    // Handle server errors (response received but with error status)
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data as any;
+      
+      // Extract error message
+      let message = 'An error occurred';
+      if (data?.detail) {
+        message = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      } else if (data?.error) {
+        message = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+      } else if (data?.message) {
+        message = data.message;
+      }
+      
+      // Handle specific error codes
+      if (status === 401) {
+        // Unauthorized - try to auto-login if credentials are available
+        const storedUsername = localStorage.getItem('username');
+        const storedToken = localStorage.getItem('token');
+        
+        // Only clear if token was invalid (not if it's missing)
+        if (storedToken && storedToken !== 'no-auth-required') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          message = 'Session expired. Please login again.';
+        } else {
+          // No token - redirect to login
+          message = 'Authentication required. Please login.';
+          // Trigger login redirect
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 100);
+          }
+        }
+      } else if (status === 403) {
+        message = 'Access forbidden. Please check your permissions.';
+      } else if (status === 404) {
+        message = 'Endpoint not found. Please check the API version.';
+      } else if (status === 429) {
+        message = 'Rate limit exceeded. Please wait a moment and try again.';
+      } else if (status === 503) {
+        message = 'Service temporarily unavailable. The prediction engine is initializing. Please try again in a moment.';
+      } else if (status >= 500) {
+        message = `Server error (${status}). Please try again later.`;
+      }
+      
+      return Promise.reject(new Error(message));
+    }
+
+    // Handle other errors
+    return Promise.reject(error);
   }
 );
 
@@ -158,6 +242,43 @@ export const stockAPI = {
   health: async () => {
     const response = await api.get('/tools/health');
     return response.data;
+  },
+  
+  checkConnection: async (retries: number = 2): Promise<{ connected: boolean; data?: any; error?: string }> => {
+    // Prevent multiple simultaneous connection checks
+    if (connectionCheckInProgress) {
+      return { connected: isBackendOnline, error: isBackendOnline ? undefined : 'Connection check in progress' };
+    }
+
+    connectionCheckInProgress = true;
+    
+    try {
+      // Use longer timeout for connection check - backend might be slow to respond
+      const response = await axios.get(`${config.API_BASE_URL}/`, {
+        timeout: 10000, // 10 seconds for connection check (increased from 5)
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      isBackendOnline = true;
+      connectionCheckInProgress = false;
+      return { connected: true, data: response.data };
+    } catch (error: any) {
+      // Retry logic
+      if (retries > 0 && (!error.response || error.code === 'ECONNABORTED' || error.message?.includes('timeout'))) {
+        connectionCheckInProgress = false;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        return stockAPI.checkConnection(retries - 1);
+      }
+      
+      isBackendOnline = false;
+      connectionCheckInProgress = false;
+      
+      const errorMessage = error.response 
+        ? `Backend responded with error: ${error.response.status}`
+        : error.message || 'Unable to connect to backend server';
+      
+      return { connected: false, error: errorMessage };
+    }
   },
   
   getRateLimitStatus: async () => {

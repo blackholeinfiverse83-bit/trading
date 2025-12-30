@@ -206,20 +206,23 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
     if (!symbol) return;
     
     try {
-      const response = await stockAPI.predict([symbol], 'intraday');
+      // Use fetchData for live updates - lighter and faster than predict
+      const response = await stockAPI.fetchData([symbol], '1d', false, false);
       
-      if (response.predictions && response.predictions.length > 0) {
-        const prediction = response.predictions.find((p: any) => !p.error);
-        if (prediction) {
-          const currentPrice = prediction.predicted_price || prediction.current_price || 0;
+      if (response.data && response.data[symbol] && response.data[symbol].history) {
+        const history = response.data[symbol].history;
+        if (history.length > 0) {
+          // Get the latest data point
+          const latest = history[history.length - 1];
+          const currentPrice = latest.close || latest.Close || 0;
           
-          // Update OHLC (using current price as close)
           if (currentPrice > 0) {
+            // Update OHLC (using current price as close)
             setOhlc(prev => ({
               ...prev,
               close: currentPrice,
-              high: Math.max(prev.high, currentPrice),
-              low: prev.low === 0 ? currentPrice : Math.min(prev.low, currentPrice),
+              high: Math.max(prev.high, currentPrice, latest.high || latest.High || currentPrice),
+              low: prev.low === 0 ? currentPrice : Math.min(prev.low, currentPrice, latest.low || latest.Low || currentPrice),
               change: currentPrice - prev.close,
               changePercent: prev.close > 0 ? ((currentPrice - prev.close) / prev.close) * 100 : 0,
             }));
@@ -240,17 +243,17 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
                 candlestickSeriesRef.current.update({
                   time: lastCandle.time,
                   open: lastCandle.open,
-                  high: Math.max(lastCandle.high, currentPrice),
-                  low: Math.min(lastCandle.low, currentPrice),
+                  high: Math.max(lastCandle.high, currentPrice, latest.high || latest.High || currentPrice),
+                  low: Math.min(lastCandle.low, currentPrice, latest.low || latest.Low || currentPrice),
                   close: currentPrice,
                 });
               } else if (allData.length === 0) {
                 // Create new candle if no data exists
                 candlestickSeriesRef.current.update({
                   time: now,
-                  open: currentPrice,
-                  high: currentPrice,
-                  low: currentPrice,
+                  open: latest.open || latest.Open || currentPrice,
+                  high: latest.high || latest.High || currentPrice,
+                  low: latest.low || latest.Low || currentPrice,
                   close: currentPrice,
                 });
               }
@@ -258,9 +261,12 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
           }
         }
       }
-    } catch (err) {
-      console.error('Failed to fetch live price:', err);
-      // Don't show error for live updates - silent fail
+    } catch (err: any) {
+      // Silently handle errors for live price updates - it's non-critical
+      // Only log if it's not a connection error
+      if (!err.message?.includes('Unable to connect')) {
+        console.error('Failed to fetch live price:', err);
+      }
     }
   }, [symbol, onPriceUpdate]);
 

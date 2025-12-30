@@ -14,6 +14,11 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     loadAnalytics();
+    // Refresh every 40 seconds
+    const interval = setInterval(() => {
+      loadAnalytics();
+    }, 40000);
+    return () => clearInterval(interval);
   }, [selectedPeriod]);
 
   const loadAnalytics = async () => {

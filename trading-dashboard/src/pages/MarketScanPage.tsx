@@ -6,7 +6,7 @@ import { useAssetType } from '../contexts/AssetTypeContext';
 import StocksView from '../components/StocksView';
 import CryptoView from '../components/CryptoView';
 import CommoditiesView from '../components/CommoditiesView';
-import { TrendingUp, TrendingDown, Minus, BarChart3, ThumbsUp, ThumbsDown, Sparkles, Loader2, X, ChevronDown, ChevronUp, Brain, Cpu, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, ThumbsUp, ThumbsDown, Sparkles, Loader2, X, ChevronDown, ChevronUp, Brain, Cpu, Zap, AlertCircle } from 'lucide-react';
 import StopLoss from '../components/StopLoss';
 import CandlestickChart from '../components/CandlestickChart';
 
@@ -19,6 +19,7 @@ const MarketScanContent = () => {
   // Removed selectedSymbols - not currently used in UI
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [horizon, setHorizon] = useState<'intraday' | 'short' | 'long'>('intraday');
   const [analyzeResults, setAnalyzeResults] = useState<any>(null);
@@ -27,6 +28,37 @@ const MarketScanContent = () => {
   const [expandedPredictions, setExpandedPredictions] = useState<Set<number>>(new Set());
   const [showChart, setShowChart] = useState(false);
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
+
+  // Check backend connection on mount and periodically
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const result = await stockAPI.checkConnection();
+        if (!result.connected) {
+          setError(result.error || 'Backend server is not reachable');
+        } else {
+          // Clear error if connection is successful
+          setError((prevError) => {
+            if (prevError && prevError.includes('Unable to connect')) {
+              return null;
+            }
+            return prevError;
+          });
+        }
+      } catch (err) {
+        console.error('Connection check failed:', err);
+        setError('Failed to check backend connection');
+      }
+    };
+    
+    // Check immediately
+    checkConnection();
+    
+    // Check every 30 seconds to ensure connection is maintained
+    const interval = setInterval(checkConnection, 30000);
+    
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - only run on mount
 
   // Load search query from URL params on mount and when params change
   useEffect(() => {
@@ -59,9 +91,11 @@ const MarketScanContent = () => {
     setError(null);
     setPredictions([]); // Clear previous results immediately
     setSearchQuery(trimmedSymbol); // Update search query state
+    setLoadingMessage('Connecting to backend...');
     
     try {
       console.log('MarketScanPage: Calling API with symbol:', trimmedSymbol, 'horizon:', horizon);
+      setLoadingMessage('Processing prediction (this may take 60-90 seconds on first run)...');
       const response = await stockAPI.predict([trimmedSymbol], horizon);
       
       console.log('MarketScanPage: API response received:', response);
@@ -98,6 +132,14 @@ const MarketScanContent = () => {
     } catch (error: any) {
       console.error('MarketScanPage: Search failed:', error);
       setPredictions([]);
+      
+      // Handle authentication errors
+      if (error.message?.includes('Authentication required') || error.message?.includes('Session expired')) {
+        setError('Please login to access this feature. Redirecting to login...');
+        // Redirect will be handled by API interceptor
+        return;
+      }
+      
       const errorMessage = error.message || 'Failed to fetch predictions. Please ensure the backend is running on http://127.0.0.1:8000';
       setError(errorMessage);
       console.error('MarketScanPage: Full error details:', {
@@ -107,6 +149,7 @@ const MarketScanContent = () => {
       });
     } finally {
       setLoading(false);
+      setLoadingMessage('');
       console.log('MarketScanPage: Search completed');
     }
   };
@@ -234,6 +277,28 @@ const MarketScanContent = () => {
 
   return (
     <div className="space-y-4 animate-fadeIn">
+      {/* Connection Error Banner - Visible at top if backend is not reachable */}
+      {error && error.includes('Unable to connect to backend') && (
+        <div className="bg-red-900/30 border-2 border-red-500/50 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-400 font-semibold mb-2">Backend Server Not Running</p>
+              <p className="text-red-300 text-sm mb-3">{error}</p>
+              <div className="bg-slate-800/50 rounded-lg p-3 mt-2">
+                <p className="text-gray-300 text-xs font-medium mb-1">To start the backend server:</p>
+                <code className="text-xs text-green-400 block bg-slate-900/50 p-2 rounded">
+                  cd backend && python api_server.py
+                </code>
+                <p className="text-gray-400 text-xs mt-2">
+                  Or use the startup script: <code className="text-yellow-400">START_BACKEND_WATCHDOG.bat</code>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Loading Indicator - Visible at top */}
       {loading && (
         <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3 flex items-center justify-center gap-2">

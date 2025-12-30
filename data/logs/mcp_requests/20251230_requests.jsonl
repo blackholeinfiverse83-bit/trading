@@ -1,0 +1,1 @@
+{"request_id": "fetch_data_1767082833_1", "tool": "fetch_data", "timestamp": "2025-12-30T13:50:33.116087", "request": {"symbols": ["AAPL"], "period": "2y", "refresh": false, "include_features": false}}

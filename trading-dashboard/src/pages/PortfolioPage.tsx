@@ -13,6 +13,11 @@ const PortfolioPage = () => {
 
   useEffect(() => {
     loadPortfolio();
+    // Refresh every 40 seconds to update prices
+    const interval = setInterval(() => {
+      loadPortfolio();
+    }, 40000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadPortfolio = async () => {

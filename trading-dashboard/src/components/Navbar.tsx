@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, User, Sun, Moon, Sparkles } from 'lucide-react';
 import { POPULAR_STOCKS, POPULAR_CRYPTO, POPULAR_COMMODITIES } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import ServerStatusIndicator from './ServerStatusIndicator';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
@@ -175,6 +176,9 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
         </div>
 
         <div className="flex items-center gap-3 ml-4">
+          {/* Server Status Indicator */}
+          <ServerStatusIndicator className="hidden sm:block" />
+          
           <div className={`flex gap-1 rounded p-0.5 ${
             isLight ? 'bg-gray-100' : isSpace ? 'bg-slate-800/60 backdrop-blur-sm' : 'bg-slate-700'
           }`}>

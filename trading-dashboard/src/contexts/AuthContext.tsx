@@ -22,8 +22,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const initializeUser = (): User | null => {
   const token = localStorage.getItem('token');
   const username = localStorage.getItem('username');
-  if (token && username) {
+  // Only return user if token is a valid JWT (not 'no-auth-required')
+  if (token && token !== 'no-auth-required' && username) {
     return { username, token };
+  }
+  // Clear invalid tokens
+  if (token === 'no-auth-required') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
   }
   return null;
 };
@@ -38,18 +44,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check backend auth status on mount
     checkAuthStatus();
     
-    // Verify token is still valid on mount (optional: could add token validation here)
+    // Verify token is still valid on mount
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
-    if (token && username && !user) {
+    
+    // If we have a valid token, restore user state
+    if (token && token !== 'no-auth-required' && username && !user) {
       setUser({ username, token });
+    } else if (token === 'no-auth-required') {
+      // Clear invalid token
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      setUser(null);
+    } else if (!token && !user && authEnabled) {
+      // No token and auth is enabled - try auto-login with default credentials
+      // This is a fallback to ensure the app works
+      const tryAutoLogin = async () => {
+        try {
+          await login('admin', 'admin123');
+        } catch (err) {
+          // Auto-login failed - user will need to login manually
+          console.log('Auto-login failed, user needs to login manually');
+        }
+      };
+      // Only try auto-login if we're not already on login page
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        tryAutoLogin();
+      }
     }
-  }, [user]);
+  }, [user, authEnabled]);
 
   const checkAuthStatus = async () => {
     try {
-      // Try to get API info to check if auth is required
-      const response = await fetch(`${config.API_BASE_URL}/`);
+      // Use the API service for consistent error handling
+      const response = await fetch(`${config.API_BASE_URL}/`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000), // 10 second timeout (increased from 5)
+      });
+      
       if (response.ok) {
         const data = await response.json();
         // Backend specifies auth_status: 'disabled' when auth is off
@@ -60,11 +93,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(anonymousUser);
           localStorage.setItem('token', 'no-auth-required');
           localStorage.setItem('username', 'anonymous');
+        } else {
+          // Auth is enabled - check if we have a valid token
+          setAuthEnabled(true);
+          const currentToken = localStorage.getItem('token');
+          const currentUsername = localStorage.getItem('username');
+          
+          if (currentToken === 'no-auth-required' || !currentToken || !currentUsername) {
+            // Clear invalid token
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            setUser(null);
+          } else if (currentToken && currentUsername && !user) {
+            // We have a token but user state is not set - restore it
+            setUser({ username: currentUsername, token: currentToken });
+          }
         }
+      } else {
+        // Non-200 response - assume auth is required
+        setAuthEnabled(true);
       }
     } catch (error) {
       // If backend is not available, assume auth is required
       console.warn('Could not check auth status, assuming auth enabled');
+      setAuthEnabled(true);
     }
   };
 

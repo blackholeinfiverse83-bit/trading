@@ -268,3 +268,7 @@ For issues or questions:
 2. Check browser console for frontend errors
 3. Review API documentation: `http://127.0.0.1:8000/docs`
 
+
+
+
+
