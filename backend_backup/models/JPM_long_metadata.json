@@ -1,7 +1,0 @@
-{
-  "symbol": "JPM",
-  "horizon": "long",
-  "target_days": 30,
-  "trained_at": "2025-12-30T14:40:22.515497",
-  "feature_count": 37
-}

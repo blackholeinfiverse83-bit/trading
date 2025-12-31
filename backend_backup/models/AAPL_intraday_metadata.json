@@ -1,7 +1,0 @@
-{
-  "symbol": "AAPL",
-  "horizon": "intraday",
-  "target_days": 1,
-  "trained_at": "2025-12-30T14:33:50.559385",
-  "feature_count": 39
-}
