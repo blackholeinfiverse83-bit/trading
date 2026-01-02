@@ -182,20 +182,29 @@ class FeedbackRequest(BaseModel):
         return v.upper().strip()
     
     @validator('predicted_action')
-    def validate_and_uppercase_action(cls, v):
-        """Validate and normalize predicted action"""
-        valid_actions = ['LONG', 'SHORT', 'HOLD']
-        if v.upper() not in valid_actions:
-            raise ValueError(f'Invalid predicted_action. Valid options: {", ".join(valid_actions)}')
-        return v.upper()
+    def validate_and_normalize_action(cls, v):
+        """Validate and normalize predicted action (accepts BUY/SELL and LONG/SHORT/HOLD)"""
+        v_upper = v.upper().strip()
+        # Map BUY/SELL to LONG/SHORT for internal processing
+        action_mapping = {
+            'BUY': 'LONG',
+            'SELL': 'SHORT',
+            'LONG': 'LONG',
+            'SHORT': 'SHORT',
+            'HOLD': 'HOLD'
+        }
+        if v_upper in action_mapping:
+            return action_mapping[v_upper]
+        valid_actions = ['LONG', 'SHORT', 'HOLD', 'BUY', 'SELL']
+        raise ValueError(f'Invalid predicted_action. Valid options: {", ".join(valid_actions)}')
     
     @validator('user_feedback')
-    def validate_and_lowercase_feedback(cls, v):
-        """Validate and normalize user feedback"""
-        valid_feedback = ['correct', 'incorrect']
-        if v.lower() not in valid_feedback:
-            raise ValueError(f'Invalid user_feedback. Valid options: {", ".join(valid_feedback)}')
-        return v.lower()
+    def validate_feedback(cls, v):
+        """Validate user feedback (accepts free text or correct/incorrect)"""
+        if not v or not v.strip():
+            raise ValueError('user_feedback cannot be empty')
+        # Accept any text feedback, but also support correct/incorrect for backward compatibility
+        return v.strip()
     
     @validator('actual_return')
     def validate_return_range(cls, v):
@@ -537,20 +546,54 @@ async def feedback(
         if not validation['valid']:
             raise HTTPException(status_code=400, detail=validation['error'])
         
-        valid_actions = ['LONG', 'SHORT', 'HOLD']
-        if data['predicted_action'].upper() not in valid_actions:
+        # Normalize action: BUY -> LONG, SELL -> SHORT
+        action_mapping = {
+            'BUY': 'LONG',
+            'SELL': 'SHORT',
+            'LONG': 'LONG',
+            'SHORT': 'SHORT',
+            'HOLD': 'HOLD'
+        }
+        normalized_action = action_mapping.get(data['predicted_action'].upper())
+        if not normalized_action:
+            valid_actions = ['LONG', 'SHORT', 'HOLD', 'BUY', 'SELL']
             raise HTTPException(status_code=400, detail=f'Invalid predicted_action. Valid: {", ".join(valid_actions)}')
         
-        valid_feedback = ['correct', 'incorrect']
-        if data['user_feedback'].lower() not in valid_feedback:
-            raise HTTPException(status_code=400, detail=f'Invalid user_feedback. Valid: {", ".join(valid_feedback)}')
+        # Store original action for logging, but use normalized for processing
+        original_action = data['predicted_action']
+        user_feedback_text = data['user_feedback']
+        
+        # Determine if feedback is correct/incorrect based on text or explicit value
+        # If user provides "correct" or "incorrect", use that; otherwise analyze the text
+        feedback_lower = user_feedback_text.lower().strip()
+        if feedback_lower in ['correct', 'incorrect']:
+            feedback_sentiment = feedback_lower
+        else:
+            # Analyze text to determine sentiment (simple keyword-based)
+            negative_keywords = ['wrong', 'incorrect', 'bad', 'failed', 'reversed', 'loss', 'down', 'fell', 'dropped']
+            positive_keywords = ['correct', 'right', 'good', 'worked', 'profit', 'up', 'rose', 'gained']
+            
+            has_negative = any(keyword in feedback_lower for keyword in negative_keywords)
+            has_positive = any(keyword in feedback_lower for keyword in positive_keywords)
+            
+            if has_negative and not has_positive:
+                feedback_sentiment = 'incorrect'
+            elif has_positive and not has_negative:
+                feedback_sentiment = 'correct'
+            else:
+                # Default to incorrect if ambiguous (conservative approach)
+                feedback_sentiment = 'incorrect'
         
         result = mcp_adapter.process_feedback(
             symbol=data['symbol'],
-            predicted_action=data['predicted_action'].upper(),
-            user_feedback=data['user_feedback'].lower(),
+            predicted_action=normalized_action,  # Use normalized LONG/SHORT/HOLD
+            user_feedback=feedback_sentiment,  # Use correct/incorrect for RL training
             actual_return=data.get('actual_return')
         )
+        
+        # Include original feedback text in response
+        result['original_feedback_text'] = user_feedback_text
+        result['original_action'] = original_action
         
         # Return 400 if feedback was rejected due to validation error
         if result.get('status') == 'error':

@@ -28,6 +28,10 @@ const MarketScanContent = () => {
   const [expandedPredictions, setExpandedPredictions] = useState<Set<number>>(new Set());
   const [showChart, setShowChart] = useState(false);
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [actualReturn, setActualReturn] = useState<string>('');
+  const [feedbackText, setFeedbackText] = useState<string>('');
 
   // Check backend connection on mount and periodically
   useEffect(() => {
@@ -185,20 +189,161 @@ const MarketScanContent = () => {
     }
   };
 
-  const handleFeedback = async (feedback: 'correct' | 'incorrect', actualReturn?: number) => {
-    if (!selectedPrediction) return;
+  const handleFeedback = async () => {
+    if (!selectedPrediction) {
+      console.error('[Feedback] No prediction selected');
+      return;
+    }
+    
+    // Validate feedback text
+    if (!feedbackText.trim()) {
+      setFeedbackError('Please provide feedback text');
+      return;
+    }
+    
+    setFeedbackLoading(true);
+    setFeedbackError(null);
+    
+    console.log('[Feedback] Starting feedback submission:', {
+      symbol: selectedPrediction.symbol,
+      action: selectedPrediction.action,
+      feedbackText,
+      actualReturn: actualReturn
+    });
+    
     try {
-      await stockAPI.feedback(
-        selectedPrediction.symbol,
-        selectedPrediction.action,
-        feedback,
-        actualReturn
+      // Parse actual_return if provided
+      // Backend expects: number | null (not undefined)
+      let actualReturnValue: number | null | undefined = undefined;
+      if (actualReturn.trim() !== '') {
+        const parsed = parseFloat(actualReturn.trim());
+        if (isNaN(parsed)) {
+          throw new Error('Actual return must be a valid number');
+        }
+        // Validate range before sending
+        if (parsed < -100 || parsed > 1000) {
+          throw new Error(`Actual return must be between -100% and 1000%, got: ${parsed}%`);
+        }
+        actualReturnValue = parsed;
+      } else {
+        // Empty string means no value - send undefined (will be omitted from payload)
+        actualReturnValue = undefined;
+      }
+
+      // Map action: LONG -> BUY, SHORT -> SELL, HOLD -> HOLD
+      // Also support if action is already BUY/SELL
+      let action = selectedPrediction.action?.toUpperCase().trim() || 'HOLD';
+      const actionMapping: { [key: string]: string } = {
+        'LONG': 'BUY',
+        'SHORT': 'SELL',
+        'HOLD': 'HOLD'
+      };
+      // If action is already BUY/SELL, keep it; otherwise map LONG->BUY, SHORT->SELL
+      if (actionMapping[action]) {
+        action = actionMapping[action];
+      }
+      
+      // Ensure symbol is valid
+      const symbol = selectedPrediction.symbol?.trim() || '';
+      if (!symbol) {
+        throw new Error('Symbol is required');
+      }
+      
+      console.log('[Feedback] Calling API with:', {
+        symbol,
+        action,
+        feedbackText,
+        actualReturn: actualReturnValue
+      });
+      
+      const result = await stockAPI.feedback(
+        symbol,
+        action,
+        feedbackText.trim(),
+        actualReturnValue
       );
+      
+      console.log('[Feedback] API response:', result);
+
+      // Check for validation warnings from backend
+      if (result.validation_warning) {
+        setFeedbackError(result.validation_warning);
+        if (result.suggested_feedback) {
+          setFeedbackError(`${result.validation_warning}\n\nSuggested feedback: ${result.suggested_feedback}`);
+        }
+        setFeedbackLoading(false);
+        return;
+      }
+
+      // Success
       setShowFeedbackModal(false);
       setSelectedPrediction(null);
-      alert('Feedback submitted successfully!');
+      setActualReturn('');
+      setFeedbackText('');
+      setFeedbackError(null);
+      
+      // Show success message with feedback stats if available
+      const statsMsg = result.feedback_stats 
+        ? `\n\nTotal feedback: ${result.feedback_stats.total_feedback_count || 0}\nSymbol feedback: ${result.feedback_stats.symbol_feedback_count || 0}`
+        : '';
+      alert(`Feedback submitted successfully!${statsMsg}`);
     } catch (error: any) {
-      alert(`Failed to submit feedback: ${error.message}`);
+      console.error('[Feedback] Error caught:', error);
+      console.error('[Feedback] Error details:', {
+        message: error.message,
+        response: error.response,
+        responseData: error.response?.data,
+        responseStatus: error.response?.status,
+        stack: error.stack
+      });
+      
+      // Handle different error types
+      let errorMessage = 'Failed to submit feedback';
+      
+      if (error.response?.data) {
+        const responseData = error.response.data;
+        console.log('[Feedback] Response data:', responseData);
+        
+        if (responseData.detail) {
+          const detail = responseData.detail;
+          
+          if (typeof detail === 'string') {
+            errorMessage = detail;
+          } else if (Array.isArray(detail)) {
+            // Pydantic validation errors (422)
+            const validationErrors = detail.map((err: any) => {
+              const field = err.loc?.join('.') || 'unknown';
+              return `${field}: ${err.msg}`;
+            });
+            errorMessage = `Validation errors:\n${validationErrors.join('\n')}`;
+            console.error('[Feedback] Validation errors:', validationErrors);
+          } else if (typeof detail === 'object') {
+            // Structured error response
+            if (detail.error) {
+              errorMessage = detail.error;
+            }
+            if (detail.validation_warning) {
+              errorMessage += (errorMessage ? '\n\n' : '') + detail.validation_warning;
+            }
+            if (detail.suggested_feedback) {
+              errorMessage += (errorMessage ? '\n\n' : '') + `Suggested: ${detail.suggested_feedback}`;
+            }
+          }
+        } else if (responseData.error) {
+          errorMessage = responseData.error;
+        } else if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+        console.error('[Feedback] Error message:', errorMessage);
+      }
+      
+      console.error('[Feedback] Final error message:', errorMessage);
+      setFeedbackError(errorMessage);
+    } finally {
+      setFeedbackLoading(false);
+      console.log('[Feedback] Feedback submission completed');
     }
   };
 
@@ -618,6 +763,9 @@ const MarketScanContent = () => {
                       <button
                         onClick={() => {
                           setSelectedPrediction(pred);
+                          setActualReturn('');
+                          setFeedbackText('');
+                          setFeedbackError(null);
                           setShowFeedbackModal(true);
                         }}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 border border-blue-500/50 text-blue-400 text-sm rounded-lg transition-all font-medium flex items-center justify-center gap-2 hover:scale-105"
@@ -664,58 +812,147 @@ const MarketScanContent = () => {
 
         {showFeedbackModal && selectedPrediction && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn p-4">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 border border-slate-700 max-w-md w-full shadow-2xl animate-slideIn">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <ThumbsUp className="w-4 h-4 text-blue-400" />
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 max-w-md w-full shadow-2xl animate-slideIn">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <ThumbsUp className="w-5 h-5 text-blue-400" />
                   Provide Feedback
                 </h3>
                 <button
                   onClick={() => {
                     setShowFeedbackModal(false);
                     setSelectedPrediction(null);
+                    setActualReturn('');
+                    setFeedbackText('');
+                    setFeedbackError(null);
                   }}
                   className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  disabled={feedbackLoading}
                 >
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
-              <div className="bg-slate-700/50 rounded p-3 mb-3">
-                <p className="text-gray-300 text-sm mb-1">
-                  <span className="font-semibold text-white">{selectedPrediction.symbol}</span> - 
-                  <span className={`font-semibold ml-2 ${
-                    selectedPrediction.action === 'LONG' ? 'text-green-400' :
-                    selectedPrediction.action === 'SHORT' ? 'text-red-400' :
-                    'text-yellow-400'
-                  }`}>
-                    {selectedPrediction.action}
-                  </span>
-                </p>
-                <p className="text-gray-400 text-xs">
-                  Predicted: ${(selectedPrediction.predicted_price || selectedPrediction.current_price || 0).toFixed(2)}
+
+              {/* Prediction Info Card */}
+              <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 rounded-lg p-4 mb-4 border border-slate-600/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-white">{selectedPrediction.symbol}</span>
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                      selectedPrediction.action?.toUpperCase() === 'LONG' || selectedPrediction.action?.toUpperCase() === 'BUY' ? 'bg-green-500/20 text-green-400 border border-green-500/50' :
+                      selectedPrediction.action?.toUpperCase() === 'SHORT' || selectedPrediction.action?.toUpperCase() === 'SELL' ? 'bg-red-500/20 text-red-400 border border-red-500/50' :
+                      'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                    }`}>
+                      {selectedPrediction.action?.toUpperCase() === 'LONG' ? 'BUY' :
+                       selectedPrediction.action?.toUpperCase() === 'SHORT' ? 'SELL' :
+                       selectedPrediction.action?.toUpperCase() || 'HOLD'}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Current Price</p>
+                    <p className="text-sm font-semibold text-white">
+                      ${(selectedPrediction.current_price || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Predicted Price</p>
+                    <p className="text-sm font-semibold text-blue-400">
+                      ${(selectedPrediction.predicted_price || selectedPrediction.current_price || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                {selectedPrediction.predicted_return !== undefined && (
+                  <div className="mt-2 pt-2 border-t border-slate-600/50">
+                    <p className="text-xs text-gray-400 mb-1">Predicted Return</p>
+                    <p className={`text-sm font-bold ${
+                      selectedPrediction.predicted_return >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {selectedPrediction.predicted_return >= 0 ? '+' : ''}
+                      {selectedPrediction.predicted_return.toFixed(2)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* User Feedback Text Input (Required) */}
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-300 mb-2">
+                  Your Feedback <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  placeholder="e.g., Model suggested BUY but price reversed after entry"
+                  rows={4}
+                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all resize-none"
+                  disabled={feedbackLoading}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Describe your feedback about this prediction (e.g., "correct", "incorrect", "price reversed", etc.)
                 </p>
               </div>
-              <div className="space-y-2">
+
+              {/* Actual Return Input (Optional) */}
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-300 mb-2">
+                  Actual Return % <span className="text-gray-500">(Optional)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="-100"
+                  max="1000"
+                  value={actualReturn}
+                  onChange={(e) => setActualReturn(e.target.value)}
+                  placeholder="e.g., 5.25 or -2.10"
+                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                  disabled={feedbackLoading}
+                />
+                <p className="text-xs text-gray-500 mt-1">Range: -100% to 1000%</p>
+              </div>
+
+              {/* Error Message */}
+              {feedbackError && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-300 whitespace-pre-line">{feedbackError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit and Cancel Buttons */}
+              <div className="space-y-3">
                 <button
-                  onClick={() => handleFeedback('correct')}
-                  className="w-full px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                  onClick={handleFeedback}
+                  disabled={feedbackLoading || !feedbackText.trim()}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-500/50 disabled:to-blue-600/50 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-blue-500/50"
                 >
-                  <ThumbsUp className="w-4 h-4" />
-                  <span>Correct Prediction</span>
-                </button>
-                <button
-                  onClick={() => handleFeedback('incorrect')}
-                  className="w-full px-3 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-red-500/50"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  <span>Incorrect Prediction</span>
+                  {feedbackLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsUp className="w-4 h-4" />
+                      <span>Submit Feedback</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => {
                     setShowFeedbackModal(false);
                     setSelectedPrediction(null);
+                    setActualReturn('');
+                    setFeedbackText('');
+                    setFeedbackError(null);
                   }}
-                  className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all text-sm font-medium"
+                  disabled={feedbackLoading}
+                  className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-700/50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-medium"
                 >
                   Cancel
                 </button>

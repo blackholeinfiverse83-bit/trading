@@ -210,18 +210,67 @@ export const stockAPI = {
   feedback: async (
     symbol: string,
     predictedAction: string,
-    userFeedback: 'correct' | 'incorrect',
-    actualReturn?: number
+    userFeedback: string,  // Now accepts free text
+    actualReturn?: number | null
   ) => {
-    const payload: any = {
-      symbol,
-      predicted_action: predictedAction,
-      user_feedback: userFeedback,
-    };
-    if (actualReturn !== undefined) payload.actual_return = actualReturn;
+    console.log('[API] Feedback request:', { symbol, predictedAction, userFeedback, actualReturn });
     
-    const response = await api.post('/tools/feedback', payload);
-    return response.data;
+    // Normalize symbol (1-20 characters, uppercase)
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    if (normalizedSymbol.length < 1 || normalizedSymbol.length > 20) {
+      throw new Error(`Symbol must be between 1 and 20 characters, got: ${normalizedSymbol.length}`);
+    }
+
+    // Normalize predicted_action: accepts BUY/SELL/LONG/SHORT/HOLD
+    const normalizedAction = predictedAction.toUpperCase().trim();
+    const validActions = ['LONG', 'SHORT', 'HOLD', 'BUY', 'SELL'];
+    if (!validActions.includes(normalizedAction)) {
+      throw new Error(`Invalid predicted_action: ${predictedAction}. Must be one of: ${validActions.join(', ')}`);
+    }
+
+    // Validate user_feedback is not empty (accepts any text)
+    const feedbackText = userFeedback.trim();
+    if (!feedbackText) {
+      throw new Error('user_feedback cannot be empty');
+    }
+
+    // Build payload according to backend schema
+    const payload: {
+      symbol: string;
+      predicted_action: string;
+      user_feedback: string;
+      actual_return?: number | null;
+    } = {
+      symbol: normalizedSymbol,
+      predicted_action: normalizedAction,
+      user_feedback: feedbackText,
+    };
+
+    // Handle actual_return: can be number, null, or undefined (omit if undefined)
+    // Backend schema: actual_return: Optional[float] = Field(None, ge=-100.0, le=1000.0)
+    if (actualReturn !== undefined && actualReturn !== null) {
+      // Validate range if provided
+      if (isNaN(actualReturn) || actualReturn < -100 || actualReturn > 1000) {
+        throw new Error(`actual_return must be between -100 and 1000, got: ${actualReturn}`);
+      }
+      payload.actual_return = actualReturn;
+    } else if (actualReturn === null) {
+      // Explicitly send null if null is passed
+      payload.actual_return = null;
+    }
+    // If undefined, omit the field entirely (backend will use default None)
+    
+    console.log('[API] Sending feedback payload:', JSON.stringify(payload, null, 2));
+    
+    try {
+      const response = await api.post('/tools/feedback', payload);
+      console.log('[API] Feedback response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('[API] Feedback error:', error);
+      console.error('[API] Error response:', error.response?.data);
+      throw error;
+    }
   },
   
   trainRL: async (
@@ -364,16 +413,34 @@ export const aiAPI = {
 
 // Popular stock symbols for search autocomplete
 export const POPULAR_STOCKS = [
-  // US Stocks
+  // Top Indian Stocks (NSE) - Featured prominently
+  'RELIANCE.NS',        // Reliance Industries
+  'TATAMOTORS.NS',      // Tata Motors
+  'TATASTEEL.NS',       // Tata Steel
+  'TATACONSUM.NS',      // Tata Consumer Products
+  'TATAPOWER.NS',       // Tata Power
+  'TCS.NS',             // Tata Consultancy Services
+  'HDFCBANK.NS',        // HDFC Bank
+  'ICICIBANK.NS',       // ICICI Bank
+  'INFY.NS',            // Infosys
+  'BHARTIARTL.NS',      // Bharti Airtel
+  'ITC.NS',             // ITC Limited
+  'SBIN.NS',            // State Bank of India
+  'BAJFINANCE.NS',      // Bajaj Finance
+  'HINDUNILVR.NS',      // Hindustan Unilever
+  'LT.NS',              // Larsen & Toubro
+  'ASIANPAINT.NS',      // Asian Paints
+  'MARUTI.NS',          // Maruti Suzuki
+  'SUNPHARMA.NS',       // Sun Pharma
+  'WIPRO.NS',           // Wipro
+  'AXISBANK.NS',        // Axis Bank
+  // Popular US Stocks
   'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'JNJ',
   'WMT', 'PG', 'MA', 'UNH', 'DIS', 'HD', 'BAC', 'PYPL', 'NFLX', 'ADBE',
-  // Indian Stocks (NSE)
-  'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'HINDUNILVR.NS',
-  'ICICIBANK.NS', 'BHARTIARTL.NS', 'SBIN.NS', 'BAJFINANCE.NS', 'LICI.NS',
-  'ITC.NS', 'SUNPHARMA.NS', 'HCLTECH.NS', 'AXISBANK.NS', 'KOTAKBANK.NS',
-  'LT.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS', 'ULTRACEMCO.NS',
-  'NESTLEIND.NS', 'WIPRO.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS',
-  'TATAMOTORS.NS', 'TATASTEEL.NS', 'JSWSTEEL.NS', 'ADANIPORTS.NS', 'TECHM.NS',
+  // Additional Indian Stocks
+  'KOTAKBANK.NS', 'LICI.NS', 'HCLTECH.NS', 'TITAN.NS', 'ULTRACEMCO.NS',
+  'NESTLEIND.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS', 'JSWSTEEL.NS',
+  'ADANIPORTS.NS', 'TECHM.NS', 'TATAELXSI.NS', 'TATACOMM.NS',
 ];
 
 // Popular crypto symbols (Yahoo Finance format)
