@@ -1,6 +1,14 @@
 import axios, { AxiosError } from 'axios';
 import { config } from '../config';
 
+// Debug logging (can be disabled in production)
+const DEBUG = import.meta.env.DEV || false;
+const log = (...args: any[]) => {
+  if (DEBUG) {
+    console.log('[API]', ...args);
+  }
+};
+
 // Connection state management
 let isBackendOnline = true;
 let connectionCheckInProgress = false;
@@ -41,6 +49,19 @@ api.interceptors.response.use(
 
     // Handle network errors (no response from server)
     if (!error.response && error.request) {
+      // Check if it's a timeout vs connection error
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('Timeout');
+      
+      if (isTimeout) {
+        // Timeout - server is running but request took too long
+        // Don't mark as offline, just return timeout error
+        return Promise.reject(new Error(
+          'Request timed out. The backend is processing your request but it\'s taking longer than expected. ' +
+          'This may happen if models need to be trained (60-90 seconds). Please try again or use the Market Scan page to train models first.'
+        ));
+      }
+      
+      // Real connection error
       isBackendOnline = false;
       
       // Retry logic for connection errors (only once)
@@ -105,7 +126,16 @@ api.interceptors.response.use(
       } else if (status === 404) {
         message = 'Endpoint not found. Please check the API version.';
       } else if (status === 429) {
-        message = 'Rate limit exceeded. Please wait a moment and try again.';
+        // Rate limit exceeded - extract retry_after if available
+        const retryAfter = data?.detail?.retry_after || data?.retry_after || 60;
+        const detailMsg = data?.detail?.message || data?.message || '';
+        message = detailMsg || `Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`;
+        
+        // Don't retry rate limit errors automatically - let the user handle it
+        // Clear any pending retries
+        if (originalRequest) {
+          originalRequest._retry = true; // Prevent retry
+        }
       } else if (status === 503) {
         message = 'Service temporarily unavailable. The prediction engine is initializing. Please try again in a moment.';
       } else if (status >= 500) {
@@ -123,8 +153,22 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: async (username: string, password: string) => {
-    const response = await api.post('/auth/login', { username, password });
-    return response.data;
+    // Check if auth endpoint exists first
+    try {
+      const response = await api.post('/auth/login', { username, password });
+      return response.data;
+    } catch (error: any) {
+      // If 404, auth is disabled - return success with no-auth token
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          username: username || 'anonymous',
+          token: 'no-auth-required',
+          message: 'Authentication is disabled - open access mode'
+        };
+      }
+      throw error;
+    }
   },
   signup: async (_username: string, _password: string, _email: string) => {
     // Note: Backend doesn't have signup endpoint, so we'll simulate it
@@ -152,8 +196,20 @@ export const stockAPI = {
     if (capitalRiskPct !== undefined) payload.capital_risk_pct = capitalRiskPct;
     if (drawdownLimitPct !== undefined) payload.drawdown_limit_pct = drawdownLimitPct;
     
-    const response = await api.post('/tools/predict', payload);
-    return response.data;
+    log('Calling /tools/predict with:', payload);
+    try {
+      const response = await api.post('/tools/predict', payload);
+      log('Predict response received:', { status: response.status, hasPredictions: 'predictions' in response.data });
+      return response.data;
+    } catch (error: any) {
+      log('Predict error:', { 
+        message: error.message, 
+        code: error.code, 
+        status: error.response?.status,
+        hasResponse: !!error.response 
+      });
+      throw error;
+    }
   },
   
   scanAll: async (
@@ -293,7 +349,7 @@ export const stockAPI = {
     return response.data;
   },
   
-  checkConnection: async (retries: number = 2): Promise<{ connected: boolean; data?: any; error?: string }> => {
+  checkConnection: async (retries: number = 3): Promise<{ connected: boolean; data?: any; error?: string }> => {
     // Prevent multiple simultaneous connection checks
     if (connectionCheckInProgress) {
       return { connected: isBackendOnline, error: isBackendOnline ? undefined : 'Connection check in progress' };
@@ -302,28 +358,36 @@ export const stockAPI = {
     connectionCheckInProgress = true;
     
     try {
-      // Use longer timeout for connection check - backend might be slow to respond
-      const response = await axios.get(`${config.API_BASE_URL}/`, {
+      // Use the api instance for consistency - this ensures CORS and other configs are applied
+      const response = await api.get('/', {
         timeout: 10000, // 10 seconds for connection check (increased from 5)
-        headers: { 'Content-Type': 'application/json' },
       });
       
       isBackendOnline = true;
       connectionCheckInProgress = false;
       return { connected: true, data: response.data };
     } catch (error: any) {
-      // Retry logic
-      if (retries > 0 && (!error.response || error.code === 'ECONNABORTED' || error.message?.includes('timeout'))) {
+      // Retry logic for network errors
+      if (retries > 0 && (!error.response || error.code === 'ECONNABORTED' || error.code === 'ECONNREFUSED' || error.message?.includes('timeout') || error.message?.includes('Network Error'))) {
         connectionCheckInProgress = false;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
         return stockAPI.checkConnection(retries - 1);
+      }
+      
+      // If we got a response, server is reachable (even if error)
+      if (error.response) {
+        isBackendOnline = true;
+        connectionCheckInProgress = false;
+        return { connected: true, data: error.response.data };
       }
       
       isBackendOnline = false;
       connectionCheckInProgress = false;
       
-      const errorMessage = error.response 
-        ? `Backend responded with error: ${error.response.status}`
+      const errorMessage = error.code === 'ECONNREFUSED' 
+        ? 'Backend server is not running. Please start the backend server.'
+        : error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+        ? 'Backend server is not responding. It may be starting up or overloaded.'
         : error.message || 'Unable to connect to backend server';
       
       return { connected: false, error: errorMessage };

@@ -227,7 +227,8 @@ const AnalyticsPage = () => {
                   </div>
                 </div>
                 {performanceData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
+                  <div style={{ width: '100%', height: 300, minWidth: 0, minHeight: 300 }}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0}>
                     {chartType === 'bar' ? (
                       <BarChart data={performanceData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={true} vertical={false} />
@@ -342,7 +343,8 @@ const AnalyticsPage = () => {
                         />
                       </AreaChart>
                     )}
-                  </ResponsiveContainer>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] text-gray-400">
                     <div className="text-center">
@@ -359,8 +361,9 @@ const AnalyticsPage = () => {
                   Signal Distribution
                 </h2>
                 {pieData.length > 0 && pieData.some(d => d.value > 0) ? (
-                  <div className="flex flex-col items-center">
-                    <ResponsiveContainer width="100%" height={250}>
+                  <div className="flex flex-col items-center" style={{ width: '100%', minWidth: 0 }}>
+                    <div style={{ width: '100%', height: 250, minWidth: 0, minHeight: 250 }}>
+                      <ResponsiveContainer width="100%" height={250} minWidth={0}>
                       <PieChart>
                         <Pie
                           data={pieData.filter(d => d.value > 0)}
@@ -390,7 +393,8 @@ const AnalyticsPage = () => {
                           formatter={(value: any) => [value, 'Signals']}
                         />
                       </PieChart>
-                    </ResponsiveContainer>
+                      </ResponsiveContainer>
+                    </div>
                     <div className="mt-4 flex flex-wrap justify-center gap-4">
                       {pieData.filter(d => d.value > 0).map((entry, index) => (
                         <div key={index} className="flex items-center gap-2">

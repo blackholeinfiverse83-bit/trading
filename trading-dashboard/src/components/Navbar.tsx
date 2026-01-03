@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, User, Sun, Moon, Sparkles } from 'lucide-react';
+import { Search, Bell, User, Sun, Moon, Sparkles, Menu } from 'lucide-react';
 import { POPULAR_STOCKS, POPULAR_CRYPTO, POPULAR_COMMODITIES } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import ServerStatusIndicator from './ServerStatusIndicator';
@@ -8,9 +8,10 @@ interface NavbarProps {
   onSearch: (query: string) => void;
   activeTab: 'stocks' | 'crypto' | 'commodities';
   onTabChange: (tab: 'stocks' | 'crypto' | 'commodities') => void;
+  onMenuClick?: () => void;
 }
 
-const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
+const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
@@ -103,16 +104,31 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
   const isSpace = theme === 'space';
 
   return (
-    <div className={`px-4 py-3 border-b relative z-30 ${
+    <div className={`px-3 sm:px-4 py-2.5 sm:py-3 border-b relative z-30 ${
       isLight 
         ? 'bg-white border-gray-200' 
         : isSpace
           ? 'bg-transparent border-purple-900/20'
           : 'bg-slate-800 border-slate-700'
     }`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        {/* Mobile Menu Button */}
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className={`lg:hidden p-2 rounded transition-colors flex-shrink-0 ${
+              isLight
+                ? 'text-gray-600 hover:bg-gray-100'
+                : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+            }`}
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        
         {/* Search Container - Fixed z-index and positioning */}
-        <div ref={searchContainerRef} className="flex-1 max-w-2xl relative z-40">
+        <div ref={searchContainerRef} className="flex-1 min-w-0 max-w-2xl relative z-40">
           <form onSubmit={handleSubmit} className="relative">
             <Search className={`absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
               isLight ? 'text-gray-500' : isSpace ? 'text-gray-300' : 'text-gray-400'
@@ -126,8 +142,8 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                 // Delay to allow click on suggestion
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
-              placeholder="Search stocks, crypto, commodities..."
-              className={`w-full pl-8 pr-3 py-1.5 text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+              placeholder="Search stocks, crypto..."
+              className={`w-full pl-8 pr-3 py-1.5 text-xs sm:text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                 isLight
                   ? 'bg-gray-100 border border-gray-300 text-gray-900 placeholder-gray-500'
                   : isSpace
@@ -175,11 +191,12 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
           </form>
         </div>
 
-        <div className="flex items-center gap-3 ml-4">
-          {/* Server Status Indicator */}
-          <ServerStatusIndicator className="hidden sm:block" />
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          {/* Server Status Indicator - Hidden on very small screens */}
+          <ServerStatusIndicator className="hidden md:block" />
           
-          <div className={`flex gap-1 rounded p-0.5 ${
+          {/* Tab Switcher - Responsive */}
+          <div className={`flex gap-0.5 sm:gap-1 rounded p-0.5 ${
             isLight ? 'bg-gray-100' : isSpace ? 'bg-slate-800/60 backdrop-blur-sm' : 'bg-slate-700'
           }`}>
             {(['stocks', 'crypto', 'commodities'] as const).map((tab) => (
@@ -191,20 +208,23 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
                   e.stopPropagation();
                   onTabChange(tab);
                 }}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer relative z-10 ${
+                className={`px-1.5 sm:px-2.5 py-1 rounded text-[10px] sm:text-xs font-medium transition-colors cursor-pointer relative z-10 ${
                   activeTab === tab
                     ? 'bg-blue-500 text-white shadow-lg'
                     : isLight
                       ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-200'
                       : 'text-gray-300 hover:text-white hover:bg-slate-600'
                 }`}
+                title={tab.charAt(0).toUpperCase() + tab.slice(1)}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                <span className="hidden sm:inline">{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                <span className="sm:hidden">{tab.charAt(0).toUpperCase()}</span>
               </button>
             ))}
           </div>
 
-          <button className={`p-1.5 rounded transition-colors ${
+          {/* Bell - Hidden on small screens */}
+          <button className={`hidden sm:flex p-1.5 rounded transition-colors ${
             isLight
               ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               : isSpace
@@ -305,14 +325,15 @@ const Navbar = ({ onSearch, activeTab, onTabChange }: NavbarProps) => {
             )}
           </div>
 
-          <button className={`p-2 rounded-lg transition-colors ${
+          {/* User - Smaller on mobile */}
+          <button className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
             isLight
               ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               : isSpace
                 ? 'text-white/90 hover:text-white hover:bg-white/10 drop-shadow'
                 : 'text-gray-300 hover:text-white hover:bg-slate-700'
           }`}>
-            <User className="w-5 h-5" />
+            <User className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>

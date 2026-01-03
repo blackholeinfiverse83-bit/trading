@@ -44,6 +44,8 @@ export const AppRoutes = () => {
       <Route path="/watchlist" element={<WatchListPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Catch-all route for 404 */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };

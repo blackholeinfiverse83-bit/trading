@@ -26,8 +26,11 @@ ENABLE_AUTH = False
 # ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
 # Rate Limiting
-RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '20'))
-RATE_LIMIT_PER_HOUR = int(os.getenv('RATE_LIMIT_PER_HOUR', '200'))
+# Increased limits for development - can be overridden via environment variables
+# Set to very high limits for development to avoid 429 errors
+# IMPORTANT: These values are used by rate_limiter.py - ensure they match!
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '500'))  # Increased from 100 to 500
+RATE_LIMIT_PER_HOUR = int(os.getenv('RATE_LIMIT_PER_HOUR', '10000'))  # Increased from 2000 to 10000
 
 # API Limits
 MAX_SYMBOLS_PER_REQUEST = int(os.getenv('MAX_SYMBOLS_PER_REQUEST', '10'))

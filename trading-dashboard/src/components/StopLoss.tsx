@@ -497,7 +497,8 @@ const StopLoss = ({ chartSymbol, chartPrice, onStopLossCalculated, onClose }: St
                 <TrendingDown className="w-3 h-3 text-red-400" />
                 <span className="text-xs font-semibold text-gray-300">Price Levels</span>
               </div>
-              <ResponsiveContainer width="100%" height={100}>
+              <div style={{ width: '100%', height: 100, minWidth: 0, minHeight: 100 }}>
+                <ResponsiveContainer width="100%" height={100} minWidth={0}>
                 <LineChart
                   data={[
                     { name: 'Entry', price: result.entryPrice },
@@ -561,7 +562,8 @@ const StopLoss = ({ chartSymbol, chartPrice, onStopLossCalculated, onClose }: St
                     }}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </div>

@@ -6,12 +6,18 @@ import {
   History, 
   Star, 
   BarChart3,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const location = useLocation();
   const { logout, user } = useAuth();
   const { theme } = useTheme();
@@ -28,15 +34,74 @@ const Sidebar = () => {
   const isLight = theme === 'light';
   const isSpace = theme === 'space';
   
+  // Handle navigation click on mobile (close sidebar)
+  const handleNavClick = () => {
+    if (onClose && window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+
+  // Handle logout and close sidebar on mobile
+  const handleLogout = () => {
+    logout();
+    if (onClose && window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+  
   return (
-    <div className={`w-64 h-screen flex flex-col relative z-20 ${
-      isLight 
-        ? 'bg-white border-r border-gray-200' 
-        : isSpace
-          ? 'bg-transparent border-r border-purple-900/20' // Transparent so background shows through
-          : 'bg-slate-900 border-r border-slate-700'
-    }`}>
-      <div className={`p-3 border-b ${
+    <>
+      {/* Mobile overlay */}
+      {onClose && (
+        <div
+          className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
+            isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static top-0 left-0 h-screen flex flex-col relative z-50
+        w-64 transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${isLight 
+          ? 'bg-white border-r border-gray-200' 
+          : isSpace
+            ? 'bg-slate-900/95 backdrop-blur-md border-r border-purple-900/20'
+            : 'bg-slate-900 border-r border-slate-700'
+        }
+      `}>
+        {/* Mobile header with close button */}
+        {onClose && (
+          <div className={`flex items-center justify-between p-3 border-b lg:hidden ${
+            isLight 
+              ? 'border-gray-200' 
+              : isSpace 
+                ? 'border-purple-900/20' 
+                : 'border-slate-700'
+          }`}>
+            <h1 className={`text-lg font-bold ${
+              isLight 
+                ? 'text-gray-900' 
+                : isSpace 
+                  ? 'text-white drop-shadow-lg' 
+                  : 'text-white'
+            }`}>Menu</h1>
+            <button
+              onClick={onClose}
+              className={`p-1.5 rounded transition-colors ${
+                isLight
+                  ? 'text-gray-600 hover:bg-gray-100'
+                  : 'text-gray-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+      <div className={`p-3 border-b hidden lg:block ${
         isLight 
           ? 'border-gray-200' 
           : isSpace 
@@ -67,7 +132,8 @@ const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-2 px-3 py-2 rounded transition-colors ${
+              onClick={handleNavClick}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded transition-colors ${
                 isActive
                   ? 'bg-blue-500 text-white'
                   : isLight
@@ -77,7 +143,7 @@ const Sidebar = () => {
                       : 'text-gray-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-5 h-5 flex-shrink-0" />
               <span className="font-medium text-sm">{item.label}</span>
             </Link>
           );
@@ -92,8 +158,8 @@ const Sidebar = () => {
             : 'border-slate-700'
       }`}>
         <button
-          onClick={logout}
-          className={`flex items-center gap-2 px-3 py-2 w-full rounded transition-colors ${
+          onClick={handleLogout}
+          className={`flex items-center gap-2 px-3 py-2.5 w-full rounded transition-colors ${
             isLight
               ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
               : isSpace
@@ -101,11 +167,12 @@ const Sidebar = () => {
                 : 'text-gray-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium text-sm">Logout</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -112,6 +112,17 @@ code {
   }
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Utility Classes */
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
@@ -123,6 +134,10 @@ code {
 
 .animate-pulse-slow {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
 }
 
 /* Loading Skeleton */
@@ -188,5 +203,80 @@ code {
 /* Fix for search suggestions and theme menu visibility */
 .absolute[style*="zIndex"] {
   z-index: 9999 !important;
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 640px) {
+  button:not(.touch-ignore), a:not(.touch-ignore) {
+    min-height: 44px; /* iOS recommended touch target size */
+    min-width: 44px;
+  }
+  
+  /* Improve text readability on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Prevent text selection on interactive elements for better UX */
+  button, .card-hover {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+    tap-highlight-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Touch manipulation for better mobile performance */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Fluid typography for better device flexibility */
+@media (max-width: 475px) {
+  /* Extra small devices - reduce font sizes slightly */
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 475px) and (max-width: 639px) {
+  /* Small devices */
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 640px) {
+  /* Tablets and up */
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+  table {
+    font-size: 0.875rem;
+  }
+  
+  th, td {
+    padding: 0.5rem;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 1024px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Hide scrollbar for horizontal scroll on mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 

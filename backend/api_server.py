@@ -708,12 +708,66 @@ async def fetch_data(
 
 if __name__ == '__main__':
     import uvicorn
+    import socket
+    import time
+    
+    # Check if port is already in use and kill the process
+    port = config.UVICORN_PORT
+    host = config.UVICORN_HOST
+    
+    try:
+        # Check if port is in use
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        
+        if result == 0:  # Port is in use
+            print(f"\n[WARNING] Port {port} is already in use!")
+            print("[INFO] Attempting to find and kill the process...")
+            
+            try:
+                # Find process using the port
+                for conn in psutil.net_connections(kind='inet'):
+                    if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
+                        pid = conn.pid
+                        if pid:
+                            print(f"[INFO] Found process {pid} using port {port}. Killing it...")
+                            try:
+                                proc = psutil.Process(pid)
+                                proc.terminate()
+                                try:
+                                    proc.wait(timeout=3)
+                                    print(f"[OK] Process {pid} terminated gracefully")
+                                except psutil.TimeoutExpired:
+                                    proc.kill()
+                                    print(f"[OK] Process {pid} force killed")
+                                time.sleep(2)  # Wait for port to be released
+                                break
+                            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                                print(f"[WARNING] Could not kill process {pid}: {e}")
+                                print(f"[ERROR] Please manually kill the process using port {port}")
+                                print(f"       Run: taskkill /F /PID {pid}")
+                                sys.exit(1)
+            except Exception as e:
+                print(f"[ERROR] Could not automatically free port {port}: {e}")
+                print(f"[ERROR] Please manually stop the process using port {port}")
+                print(f"       Or run: backend\\KILL_PORT_8000.bat")
+                sys.exit(1)
+    except Exception as e:
+        print(f"[WARNING] Could not check port status: {e}")
+        print("[INFO] Continuing anyway...")
     
     print("\n" + "="*80)
     print(" " * 20 + "MCP API SERVER STARTING")
     print("="*80)
     print("\nSECURITY FEATURES:")
     print("  [ ] JWT Authentication: DISABLED (Open Access)")
+    # Reload config to ensure we get latest values (especially rate limits from env vars)
+    import importlib
+    if 'config' in sys.modules:
+        importlib.reload(sys.modules['config'])
+        # Re-import after reload to get updated values
+        import config
     print(f"  [X] Rate Limiting ({config.RATE_LIMIT_PER_MINUTE}/min, {config.RATE_LIMIT_PER_HOUR}/hour)")
     print("  [X] Input Validation")
     print("  [X] Comprehensive Logging")

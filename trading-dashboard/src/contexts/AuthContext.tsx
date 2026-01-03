@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
 import { config } from '../config';
 
@@ -37,92 +37,130 @@ const initializeUser = (): User | null => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Check if backend auth is disabled (open access mode)
   // In open access mode, we allow anonymous users
-  const [authEnabled, setAuthEnabled] = useState(true);
+  const [authEnabled, setAuthEnabled] = useState<boolean | null>(null); // null = not checked yet
   const [user, setUser] = useState<User | null>(initializeUser);
+
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      // Use fetch with better error handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch(`${config.API_BASE_URL}/`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Backend specifies auth_status: 'disabled' when auth is off
+          if (data.auth_status === 'disabled') {
+            setAuthEnabled(false);
+            // Auto-login as anonymous user when auth is disabled
+            const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
+            setUser(anonymousUser);
+            localStorage.setItem('token', 'no-auth-required');
+            localStorage.setItem('username', 'anonymous');
+          } else {
+            // Auth is enabled
+            setAuthEnabled(true);
+            const currentToken = localStorage.getItem('token');
+            const currentUsername = localStorage.getItem('username');
+            
+            if (currentToken === 'no-auth-required') {
+              // Clear invalid token (auth is enabled but we have no-auth token)
+              localStorage.removeItem('token');
+              localStorage.removeItem('username');
+              setUser(null);
+            } else if (currentToken && currentUsername && currentToken !== 'no-auth-required') {
+              // We have a valid token - restore user
+              setUser({ username: currentUsername, token: currentToken });
+            }
+          }
+        } else {
+          // Non-200 response - assume auth is required
+          setAuthEnabled(true);
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        // If it's an abort (timeout), try to use cached auth status
+        if (fetchError.name === 'AbortError') {
+          // Check if we have a cached auth status
+          const cachedToken = localStorage.getItem('token');
+          if (cachedToken === 'no-auth-required') {
+            // We've been in no-auth mode before, assume it's still disabled
+            setAuthEnabled(false);
+            const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
+            setUser(anonymousUser);
+            return;
+          }
+        }
+        
+        // For other errors, assume auth is required but don't log as warning
+        // This is normal if backend is starting up
+        setAuthEnabled(true);
+      }
+    } catch (error) {
+      // Fallback: check localStorage for previous auth status
+      const cachedToken = localStorage.getItem('token');
+      if (cachedToken === 'no-auth-required') {
+        // We've been in no-auth mode before, assume it's still disabled
+        setAuthEnabled(false);
+        const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
+        setUser(anonymousUser);
+      } else {
+        // Assume auth is required
+        setAuthEnabled(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Check backend auth status on mount
     checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // Auto-login attempt when auth is enabled and no token exists
+  useEffect(() => {
+    // Don't try auto-login if auth is disabled or not yet determined
+    if (authEnabled !== true) {
+      return;
+    }
     
-    // Verify token is still valid on mount
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
     
-    // If we have a valid token, restore user state
-    if (token && token !== 'no-auth-required' && username && !user) {
-      setUser({ username, token });
-    } else if (token === 'no-auth-required') {
-      // Clear invalid token
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      setUser(null);
-    } else if (!token && !user && authEnabled) {
-      // No token and auth is enabled - try auto-login with default credentials
-      // This is a fallback to ensure the app works
+    // Only try auto-login if no token exists and not on login page
+    if (!token && !username && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
       const tryAutoLogin = async () => {
         try {
-          await login('admin', 'admin123');
+          const response = await authAPI.login('admin', 'admin123');
+          if (response.success && response.token) {
+            const userData = { 
+              username: response.username || 'admin', 
+              token: response.token 
+            };
+            setUser(userData);
+            localStorage.setItem('token', response.token);
+            localStorage.setItem('username', response.username || 'admin');
+          }
         } catch (err) {
-          // Auto-login failed - user will need to login manually
-          console.log('Auto-login failed, user needs to login manually');
+          // Auto-login failed silently - user will need to login manually
+          // Don't log this as it's expected behavior
         }
       };
-      // Only try auto-login if we're not already on login page
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        tryAutoLogin();
-      }
+      tryAutoLogin();
     }
-  }, [user, authEnabled]);
+  }, [authEnabled]);
 
-  const checkAuthStatus = async () => {
-    try {
-      // Use the API service for consistent error handling
-      const response = await fetch(`${config.API_BASE_URL}/`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(10000), // 10 second timeout (increased from 5)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Backend specifies auth_status: 'disabled' when auth is off
-        if (data.auth_status === 'disabled') {
-          setAuthEnabled(false);
-          // Auto-login as anonymous user when auth is disabled
-          const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
-          setUser(anonymousUser);
-          localStorage.setItem('token', 'no-auth-required');
-          localStorage.setItem('username', 'anonymous');
-        } else {
-          // Auth is enabled - check if we have a valid token
-          setAuthEnabled(true);
-          const currentToken = localStorage.getItem('token');
-          const currentUsername = localStorage.getItem('username');
-          
-          if (currentToken === 'no-auth-required' || !currentToken || !currentUsername) {
-            // Clear invalid token
-            localStorage.removeItem('token');
-            localStorage.removeItem('username');
-            setUser(null);
-          } else if (currentToken && currentUsername && !user) {
-            // We have a token but user state is not set - restore it
-            setUser({ username: currentUsername, token: currentToken });
-          }
-        }
-      } else {
-        // Non-200 response - assume auth is required
-        setAuthEnabled(true);
-      }
-    } catch (error) {
-      // If backend is not available, assume auth is required
-      console.warn('Could not check auth status, assuming auth enabled');
-      setAuthEnabled(true);
-    }
-  };
-
-  const login = async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     // If auth is disabled, allow any login or skip login
-    if (!authEnabled) {
+    if (authEnabled === false) {
       const userData = { 
         username: username || 'anonymous', 
         token: 'no-auth-required' 
@@ -133,28 +171,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
-    try {
-      const response = await authAPI.login(username, password);
-      
-      if (response.success && response.token) {
-        const userData = { 
-          username: response.username || username, 
-          token: response.token 
-        };
-        setUser(userData);
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('username', response.username || username);
-      } else {
-        throw new Error(response.error || 'Login failed');
+    // Only try to login via API if auth is enabled
+    if (authEnabled === true) {
+      try {
+        const response = await authAPI.login(username, password);
+        
+        if (response.success && response.token) {
+          const userData = { 
+            username: response.username || username, 
+            token: response.token 
+          };
+          setUser(userData);
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('username', response.username || username);
+        } else {
+          throw new Error(response.error || 'Login failed');
+        }
+      } catch (error: any) {
+        // Handle axios errors
+        if (error.response?.data?.detail) {
+          throw new Error(error.response.data.detail);
+        }
+        throw new Error(error.message || 'Login failed. Please check your credentials.');
       }
-    } catch (error: any) {
-      // Handle axios errors
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      throw new Error(error.message || 'Login failed. Please check your credentials.');
     }
-  };
+  }, [authEnabled]);
 
   const signup = async (username: string, password: string, email: string) => {
     // If auth is disabled, just log in as the username
@@ -178,9 +219,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    // If auth is disabled, logout should just refresh the anonymous user
+    if (authEnabled === false) {
+      const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
+      setUser(anonymousUser);
+      localStorage.setItem('token', 'no-auth-required');
+      localStorage.setItem('username', 'anonymous');
+      // Optionally redirect to home/dashboard
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/login')) {
+        window.location.href = '/dashboard';
+      }
+    } else {
+      // Auth is enabled - clear everything
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      // Redirect to login page
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
   };
 
   return (

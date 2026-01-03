@@ -16,6 +16,18 @@ const LayoutContent = ({ children }: LayoutProps) => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [, forceUpdate] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Listen for theme changes to force re-render
   useEffect(() => {
@@ -50,11 +62,18 @@ const LayoutContent = ({ children }: LayoutProps) => {
       style={theme === 'space' ? { backgroundColor: '#1b0725' } : undefined}
     >
       {theme === 'space' && <UniGuruBackground key="uniguru-bg" />}
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-        <Navbar onSearch={handleSearch} activeTab={assetType} onTabChange={handleTabChange} />
-        <main className="flex-1 overflow-y-auto p-4 relative z-10">
-          {children}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-0">
+        <Navbar 
+          onSearch={handleSearch} 
+          activeTab={assetType} 
+          onTabChange={handleTabChange}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+        <main className="flex-1 overflow-y-auto p-2 md:p-4 lg:p-5 relative z-10 max-w-full overflow-x-hidden" style={{ paddingTop: '0' }}>
+          <div className="max-w-full mx-auto">
+            {children}
+          </div>
         </main>
         <FloatingAIButton />
       </div>

@@ -14,28 +14,28 @@ const FloatingAIButton = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group touch-manipulation ${
           isHovered ? 'scale-110' : 'scale-100'
         }`}
         aria-label="AI Assistant"
       >
-        <div className="relative w-8 h-8 flex items-center justify-center">
+        <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
           {/* AI Logo */}
           {!imageError ? (
             <img
               src="/jarvis-logo.png"
               alt="AI Assistant"
-              className="w-8 h-8 object-contain"
+              className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
               onError={() => setImageError(true)}
             />
           ) : (
-            <MessageCircle className="w-8 h-8 text-white" />
+            <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           )}
         </div>
         
-        {/* Tooltip on hover */}
+        {/* Tooltip on hover - hidden on mobile */}
         {isHovered && (
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+          <div className="hidden sm:block absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
             AI Assistant
             <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800"></div>
           </div>
