@@ -20,7 +20,7 @@ export const config = {
   },
   
   // UI Settings
-  REFRESH_INTERVAL: 60000, // 60 seconds - dashboard refresh interval
+  REFRESH_INTERVAL: 120000, // 120 seconds (2 minutes) - dashboard refresh interval
   DEBOUNCE_DELAY: 300, // 300ms for search inputs
 };
 

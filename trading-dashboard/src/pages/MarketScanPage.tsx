@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { stockAPI } from '../services/api';
+import { stockAPI, TimeoutError, PredictionItem, AnalyzeResponse } from '../services/api';
 import { useAssetType } from '../contexts/AssetTypeContext';
 import StocksView from '../components/StocksView';
 import CryptoView from '../components/CryptoView';
@@ -17,14 +17,14 @@ const MarketScanContent = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   // Removed selectedSymbols - not currently used in UI
-  const [predictions, setPredictions] = useState<any[]>([]);
+  const [predictions, setPredictions] = useState<PredictionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [horizon, setHorizon] = useState<'intraday' | 'short' | 'long'>('intraday');
-  const [analyzeResults, setAnalyzeResults] = useState<any>(null);
+  const [analyzeResults, setAnalyzeResults] = useState<AnalyzeResponse | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [selectedPrediction, setSelectedPrediction] = useState<any>(null);
+  const [selectedPrediction, setSelectedPrediction] = useState<PredictionItem | null>(null);
   const [expandedPredictions, setExpandedPredictions] = useState<Set<number>>(new Set());
   const [showChart, setShowChart] = useState(false);
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
@@ -111,7 +111,7 @@ const MarketScanContent = () => {
       
       // Backend returns: { metadata, predictions }
       // Filter out predictions with errors
-      const validPredictions = (response.predictions || []).filter((p: any) => !p.error);
+      const validPredictions = (response.predictions || []).filter((p: PredictionItem) => !p.error);
       
       console.log('MarketScanPage: Valid predictions found:', validPredictions.length);
       
@@ -122,7 +122,7 @@ const MarketScanContent = () => {
       } else {
         setPredictions([]);
         // Check if there were errors in the predictions
-        const errors = (response.predictions || []).filter((p: any) => p.error);
+        const errors = (response.predictions || []).filter((p: PredictionItem) => p.error);
         if (errors.length > 0) {
           const errorMsg = errors[0].error || 'Prediction failed for this symbol';
           setError(errorMsg);
@@ -133,28 +133,45 @@ const MarketScanContent = () => {
           console.warn('MarketScanPage:', errorMsg);
         }
       }
-    } catch (error: any) {
-      console.error('MarketScanPage: Search failed:', error);
+    } catch (error: unknown) {
+      // Handle TimeoutError - backend is still processing
+      if (error instanceof TimeoutError) {
+        // Keep loading state active, show processing message
+        setError(null); // Clear any previous errors
+        setLoadingMessage('Processing prediction (this may take 60-90 seconds on first run)...');
+        console.log('MarketScanPage: Request timed out but backend is still processing');
+        // Don't clear loading state - backend is still working
+        return;
+      }
+      
+      // Handle actual errors
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error('MarketScanPage: Search failed:', err);
       setPredictions([]);
       
       // Handle authentication errors
-      if (error.message?.includes('Authentication required') || error.message?.includes('Session expired')) {
+      if (err.message?.includes('Authentication required') || err.message?.includes('Session expired')) {
         setError('Please login to access this feature. Redirecting to login...');
+        setLoading(false);
+        setLoadingMessage('');
         // Redirect will be handled by API interceptor
         return;
       }
       
-      const errorMessage = error.message || 'Failed to fetch predictions. Please ensure the backend is running on http://127.0.0.1:8000';
-      setError(errorMessage);
-      console.error('MarketScanPage: Full error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-    } finally {
+      // Connection errors
+      if (err.message?.includes('Unable to connect') || err.message?.includes('ECONNREFUSED')) {
+        setError('Cannot connect to backend server. Please ensure the backend is running on http://127.0.0.1:8000');
+      } else {
+        setError(err.message || 'Failed to fetch predictions. Please ensure the backend is running on http://127.0.0.1:8000');
+      }
+      
       setLoading(false);
       setLoadingMessage('');
-      console.log('MarketScanPage: Search completed');
+      console.error('MarketScanPage: Full error details:', {
+        message: err.message,
+        response: (error as any)?.response?.data,
+        status: (error as any)?.response?.status
+      });
     }
   };
 
@@ -174,17 +191,28 @@ const MarketScanContent = () => {
       
       setAnalyzeResults(response);
       // Filter out predictions with errors
-      const validPredictions = (response.predictions || []).filter((p: any) => !p.error);
+      const validPredictions = (response.predictions || []).filter((p: PredictionItem) => !p.error);
       setPredictions(validPredictions);
       
       if (validPredictions.length === 0) {
         setError('Analysis completed but no valid predictions were generated.');
       }
-    } catch (error: any) {
-      console.error('Analyze failed:', error);
-      setError(error.message || 'Failed to analyze stock. Please ensure the backend is running.');
+      setLoading(false);
+    } catch (error: unknown) {
+      // Handle TimeoutError - backend is still processing
+      if (error instanceof TimeoutError) {
+        // Keep loading state active
+        setError(null);
+        console.log('MarketScanPage: Analysis timed out but backend is still processing');
+        // Don't clear loading - backend is still working
+        return;
+      }
+      
+      // Handle actual errors
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error('Analyze failed:', err);
+      setError(err.message || 'Failed to analyze stock. Please ensure the backend is running.');
       setAnalyzeResults(null);
-    } finally {
       setLoading(false);
     }
   };

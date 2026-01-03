@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { TrendingUp, TrendingDown, Plus } from 'lucide-react';
-import { stockAPI } from '../services/api';
+import { stockAPI, TimeoutError, PredictionItem } from '../services/api';
 
 const PortfolioPage = () => {
   const [holdings, setHoldings] = useState<any[]>([]);
@@ -13,10 +13,10 @@ const PortfolioPage = () => {
 
   useEffect(() => {
     loadPortfolio();
-    // Refresh every 40 seconds to update prices
+    // Refresh every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       loadPortfolio();
-    }, 40000);
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -25,7 +25,7 @@ const PortfolioPage = () => {
     try {
       // Load holdings from localStorage (user-managed portfolio)
       const savedHoldings = localStorage.getItem('portfolio_holdings');
-      let userHoldings: any[] = savedHoldings ? JSON.parse(savedHoldings) : [];
+      let userHoldings: Holding[] = savedHoldings ? JSON.parse(savedHoldings) : [];
       
       // If no holdings, show empty state
       if (userHoldings.length === 0) {
@@ -49,11 +49,11 @@ const PortfolioPage = () => {
         
         if (response.predictions) {
           // Filter out predictions with errors and map to holdings
-          const validPredictions = response.predictions.filter((p: any) => !p.error);
+          const validPredictions = response.predictions.filter((p: PredictionItem) => !p.error);
           
           // Update holdings with real-time prices
           const updatedHoldings = userHoldings.map((holding) => {
-            const prediction = validPredictions.find((p: any) => p.symbol === holding.symbol);
+            const prediction = validPredictions.find((p: PredictionItem) => p.symbol === holding.symbol);
             if (prediction) {
               const currentPrice = prediction.predicted_price || prediction.current_price || holding.avgPrice;
               return {
@@ -85,26 +85,39 @@ const PortfolioPage = () => {
           setTotalValue(total);
           setTotalGain(gain);
         }
-      } catch (apiError) {
+      } catch (apiError: unknown) {
+        // Handle TimeoutError - backend is still processing
+        if (apiError instanceof TimeoutError) {
+          // Keep loading state active, use stored holdings for now
+          console.log('PortfolioPage: Request timed out but backend is still processing');
+          setHoldings(userHoldings);
+          const total = userHoldings.reduce((sum, h) => sum + (h.value || h.shares * (h.currentPrice || h.avgPrice)), 0);
+          const gain = userHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
+          setTotalValue(total);
+          setTotalGain(gain);
+          // Don't clear loading - backend is still working
+          return;
+        }
+        
+        // Handle actual errors - use stored holdings without price updates
         console.error('Failed to fetch real-time prices:', apiError);
-        // Use stored holdings without price updates
         setHoldings(userHoldings);
         const total = userHoldings.reduce((sum, h) => sum + (h.value || h.shares * (h.currentPrice || h.avgPrice)), 0);
         const gain = userHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
         setTotalValue(total);
         setTotalGain(gain);
       }
-    } catch (error) {
+      setLoading(false);
+    } catch (error: unknown) {
       console.error('Failed to load portfolio:', error);
       setHoldings([]);
       setTotalValue(0);
       setTotalGain(0);
-    } finally {
       setLoading(false);
     }
   };
 
-  const calculateGain = (holding: any) => {
+  const calculateGain = (holding: Holding) => {
     const gain = (holding.currentPrice - holding.avgPrice) * holding.shares;
     const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
     return { gain, gainPercent };
@@ -117,7 +130,7 @@ const PortfolioPage = () => {
       try {
         const response = await stockAPI.predict([newPosition.symbol], 'intraday');
         if (response.predictions && response.predictions.length > 0) {
-          const prediction = response.predictions.find((p: any) => !p.error);
+          const prediction = response.predictions.find((p: PredictionItem) => !p.error);
           if (prediction) {
             currentPrice = prediction.predicted_price || prediction.current_price || newPosition.avgPrice;
           }

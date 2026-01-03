@@ -76,10 +76,10 @@ const ServerStatusIndicator = ({ className = '', showDetails = false }: ServerSt
     // Initial check
     checkServerStatus();
 
-    // Check every 10 seconds
+    // Check every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       checkServerStatus();
-    }, 10000);
+    }, 120000);
 
     return () => clearInterval(interval);
   }, []);

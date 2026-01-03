@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
-import { stockAPI, POPULAR_STOCKS } from '../services/api';
+import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
 import { useConnection } from '../contexts/ConnectionContext';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
@@ -14,8 +14,8 @@ const DashboardPage = () => {
   const [totalGainPercent, setTotalGainPercent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [topStocks, setTopStocks] = useState<any[]>([]);
-  const [userAddedTrades, setUserAddedTrades] = useState<any[]>([]);
+  const [topStocks, setTopStocks] = useState<PredictionItem[]>([]);
+  const [userAddedTrades, setUserAddedTrades] = useState<PredictionItem[]>([]);
   const [hiddenTrades, setHiddenTrades] = useState<string[]>([]);
   const [showAddTradeModal, setShowAddTradeModal] = useState(false);
   const [addTradeSymbol, setAddTradeSymbol] = useState('');
@@ -29,6 +29,8 @@ const DashboardPage = () => {
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
   const addTradeInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const prevConnectionStateRef = useRef<boolean>(true);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load user-added trades and hidden trades from localStorage on mount
   useEffect(() => {
@@ -55,16 +57,16 @@ const DashboardPage = () => {
     let isMounted = true;
     let loadingInProgress = false;
     let lastRefreshTime = 0;
-    const REFRESH_INTERVAL = 60000; // 60 seconds in milliseconds
+    const REFRESH_INTERVAL = 120000; // 120 seconds (2 minutes) in milliseconds
     
-    // Check connection first, then load data
-    const checkAndLoad = async () => {
+    // Load data without duplicate connection check
+    const loadData = async () => {
       // Prevent multiple simultaneous loads
       if (loadingInProgress) {
         return;
       }
       
-      // Prevent refreshes more frequent than 60 seconds
+      // Prevent refreshes more frequent than 120 seconds
       const now = Date.now();
       if (now - lastRefreshTime < REFRESH_INTERVAL) {
         console.log(`[Dashboard] Skipping refresh - only ${Math.round((now - lastRefreshTime) / 1000)}s since last refresh`);
@@ -74,46 +76,26 @@ const DashboardPage = () => {
       loadingInProgress = true;
       lastRefreshTime = now;
       
-      try {
-        const connectionCheck = await stockAPI.checkConnection();
-        if (!isMounted) return;
-        
-        if (!connectionCheck.connected) {
-          // Only show error if it's a real connection issue
-          if (connectionCheck.error && !connectionCheck.error.includes('progress')) {
-            setError(connectionCheck.error);
-          }
-          setLoading(false);
-          loadingInProgress = false;
-          return;
-        } else {
-          // Clear any connection errors if we're connected
-          setError((prevError) => {
-            if (prevError && (prevError.includes('Unable to connect') || prevError.includes('not reachable') || prevError.includes('not running'))) {
-              return null;
-            }
-            return prevError;
-          });
-        }
-      } catch (err: any) {
-        if (!isMounted) return;
-        console.error('Connection check failed:', err);
-        // Don't show error immediately - might be transient
+      // Use connection state from context instead of checking again
+      if (!connectionState.isConnected) {
+        setError(connectionState.error || 'Backend server is not reachable');
         setLoading(false);
         loadingInProgress = false;
         return;
       }
       
-      // If connected, load data
-      // Load dashboard data first, then health status (sequential to avoid rate limits)
+      // Clear any connection errors if we're connected
+      setError((prevError) => {
+        if (prevError && (prevError.includes('Unable to connect') || prevError.includes('not reachable') || prevError.includes('not running'))) {
+          return null;
+        }
+        return prevError;
+      });
+      
+      // If connected, load data directly (no connection check needed)
       try {
         await loadDashboardData();
-        // Load health status after a small delay to avoid rate limits
-        setTimeout(() => {
-          if (isMounted) {
-            loadHealthStatus();
-          }
-        }, 1000);
+        // Health check is now handled separately in another useEffect
       } catch (err) {
         if (!isMounted) return;
         console.error('Failed to load dashboard data:', err);
@@ -123,30 +105,61 @@ const DashboardPage = () => {
       }
     };
     
-    // Initial load
-    checkAndLoad();
+    // Only re-run if connection state changes from disconnected to connected
+    // This prevents unnecessary re-runs when connection state updates but stays the same
+    const connectionChanged = prevConnectionStateRef.current !== connectionState.isConnected;
+    prevConnectionStateRef.current = connectionState.isConnected;
     
-    // Refresh every 60 seconds - wait full 60 seconds between refreshes
-    const interval = setInterval(() => {
-      if (!loadingInProgress && isMounted) {
-        checkAndLoad();
-      }
-    }, REFRESH_INTERVAL);
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    // Initial load only if connected or if connection just changed to connected
+    if (connectionState.isConnected && (connectionChanged || !refreshIntervalRef.current)) {
+      loadData();
+    }
+    
+    // Refresh every 120 seconds (2 minutes) - only if connected
+    if (connectionState.isConnected) {
+      refreshIntervalRef.current = setInterval(() => {
+        if (!loadingInProgress && isMounted && connectionState.isConnected) {
+          loadData();
+        }
+      }, REFRESH_INTERVAL);
+    }
     
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
     };
-  }, []); // Empty dependency array - only run on mount
+  }, [connectionState.isConnected]); // Only re-run when connection state actually changes
 
-  const loadHealthStatus = async () => {
-    try {
-      const health = await stockAPI.health();
-      setHealthStatus(health);
-    } catch (error) {
-      console.error('Failed to load health status:', error);
-    }
-  };
+  // Health check moved to separate useEffect - runs every 5 minutes instead of every refresh
+  useEffect(() => {
+    const loadHealthStatus = async () => {
+      try {
+        const health = await stockAPI.health();
+        setHealthStatus(health);
+      } catch (error) {
+        console.error('Failed to load health status:', error);
+        // Don't show error - health check is not critical
+      }
+    };
+    
+    // Load once on mount
+    loadHealthStatus();
+    
+    // Then check every 5 minutes (300000ms) instead of every refresh
+    const healthInterval = setInterval(() => {
+      loadHealthStatus();
+    }, 300000); // 5 minutes = 300000ms
+    
+    return () => clearInterval(healthInterval);
+  }, []); // Only run once on mount
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -165,22 +178,31 @@ const DashboardPage = () => {
       let response;
       try {
         response = await stockAPI.predict(symbols, 'intraday');
-      } catch (predictError: any) {
-        console.error('[Dashboard] Predict error:', predictError);
-        // If timeout, show helpful message
-        if (predictError.message?.includes('timeout') || predictError.message?.includes('timed out') || predictError.message?.includes('taking longer')) {
-          setError(predictError.message || 'Predictions are taking longer than expected. Models may need training (60-90 seconds per symbol). Please try the Market Scan page to train models first, or wait a moment and refresh.');
-          setLoading(false);
-          return;
+      } catch (predictError: unknown) {
+        // Handle TimeoutError - backend is still processing, don't show error
+        if (predictError instanceof TimeoutError) {
+          // Keep loading state active, show processing message
+          setError(null); // Clear any previous errors
+          // Loading state remains true - backend is still working
+          console.log('[Dashboard] Request timed out but backend is still processing:', predictError.message);
+          return; // Don't clear loading, don't show error
         }
+        
+        // Handle actual errors
+        const error = predictError instanceof Error ? predictError : new Error(String(predictError));
+        console.error('[Dashboard] Predict error:', error);
+        
         // If connection error, show that
-        if (predictError.message?.includes('Unable to connect') || predictError.message?.includes('ECONNREFUSED')) {
+        if (error.message?.includes('Unable to connect') || error.message?.includes('ECONNREFUSED')) {
           setError('Cannot connect to backend server. Please ensure the backend is running on http://127.0.0.1:8000');
           setLoading(false);
           return;
         }
-        // Re-throw other errors
-        throw predictError;
+        
+        // For other errors, show error but don't treat as fatal
+        setError(error.message || 'Failed to load predictions. Please try again.');
+        setLoading(false);
+        return;
       }
       
       // Check for errors in metadata
@@ -190,7 +212,7 @@ const DashboardPage = () => {
       
       // Backend returns: { metadata, predictions }
       // Filter out predictions with errors
-      const validPredictions = (response.predictions || []).filter((p: any) => !p.error);
+      const validPredictions = (response.predictions || []).filter((p: PredictionItem) => !p.error);
       
       if (validPredictions.length > 0) {
         // Set initial prediction immediately (fast loading)
@@ -203,7 +225,7 @@ const DashboardPage = () => {
         setTopStocks([]);
         if (response.metadata?.count === 0 || validPredictions.length === 0) {
           // Check if there are predictions with errors (indicating training needed)
-          const predictionsWithErrors = (response.predictions || []).filter((p: any) => p.error);
+          const predictionsWithErrors = (response.predictions || []).filter((p: PredictionItem) => p.error);
           if (predictionsWithErrors.length > 0) {
             const errorMsg = predictionsWithErrors[0].error || '';
             if (errorMsg.includes('training') || errorMsg.includes('Model') || errorMsg.includes('model')) {
@@ -227,18 +249,31 @@ const DashboardPage = () => {
                       loadDashboardData(); // Reload data
                     }, 2000); // Wait 2 seconds then retry
                   })
-                  .catch((trainError) => {
-                    console.error('[Dashboard] Training failed:', trainError);
-                    // If rate limited, don't retry immediately
-                    if (trainError.message?.includes('Rate limit') || trainError.message?.includes('429')) {
-                      setError('Rate limit reached. Please wait 60 seconds before training models. Use the Market Scan page to train models.');
-                    } else {
-                      // Training might still be in progress (timeout), so show helpful message
-                      setError(`Training model for ${symbolToTrain}... This may take 60-90 seconds. Please wait or use the Market Scan page to train models.`);
-                      // Still retry after delay in case training completed
+                  .catch((trainError: unknown) => {
+                    // Handle TimeoutError - training is still in progress
+                    if (trainError instanceof TimeoutError) {
+                      // Keep loading, show processing message
+                      setError(`Training model for ${symbolToTrain}... This will take 60-90 seconds. The dashboard will refresh automatically when complete.`);
+                      // Don't clear loading - training is still in progress
+                      // Retry after delay to check if training completed
                       setTimeout(() => {
                         loadDashboardData();
                       }, 90000); // Retry after 90 seconds
+                      return;
+                    }
+                    
+                    // Handle actual errors
+                    const error = trainError instanceof Error ? trainError : new Error(String(trainError));
+                    console.error('[Dashboard] Training failed:', error);
+                    
+                    // If rate limited, don't retry immediately
+                    if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
+                      setError('Rate limit reached. Please wait 60 seconds before training models. Use the Market Scan page to train models.');
+                      setLoading(false);
+                    } else {
+                      // Other errors
+                      setError(`Training failed: ${error.message}. Please use the Market Scan page to train models.`);
+                      setLoading(false);
                     }
                   });
               }
@@ -256,12 +291,12 @@ const DashboardPage = () => {
       // Calculate real portfolio metrics from predictions
       if (validPredictions.length > 0) {
         // Calculate total portfolio value (sum of all predicted prices)
-        const totalValue = validPredictions.reduce((sum: number, pred: any) => {
+        const totalValue = validPredictions.reduce((sum: number, pred: PredictionItem) => {
           return sum + (pred.predicted_price || pred.current_price || 0);
         }, 0);
         
         // Calculate total gain/loss from predicted returns
-        const totalReturn = validPredictions.reduce((sum: number, pred: any) => {
+        const totalReturn = validPredictions.reduce((sum: number, pred: PredictionItem) => {
           const currentPrice = pred.current_price || 0;
           const predictedPrice = pred.predicted_price || currentPrice;
           const returnValue = ((predictedPrice - currentPrice) / currentPrice) * 100;
@@ -276,7 +311,7 @@ const DashboardPage = () => {
           setDailyChangePercent(changePercent);
         } else {
           // First load - use average return as daily change estimate
-          const avgReturn = validPredictions.reduce((sum: number, pred: any) => {
+          const avgReturn = validPredictions.reduce((sum: number, pred: PredictionItem) => {
             return sum + (pred.predicted_return || 0);
           }, 0) / validPredictions.length;
           const estimatedChange = (avgReturn / 100) * totalValue;
@@ -298,30 +333,37 @@ const DashboardPage = () => {
       }
       
       setLastUpdated(new Date());
-    } catch (error: any) {
-      console.error('Failed to load dashboard data:', error);
-      // Handle different types of errors
-      if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
-        // Timeout - models likely need training
-        setError('Predictions are taking longer than expected. Models may need training (60-90 seconds per symbol). Try the Market Scan page to train models first, or wait and refresh.');
-      } else if (error.message?.includes('Unable to connect') || error.message?.includes('ECONNREFUSED') || error.message?.includes('Network Error')) {
+    } catch (error: unknown) {
+      // Handle TimeoutError - backend is still processing
+      if (error instanceof TimeoutError) {
+        // Keep loading state active, don't show error
+        setError(null);
+        console.log('[Dashboard] Request timed out but backend is still processing');
+        // Don't clear loading state - backend is still working
+        return;
+      }
+      
+      // Handle actual errors
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error('Failed to load dashboard data:', err);
+      
+      if (err.message?.includes('Unable to connect') || err.message?.includes('ECONNREFUSED') || err.message?.includes('Network Error')) {
         // Connection error
-        setError(error.message || 'Backend server is not reachable. Please ensure the backend is running.');
-      } else if (error.message?.includes('Model training') || error.message?.includes('training')) {
+        setError(err.message || 'Backend server is not reachable. Please ensure the backend is running.');
+      } else if (err.message?.includes('Model training') || err.message?.includes('training')) {
         // Model training needed
-        setError(error.message + ' Use the Market Scan page to train models first.');
+        setError(err.message + ' Use the Market Scan page to train models first.');
       } else {
         // Other errors - show but don't treat as fatal
-        setError(error.message || 'Failed to load dashboard data. Please try again.');
+        setError(err.message || 'Failed to load dashboard data. Please try again.');
       }
       setTopStocks([]);
-    } finally {
       setLoading(false);
     }
   };
 
   // Save user-added trades to localStorage
-  const saveUserAddedTrades = (trades: any[]) => {
+  const saveUserAddedTrades = (trades: PredictionItem[]) => {
     setUserAddedTrades(trades);
     localStorage.setItem('userAddedTrades', JSON.stringify(trades));
   };
@@ -415,7 +457,7 @@ const DashboardPage = () => {
         throw new Error(response.metadata.error);
       }
 
-      const validPredictions = (response.predictions || []).filter((p: any) => !p.error);
+      const validPredictions = (response.predictions || []).filter((p: PredictionItem) => !p.error);
       
       if (validPredictions.length === 0) {
         // No predictions found - provide helpful error message with suggestions if available

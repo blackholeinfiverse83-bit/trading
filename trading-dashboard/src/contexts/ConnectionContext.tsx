@@ -32,6 +32,13 @@ export const ConnectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (prev.isChecking && !isForceCheck) {
         return prev;
       }
+      // Don't check if we checked within last 10 seconds (unless forced)
+      if (!isForceCheck && prev.lastCheck) {
+        const timeSinceLastCheck = Date.now() - prev.lastCheck.getTime();
+        if (timeSinceLastCheck < 10000) { // 10 seconds cache
+          return prev; // Return cached state
+        }
+      }
       return { ...prev, isChecking: true, error: null };
     });
 
@@ -64,10 +71,10 @@ export const ConnectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Initial check
     checkConnection();
 
-    // Check every 5 seconds
+    // Check every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       checkConnection();
-    }, 5000);
+    }, 120000); // Changed to 120 seconds (2 minutes) to reduce rate limit issues
 
     return () => clearInterval(interval);
   }, [checkConnection]); // Include checkConnection in dependencies

@@ -1,23 +1,33 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { stockAPI } from '../services/api';
+import { stockAPI, TimeoutError, PredictionItem } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Brain, Cpu, TrendingUp, Zap, BarChart3 } from 'lucide-react';
 
 const AnalyticsPage = () => {
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<{
+    predictions: PredictionItem[];
+    buyCount: number;
+    sellCount: number;
+    holdCount: number;
+    avgConfidence: number;
+    avgReturn: number;
+    totalReturn: number;
+    ensembleStats: { aligned: number; priceAgreement: number; totalPredictions: number };
+    modelPerformance: Record<string, { count: number; avgReturn: number }>;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d'>('30d');
-  const [features, setFeatures] = useState<any>(null);
+  const [features, setFeatures] = useState<Record<string, unknown> | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
 
   useEffect(() => {
     loadAnalytics();
-    // Refresh every 40 seconds
+    // Refresh every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       loadAnalytics();
-    }, 40000);
+    }, 120000);
     return () => clearInterval(interval);
   }, [selectedPeriod]);
 
@@ -35,21 +45,21 @@ const AnalyticsPage = () => {
       // Backend returns: { metadata, shortlist, all_predictions }
       // Filter out predictions with errors
       const allPredictions = response.all_predictions || response.shortlist || [];
-      const predictions = allPredictions.filter((p: any) => !p.error);
+      const predictions = allPredictions.filter((p: PredictionItem) => !p.error);
       
       // Process analytics data - backend uses LONG/SHORT/HOLD
-      const buyCount = predictions.filter((p: any) => p.action === 'LONG').length;
-      const sellCount = predictions.filter((p: any) => p.action === 'SHORT').length;
-      const holdCount = predictions.filter((p: any) => p.action === 'HOLD').length;
+      const buyCount = predictions.filter((p: PredictionItem) => p.action === 'LONG').length;
+      const sellCount = predictions.filter((p: PredictionItem) => p.action === 'SHORT').length;
+      const holdCount = predictions.filter((p: PredictionItem) => p.action === 'HOLD').length;
       
       // Calculate additional analytics
-      const totalReturn = predictions.reduce((sum: number, p: any) => sum + (p.predicted_return || 0), 0);
+      const totalReturn = predictions.reduce((sum: number, p: PredictionItem) => sum + (p.predicted_return || 0), 0);
       const avgReturn = predictions.length > 0 ? totalReturn / predictions.length : 0;
       
       // Extract ensemble details
       const ensembleStats = {
-        aligned: predictions.filter((p: any) => p.ensemble_details?.models_align).length,
-        priceAgreement: predictions.filter((p: any) => p.ensemble_details?.price_agreement).length,
+        aligned: predictions.filter((p: PredictionItem) => p.ensemble_details?.models_align).length,
+        priceAgreement: predictions.filter((p: PredictionItem) => p.ensemble_details?.price_agreement).length,
         totalPredictions: predictions.length
       };
       
@@ -61,7 +71,7 @@ const AnalyticsPage = () => {
         dqn: { count: 0, avgReturn: 0 }
       };
       
-      predictions.forEach((p: any) => {
+      predictions.forEach((p: PredictionItem) => {
         const ind = p.individual_predictions || {};
         if (ind.random_forest) {
           modelPerformance.random_forest.count++;
@@ -92,7 +102,7 @@ const AnalyticsPage = () => {
         sellCount,
         holdCount,
         avgConfidence: predictions.length > 0 
-          ? predictions.reduce((sum: number, p: any) => sum + (p.confidence || 0), 0) / predictions.length 
+          ? predictions.reduce((sum: number, p: PredictionItem) => sum + (p.confidence || 0), 0) / predictions.length 
           : 0,
         avgReturn,
         totalReturn,
@@ -104,10 +114,20 @@ const AnalyticsPage = () => {
       if (predictions.length > 0 && !selectedSymbol) {
         loadFeaturesForSymbol(predictions[0].symbol);
       }
-    } catch (error: any) {
-      console.error('Failed to load analytics:', error);
+      setLoading(false);
+    } catch (error: unknown) {
+      // Handle TimeoutError - backend is still processing
+      if (error instanceof TimeoutError) {
+        // Keep loading state active, don't show error
+        console.log('AnalyticsPage: Request timed out but backend is still processing');
+        // Don't clear loading - backend is still working
+        return;
+      }
+      
+      // Handle actual errors
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error('Failed to load analytics:', err);
       setAnalytics(null);
-    } finally {
       setLoading(false);
     }
   };

@@ -9,6 +9,72 @@ const log = (...args: any[]) => {
   }
 };
 
+// TypeScript interfaces for API responses
+export interface PredictionItem {
+  symbol: string;
+  action: 'LONG' | 'SHORT' | 'HOLD' | 'BUY' | 'SELL';
+  predicted_return: number;
+  confidence: number;
+  stop_loss?: number;
+  take_profit?: number;
+  risk_score?: number;
+  error?: string;
+  horizon?: string; // Horizon for this prediction
+  predicted_price?: number; // Predicted price
+  current_price?: number; // Current price
+  isUserAdded?: boolean; // Frontend-only flag for user-added trades
+  ensemble_details?: {
+    models_align: boolean;
+    price_agreement: boolean;
+  };
+  individual_predictions?: Record<string, {
+    action: string;
+    predicted_return: number;
+    confidence: number;
+  }>;
+  horizon_details?: Record<string, unknown>; // Additional horizon-specific details
+}
+
+export interface PredictResponse {
+  metadata: {
+    count: number;
+    horizon: string;
+    timestamp?: string;
+    error?: string;
+  };
+  predictions: PredictionItem[];
+}
+
+export interface ScanAllResponse {
+  metadata: {
+    count: number;
+    horizon: string;
+    timestamp?: string;
+    error?: string;
+  };
+  shortlist: PredictionItem[];
+  all_predictions: PredictionItem[];
+}
+
+export interface AnalyzeResponse {
+  metadata: {
+    symbol: string;
+    horizons: string[];
+    timestamp?: string;
+    error?: string;
+  };
+  predictions: PredictionItem[];
+}
+
+// Custom error class for timeouts on long-running requests
+// This allows components to distinguish "still processing" from "actual failure"
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TimeoutError';
+  }
+}
+
 // Connection state management
 let isBackendOnline = true;
 let connectionCheckInProgress = false;
@@ -54,11 +120,26 @@ api.interceptors.response.use(
       
       if (isTimeout) {
         // Timeout - server is running but request took too long
-        // Don't mark as offline, just return timeout error
-        return Promise.reject(new Error(
-          'Request timed out. The backend is processing your request but it\'s taking longer than expected. ' +
-          'This may happen if models need to be trained (60-90 seconds). Please try again or use the Market Scan page to train models first.'
-        ));
+        // Check if this is a long-running request (predict, scanAll, analyze, trainRL)
+        const url = originalRequest?.url || '';
+        const isLongRunningRequest = url.includes('/tools/predict') || 
+                                     url.includes('/tools/scan_all') || 
+                                     url.includes('/tools/analyze') || 
+                                     url.includes('/tools/train_rl');
+        
+        if (isLongRunningRequest) {
+          // For long-running requests, timeout means "still processing", not failure
+          // Throw special TimeoutError that components can handle gracefully
+          return Promise.reject(new TimeoutError(
+            'Request is taking longer than expected. The backend is still processing your request. ' +
+            'This is normal when models need training (60-90 seconds per symbol). Please wait...'
+          ));
+        } else {
+          // For other requests, timeout is a real error
+          return Promise.reject(new Error(
+            'Request timed out. Please try again or check your connection.'
+          ));
+        }
       }
       
       // Real connection error
@@ -186,8 +267,15 @@ export const stockAPI = {
     stopLossPct?: number,
     capitalRiskPct?: number,
     drawdownLimitPct?: number
-  ) => {
-    const payload: any = {
+  ): Promise<PredictResponse> => {
+    const payload: {
+      symbols: string[];
+      horizon: string;
+      risk_profile?: string;
+      stop_loss_pct?: number;
+      capital_risk_pct?: number;
+      drawdown_limit_pct?: number;
+    } = {
       symbols,
       horizon,
     };
@@ -198,15 +286,13 @@ export const stockAPI = {
     
     log('Calling /tools/predict with:', payload);
     try {
-      const response = await api.post('/tools/predict', payload);
+      const response = await api.post<PredictResponse>('/tools/predict', payload);
       log('Predict response received:', { status: response.status, hasPredictions: 'predictions' in response.data });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log('Predict error:', { 
-        message: error.message, 
-        code: error.code, 
-        status: error.response?.status,
-        hasResponse: !!error.response 
+        message: error instanceof Error ? error.message : String(error),
+        isTimeout: error instanceof TimeoutError,
       });
       throw error;
     }
@@ -218,8 +304,14 @@ export const stockAPI = {
     minConfidence: number = 0.3,
     stopLossPct?: number,
     capitalRiskPct?: number
-  ) => {
-    const payload: any = {
+  ): Promise<ScanAllResponse> => {
+    const payload: {
+      symbols: string[];
+      horizon: string;
+      min_confidence: number;
+      stop_loss_pct?: number;
+      capital_risk_pct?: number;
+    } = {
       symbols,
       horizon,
       min_confidence: minConfidence,
@@ -227,8 +319,16 @@ export const stockAPI = {
     if (stopLossPct !== undefined) payload.stop_loss_pct = stopLossPct;
     if (capitalRiskPct !== undefined) payload.capital_risk_pct = capitalRiskPct;
     
-    const response = await api.post('/tools/scan_all', payload);
-    return response.data;
+    try {
+      const response = await api.post<ScanAllResponse>('/tools/scan_all', payload);
+      return response.data;
+    } catch (error: unknown) {
+      log('ScanAll error:', { 
+        message: error instanceof Error ? error.message : String(error),
+        isTimeout: error instanceof TimeoutError,
+      });
+      throw error;
+    }
   },
   
   analyze: async (
@@ -237,15 +337,23 @@ export const stockAPI = {
     stopLossPct: number = 2.0,
     capitalRiskPct: number = 1.0,
     drawdownLimitPct: number = 5.0
-  ) => {
-    const response = await api.post('/tools/analyze', {
-      symbol,
-      horizons,
-      stop_loss_pct: stopLossPct,
-      capital_risk_pct: capitalRiskPct,
-      drawdown_limit_pct: drawdownLimitPct,
-    });
-    return response.data;
+  ): Promise<AnalyzeResponse> => {
+    try {
+      const response = await api.post<AnalyzeResponse>('/tools/analyze', {
+        symbol,
+        horizons,
+        stop_loss_pct: stopLossPct,
+        capital_risk_pct: capitalRiskPct,
+        drawdown_limit_pct: drawdownLimitPct,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      log('Analyze error:', { 
+        message: error instanceof Error ? error.message : String(error),
+        isTimeout: error instanceof TimeoutError,
+      });
+      throw error;
+    }
   },
   
   fetchData: async (
@@ -334,14 +442,22 @@ export const stockAPI = {
     horizon: string = 'intraday',
     nEpisodes: number = 10,
     forceRetrain: boolean = false
-  ) => {
-    const response = await api.post('/tools/train_rl', {
-      symbol,
-      horizon,
-      n_episodes: nEpisodes,
-      force_retrain: forceRetrain,
-    });
-    return response.data;
+  ): Promise<{ success: boolean; message?: string; symbol?: string; horizon?: string }> => {
+    try {
+      const response = await api.post<{ success: boolean; message?: string; symbol?: string; horizon?: string }>('/tools/train_rl', {
+        symbol,
+        horizon,
+        n_episodes: nEpisodes,
+        force_retrain: forceRetrain,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      log('TrainRL error:', { 
+        message: error instanceof Error ? error.message : String(error),
+        isTimeout: error instanceof TimeoutError,
+      });
+      throw error;
+    }
   },
   
   health: async () => {
