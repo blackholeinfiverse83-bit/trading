@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { stockAPI, TimeoutError, PredictionItem, AnalyzeResponse } from '../services/api';
+import { stockAPI, TimeoutError, type PredictionItem, type AnalyzeResponse } from '../services/api';
 import { useAssetType } from '../contexts/AssetTypeContext';
 import StocksView from '../components/StocksView';
 import CryptoView from '../components/CryptoView';

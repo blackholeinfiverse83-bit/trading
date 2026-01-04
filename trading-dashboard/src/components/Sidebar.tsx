@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Search, 
@@ -6,6 +6,9 @@ import {
   History, 
   Star, 
   BarChart3,
+  Bell,
+  Settings,
+  GitCompare,
   LogOut,
   X
 } from 'lucide-react';
@@ -19,6 +22,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { theme } = useTheme();
 
@@ -29,6 +33,9 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { path: '/trading-history', icon: History, label: 'Trading History' },
     { path: '/watchlist', icon: Star, label: 'Watch List' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/alerts', icon: Bell, label: 'Alerts' },
+    { path: '/compare', icon: GitCompare, label: 'Compare' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   const isLight = theme === 'light';
@@ -42,11 +49,21 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   };
 
   // Handle logout and close sidebar on mobile
-  const handleLogout = () => {
+  const handleLogout = (e?: React.MouseEvent) => {
+    // Prevent any default behavior
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    // Clear state first
     logout();
+    
+    // Close sidebar on mobile
     if (onClose && window.innerWidth < 1024) {
       onClose();
     }
+    
+    // Navigate immediately using React Router (replace: true prevents back button)
+    navigate('/login', { replace: true });
   };
   
   return (

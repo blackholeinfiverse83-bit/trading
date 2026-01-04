@@ -79,6 +79,64 @@ export class TimeoutError extends Error {
 let isBackendOnline = true;
 let connectionCheckInProgress = false;
 
+// Request throttling - Limit frontend to 20 requests per minute
+const MAX_REQUESTS = config.MAX_REQUESTS_PER_MINUTE || 20;
+const THROTTLE_WINDOW_MS = config.THROTTLE_WINDOW_MS || 60 * 1000; // 1 minute window
+let requestCount = 0;
+let requestTimestamps: number[] = [];
+
+/**
+ * Clean up old request timestamps outside the throttle window
+ */
+function cleanupOldRequests() {
+  const now = Date.now();
+  requestTimestamps = requestTimestamps.filter(ts => now - ts < THROTTLE_WINDOW_MS);
+  requestCount = requestTimestamps.length;
+}
+
+/**
+ * Check if we can make a request (under 20 requests limit)
+ * Returns true if request can proceed, false if throttled
+ */
+function canMakeRequest(): boolean {
+  cleanupOldRequests();
+  return requestCount < MAX_REQUESTS;
+}
+
+/**
+ * Record a request timestamp
+ */
+function recordRequest() {
+  const now = Date.now();
+  requestTimestamps.push(now);
+  requestCount = requestTimestamps.length;
+  cleanupOldRequests();
+}
+
+/**
+ * Get remaining requests in current window
+ */
+export function getRemainingRequests(): number {
+  cleanupOldRequests();
+  return Math.max(0, MAX_REQUESTS - requestCount);
+}
+
+/**
+ * Get request limit status
+ */
+export function getRequestLimitStatus(): { used: number; limit: number; remaining: number; resetIn: number } {
+  cleanupOldRequests();
+  const oldestTimestamp = requestTimestamps.length > 0 ? Math.min(...requestTimestamps) : Date.now();
+  const resetIn = Math.max(0, THROTTLE_WINDOW_MS - (Date.now() - oldestTimestamp));
+  
+  return {
+    used: requestCount,
+    limit: MAX_REQUESTS,
+    remaining: Math.max(0, MAX_REQUESTS - requestCount),
+    resetIn: Math.ceil(resetIn / 1000) // seconds
+  };
+}
+
 const api = axios.create({
   baseURL: config.API_BASE_URL,
   headers: {
@@ -88,14 +146,31 @@ const api = axios.create({
   withCredentials: false, // CORS is handled by backend
 });
 
-// Add token to requests if available
+// Add token to requests if available and enforce request throttling
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Check request throttling BEFORE making the request
+    if (!canMakeRequest()) {
+      const status = getRequestLimitStatus();
+      const error = new Error(
+        `Request limit exceeded. You have used ${status.used}/${status.limit} requests. ` +
+        `Please wait ${status.resetIn} seconds before making more requests.`
+      );
+      (error as any).isThrottled = true;
+      (error as any).throttleStatus = status;
+      return Promise.reject(error);
+    }
+    
+    // Record this request
+    recordRequest();
+    
+    // Add authentication token
     const token = localStorage.getItem('token');
     // Only add token if it's a valid JWT (not 'no-auth-required')
     if (token && token !== 'no-auth-required' && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => {
@@ -216,6 +291,17 @@ api.interceptors.response.use(
         // Clear any pending retries
         if (originalRequest) {
           originalRequest._retry = true; // Prevent retry
+        }
+      } else if (error.isThrottled) {
+        // Frontend request throttling - show user-friendly message
+        const throttleStatus = error.throttleStatus || getRequestLimitStatus();
+        message = error.message || 
+          `Request limit reached (${throttleStatus.used}/${throttleStatus.limit}). ` +
+          `Please wait ${throttleStatus.resetIn} seconds before making more requests.`;
+        
+        // Don't retry throttled requests
+        if (originalRequest) {
+          originalRequest._retry = true;
         }
       } else if (status === 503) {
         message = 'Service temporarily unavailable. The prediction engine is initializing. Please try again in a moment.';

@@ -9,6 +9,9 @@ import PortfolioPage from './pages/PortfolioPage';
 import TradingHistoryPage from './pages/TradingHistoryPage';
 import WatchListPage from './pages/WatchListPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AlertsPage from './pages/AlertsPage';
+import SettingsPage from './pages/SettingsPage';
+import ComparePage from './pages/ComparePage';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -43,6 +46,9 @@ export const AppRoutes = () => {
       <Route path="/trading-history" element={<TradingHistoryPage />} />
       <Route path="/watchlist" element={<WatchListPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/alerts" element={<AlertsPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/compare" element={<ComparePage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       {/* Catch-all route for 404 */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

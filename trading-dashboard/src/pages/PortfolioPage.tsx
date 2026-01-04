@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { TrendingUp, TrendingDown, Plus } from 'lucide-react';
-import { stockAPI, TimeoutError, PredictionItem } from '../services/api';
+import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
 
 const PortfolioPage = () => {
   const [holdings, setHoldings] = useState<any[]>([]);

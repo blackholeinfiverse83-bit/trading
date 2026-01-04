@@ -219,26 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // If auth is disabled, logout should just refresh the anonymous user
-    if (authEnabled === false) {
-      const anonymousUser = { username: 'anonymous', token: 'no-auth-required' };
-      setUser(anonymousUser);
-      localStorage.setItem('token', 'no-auth-required');
-      localStorage.setItem('username', 'anonymous');
-      // Optionally redirect to home/dashboard
-      if (typeof window !== 'undefined' && window.location.pathname.includes('/login')) {
-        window.location.href = '/dashboard';
-      }
-    } else {
-      // Auth is enabled - clear everything
-      setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      // Redirect to login page
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    }
+    // Clear user state and localStorage regardless of auth status
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    // Note: Navigation is handled by the component calling logout
+    // This allows React Router to handle navigation properly
   };
 
   return (

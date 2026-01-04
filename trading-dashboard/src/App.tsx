@@ -2,6 +2,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ConnectionProvider } from './contexts/ConnectionContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
 import { AppRoutes } from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
 import BackendConnectionBanner from './components/BackendConnectionBanner';
@@ -14,8 +16,12 @@ function App() {
         <ThemeProvider>
           <ConnectionProvider>
             <AuthProvider>
-              <BackendConnectionBanner />
-              <AppRoutes />
+              <WebSocketProvider>
+                <NotificationProvider>
+                  <BackendConnectionBanner />
+                  <AppRoutes />
+                </NotificationProvider>
+              </WebSocketProvider>
             </AuthProvider>
           </ConnectionProvider>
         </ThemeProvider>

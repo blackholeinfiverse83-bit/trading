@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { stockAPI, TimeoutError, PredictionItem } from '../services/api';
+import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Brain, Cpu, TrendingUp, Zap, BarChart3 } from 'lucide-react';
 
@@ -443,7 +443,7 @@ const AnalyticsPage = () => {
             <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
               <h2 className="text-xl font-semibold text-white mb-4">Top Predictions</h2>
               <div className="space-y-3">
-                {analytics?.predictions?.slice(0, 5).map((pred: any, index: number) => (
+                {analytics?.predictions?.slice(0, 5).map((pred: PredictionItem, index: number) => (
                   <div 
                     key={index} 
                     className="flex items-center justify-between p-3 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer"

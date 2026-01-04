@@ -1,385 +1,5 @@
 [
   {
-    "symbol": "TSLA",
-    "timestamp": "2026-01-02T13:25:54.586617",
-    "current_price": 449.72,
-    "predicted_price": 406.08,
-    "predicted_return": -9.7,
-    "action": "SHORT",
-    "score": 0.7112,
-    "confidence": 0.7112,
-    "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:SHORT | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Price Models (Strong Agreement)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Strong Agreement)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.3169,
-      "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:SHORT | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Price Models (Strong Agreement)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -8.81,
-        "price": 410.08
-      },
-      "lightgbm": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "xgboost": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "dqn": {
-        "action": "SHORT",
-        "q_value": -22.9017,
-        "confidence": 0.5367
-      }
-    }
-  },
-  {
-    "symbol": "AAPL",
-    "timestamp": "2026-01-02T13:26:00.700389",
-    "current_price": 271.86,
-    "predicted_price": 259.92,
-    "predicted_return": -4.39,
-    "action": "SHORT",
-    "score": 0.51,
-    "confidence": 0.51,
-    "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Small Downside)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.6,
-      "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "lightgbm": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "xgboost": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "dqn": {
-        "action": "HOLD",
-        "q_value": 24.0607,
-        "confidence": 0.5529
-      }
-    }
-  },
-  {
-    "symbol": "GOOGL",
-    "timestamp": "2026-01-02T13:26:01.534992",
-    "current_price": 313.0,
-    "predicted_price": 298.08,
-    "predicted_return": -4.77,
-    "action": "SHORT",
-    "score": 0.5705,
-    "confidence": 0.5705,
-    "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:SHORT | Tech:RSI:56.9 (Neutral) | MACD:4.14/5.1 (Bearish) | SMA10:+1.0% | SMA50:+5.3% | BB:Upper Half | ADX:21.3 (Moderate Trend) | Price Models (Strong Agreement)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Strong Agreement)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.2094,
-      "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:SHORT | Tech:RSI:56.9 (Neutral) | MACD:4.14/5.1 (Bearish) | SMA10:+1.0% | SMA50:+5.3% | BB:Upper Half | ADX:21.3 (Moderate Trend) | Price Models (Strong Agreement)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "lightgbm": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "xgboost": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "dqn": {
-        "action": "SHORT",
-        "q_value": -18.5795,
-        "confidence": 0.3712
-      }
-    }
-  },
-  {
-    "symbol": "MSFT",
-    "timestamp": "2026-01-02T13:26:02.369042",
-    "current_price": 483.62,
-    "predicted_price": 469.54,
-    "predicted_return": -2.91,
-    "action": "SHORT",
-    "score": 0.425,
-    "confidence": 0.425,
-    "reason": "RF:+0.35% | LGBM:-4.00% | XGB:-4.00% | DQN:LONG | Tech:RSI:46.1 (Neutral) | MACD:-1.79/-3.16 (Bullish) | SMA50:-2.6% | SMA200:+1.5% | BB:Upper Half | ADX:16.0 (Weak Trend) | Mixed signals (disagreement resolved)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Small Downside)",
-      "price_agreement": false,
-      "models_align": false,
-      "total_vote": 0.5,
-      "reason": "RF:+0.35% | LGBM:-4.00% | XGB:-4.00% | DQN:LONG | Tech:RSI:46.1 (Neutral) | MACD:-1.79/-3.16 (Bullish) | SMA50:-2.6% | SMA200:+1.5% | BB:Upper Half | ADX:16.0 (Weak Trend) | Mixed signals (disagreement resolved)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": 0.35,
-        "price": 485.32
-      },
-      "lightgbm": {
-        "return": -4.0,
-        "price": 464.28
-      },
-      "xgboost": {
-        "return": -4.0,
-        "price": 464.28
-      },
-      "dqn": {
-        "action": "LONG",
-        "q_value": -18.5437,
-        "confidence": 0.3515
-      }
-    }
-  },
-  {
-    "symbol": "TSLA",
-    "timestamp": "2026-01-02T13:26:03.268748",
-    "current_price": 449.72,
-    "predicted_price": 406.08,
-    "predicted_return": -9.7,
-    "action": "SHORT",
-    "score": 0.566,
-    "confidence": 0.566,
-    "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:SHORT | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Price Models (Strong Agreement)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Strong Agreement)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.2315,
-      "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:SHORT | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Price Models (Strong Agreement)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -8.81,
-        "price": 410.08
-      },
-      "lightgbm": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "xgboost": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "dqn": {
-        "action": "SHORT",
-        "q_value": -23.8401,
-        "confidence": 0.3659
-      }
-    }
-  },
-  {
-    "symbol": "AAPL",
-    "timestamp": "2026-01-02T13:26:04.998405",
-    "current_price": 271.86,
-    "predicted_price": 259.92,
-    "predicted_return": -4.39,
-    "action": "SHORT",
-    "score": 0.4623,
-    "confidence": 0.4623,
-    "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:LONG | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Mixed signals (disagreement resolved)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (DQN Low Confidence)",
-      "price_agreement": false,
-      "models_align": false,
-      "total_vote": 0.5439,
-      "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:LONG | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Mixed signals (disagreement resolved)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "lightgbm": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "xgboost": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "dqn": {
-        "action": "LONG",
-        "q_value": 18.3625,
-        "confidence": 0.3842
-      }
-    }
-  },
-  {
-    "symbol": "GOOGL",
-    "timestamp": "2026-01-02T13:26:05.830722",
-    "current_price": 313.0,
-    "predicted_price": 298.08,
-    "predicted_return": -4.77,
-    "action": "SHORT",
-    "score": 0.7375,
-    "confidence": 0.7375,
-    "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:SHORT | Tech:RSI:56.9 (Neutral) | MACD:4.14/5.1 (Bearish) | SMA10:+1.0% | SMA50:+5.3% | BB:Upper Half | ADX:21.3 (Moderate Trend) | Price Models (Strong Agreement)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Strong Agreement)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.3077,
-      "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:SHORT | Tech:RSI:56.9 (Neutral) | MACD:4.14/5.1 (Bearish) | SMA10:+1.0% | SMA50:+5.3% | BB:Upper Half | ADX:21.3 (Moderate Trend) | Price Models (Strong Agreement)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "lightgbm": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "xgboost": {
-        "return": -4.77,
-        "price": 298.08
-      },
-      "dqn": {
-        "action": "SHORT",
-        "q_value": -19.8882,
-        "confidence": 0.5677
-      }
-    }
-  },
-  {
-    "symbol": "MSFT",
-    "timestamp": "2026-01-02T13:26:06.630742",
-    "current_price": 483.62,
-    "predicted_price": 469.54,
-    "predicted_return": -2.91,
-    "action": "SHORT",
-    "score": 0.51,
-    "confidence": 0.51,
-    "reason": "RF:+0.35% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:46.1 (Neutral) | MACD:-1.79/-3.16 (Bullish) | SMA50:-2.6% | SMA200:+1.5% | BB:Upper Half | ADX:16.0 (Weak Trend) | Small downside (-2.91%), going SHORT",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Small Downside)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.6,
-      "reason": "RF:+0.35% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:46.1 (Neutral) | MACD:-1.79/-3.16 (Bullish) | SMA50:-2.6% | SMA200:+1.5% | BB:Upper Half | ADX:16.0 (Weak Trend) | Small downside (-2.91%), going SHORT"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": 0.35,
-        "price": 485.32
-      },
-      "lightgbm": {
-        "return": -4.0,
-        "price": 464.28
-      },
-      "xgboost": {
-        "return": -4.0,
-        "price": 464.28
-      },
-      "dqn": {
-        "action": "HOLD",
-        "q_value": -17.483,
-        "confidence": 0.6646
-      }
-    }
-  },
-  {
-    "symbol": "TSLA",
-    "timestamp": "2026-01-02T13:26:07.349304",
-    "current_price": 449.72,
-    "predicted_price": 406.08,
-    "predicted_return": -9.7,
-    "action": "SHORT",
-    "score": 0.4225,
-    "confidence": 0.4225,
-    "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:LONG | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Mixed signals (disagreement resolved)",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Moderate Disagreement)",
-      "price_agreement": false,
-      "models_align": false,
-      "total_vote": 0.497,
-      "reason": "RF:-8.81% | LGBM:-10.00% | XGB:-10.00% | DQN:LONG | Tech:RSI:46.7 (Neutral) | MACD:7.64/11.04 (Bearish) | SMA10:-5.2% | SMA20:-3.3% | BB:Lower Half | ADX:20.3 (Moderate Trend) | Mixed signals (disagreement resolved)"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -8.81,
-        "price": 410.08
-      },
-      "lightgbm": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "xgboost": {
-        "return": -10.0,
-        "price": 404.74
-      },
-      "dqn": {
-        "action": "LONG",
-        "q_value": -25.5871,
-        "confidence": 0.6239
-      }
-    }
-  },
-  {
-    "symbol": "AAPL",
-    "timestamp": "2026-01-02T13:26:09.066589",
-    "current_price": 271.86,
-    "predicted_price": 259.92,
-    "predicted_return": -4.39,
-    "action": "SHORT",
-    "score": 0.51,
-    "confidence": 0.51,
-    "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Small Downside)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.6,
-      "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "lightgbm": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "xgboost": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "dqn": {
-        "action": "HOLD",
-        "q_value": 28.6745,
-        "confidence": 0.5937
-      }
-    }
-  },
-  {
     "symbol": "GOOGL",
     "timestamp": "2026-01-02T13:26:09.831164",
     "current_price": 313.0,
@@ -37996,6 +37616,386 @@
         "action": "SHORT",
         "q_value": 30.7605,
         "confidence": 0.5376
+      }
+    }
+  },
+  {
+    "symbol": "TATAMOTORS.NS",
+    "timestamp": "2026-01-04T16:01:29.244207",
+    "current_price": 405.85,
+    "predicted_price": 432.95,
+    "predicted_return": 6.68,
+    "action": "LONG",
+    "score": 0.3967,
+    "confidence": 0.3967,
+    "reason": "RF:+6.68% | LGBM:+6.68% | XGB:+6.68% | DQN:SHORT | News:BHAV_NOT_SUPPORTED | Tech:RSI:16.4 (Oversold (Bullish)) | MACD:-80.09/-53.84 (Bearish) | SMA10:-18.5% | SMA20:-44.2% | BB:Lower Half | ADX:39.5 (Strong Trend) | Mixed signals (disagreement resolved)",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Moderate Disagreement)",
+      "price_agreement": false,
+      "models_align": false,
+      "total_vote": 0.4668,
+      "reason": "RF:+6.68% | LGBM:+6.68% | XGB:+6.68% | DQN:SHORT | News:BHAV_NOT_SUPPORTED | Tech:RSI:16.4 (Oversold (Bullish)) | MACD:-80.09/-53.84 (Bearish) | SMA10:-18.5% | SMA20:-44.2% | BB:Lower Half | ADX:39.5 (Strong Trend) | Mixed signals (disagreement resolved)"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "lightgbm": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "xgboost": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "dqn": {
+        "action": "SHORT",
+        "q_value": 36.2459,
+        "confidence": 0.6429
+      }
+    }
+  },
+  {
+    "symbol": "TATAPOWER.NS",
+    "timestamp": "2026-01-04T16:02:32.503853",
+    "current_price": 393.1,
+    "predicted_price": 394.65,
+    "predicted_return": 0.39,
+    "action": "LONG",
+    "score": 0.4393,
+    "confidence": 0.4393,
+    "reason": "RF:-0.65% | LGBM:+0.32% | XGB:+1.58% | DQN:HOLD | News:NEUTRAL | Tech:RSI:63.1 (Neutral) | MACD:-0.87/-2.26 (Bullish) | SMA10:+3.2% | SMA20:+3.4% | BB:Above Upper (Overbought) | ADX:15.3 (Weak Trend) | Small upside (+0.39%), going LONG",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Upside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.4393,
+      "reason": "RF:-0.65% | LGBM:+0.32% | XGB:+1.58% | DQN:HOLD | News:NEUTRAL | Tech:RSI:63.1 (Neutral) | MACD:-0.87/-2.26 (Bullish) | SMA10:+3.2% | SMA20:+3.4% | BB:Above Upper (Overbought) | ADX:15.3 (Weak Trend) | Small upside (+0.39%), going LONG"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -0.65,
+        "price": 390.56
+      },
+      "lightgbm": {
+        "return": 0.32,
+        "price": 394.37
+      },
+      "xgboost": {
+        "return": 1.58,
+        "price": 399.29
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": -33.9402,
+        "confidence": 0.4516
+      }
+    }
+  },
+  {
+    "symbol": "GOOGL",
+    "timestamp": "2026-01-04T17:19:23.936459",
+    "current_price": 315.15,
+    "predicted_price": 300.13,
+    "predicted_return": -4.77,
+    "action": "SHORT",
+    "score": 0.4655,
+    "confidence": 0.4655,
+    "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:LONG | Tech:RSI:59.0 (Neutral) | MACD:4.12/4.9 (Bearish) | SMA10:+1.1% | SMA20:+1.0% | BB:Upper Half | ADX:22.0 (Moderate Trend) | Mixed signals (disagreement resolved)",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (DQN Low Confidence)",
+      "price_agreement": false,
+      "models_align": false,
+      "total_vote": 0.5477,
+      "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:LONG | Tech:RSI:59.0 (Neutral) | MACD:4.12/4.9 (Bearish) | SMA10:+1.1% | SMA20:+1.0% | BB:Upper Half | ADX:22.0 (Moderate Trend) | Mixed signals (disagreement resolved)"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "lightgbm": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "xgboost": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "dqn": {
+        "action": "LONG",
+        "q_value": -19.5711,
+        "confidence": 0.4358
+      }
+    }
+  },
+  {
+    "symbol": "MSFT",
+    "timestamp": "2026-01-04T17:19:24.882224",
+    "current_price": 472.94,
+    "predicted_price": 460.86,
+    "predicted_return": -2.56,
+    "action": "SHORT",
+    "score": 0.51,
+    "confidence": 0.51,
+    "reason": "RF:+1.78% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:37.4 (Neutral) | MACD:-2.62/-3.05 (Bullish) | SMA10:-2.5% | SMA20:-2.2% | BB:Lower Half | ADX:17.1 (Weak Trend) | Small downside (-2.56%), going SHORT",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Downside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.6,
+      "reason": "RF:+1.78% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:37.4 (Neutral) | MACD:-2.62/-3.05 (Bullish) | SMA10:-2.5% | SMA20:-2.2% | BB:Lower Half | ADX:17.1 (Weak Trend) | Small downside (-2.56%), going SHORT"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": 1.78,
+        "price": 481.35
+      },
+      "lightgbm": {
+        "return": -4.0,
+        "price": 454.02
+      },
+      "xgboost": {
+        "return": -4.0,
+        "price": 454.02
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": -16.8407,
+        "confidence": 0.3792
+      }
+    }
+  },
+  {
+    "symbol": "TSLA",
+    "timestamp": "2026-01-04T17:19:25.525151",
+    "current_price": 438.07,
+    "predicted_price": 401.11,
+    "predicted_return": -8.44,
+    "action": "SHORT",
+    "score": 0.8075,
+    "confidence": 0.8075,
+    "reason": "RF:-7.10% | LGBM:-8.33% | XGB:-9.99% | DQN:SHORT | Tech:RSI:42.4 (Neutral) | MACD:4.88/9.81 (Bearish) | SMA10:-7.3% | SMA20:-6.0% | BB:Lower Half | ADX:20.0 (Weak Trend) | Price Models (Strong Agreement)",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Strong Agreement)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.3735,
+      "reason": "RF:-7.10% | LGBM:-8.33% | XGB:-9.99% | DQN:SHORT | Tech:RSI:42.4 (Neutral) | MACD:4.88/9.81 (Bearish) | SMA10:-7.3% | SMA20:-6.0% | BB:Lower Half | ADX:20.0 (Weak Trend) | Price Models (Strong Agreement)"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -7.1,
+        "price": 406.95
+      },
+      "lightgbm": {
+        "return": -8.33,
+        "price": 401.58
+      },
+      "xgboost": {
+        "return": -9.99,
+        "price": 394.29
+      },
+      "dqn": {
+        "action": "SHORT",
+        "q_value": -20.0648,
+        "confidence": 0.6626
+      }
+    }
+  },
+  {
+    "symbol": "RELIANCE.NS",
+    "timestamp": "2026-01-04T17:19:26.169925",
+    "current_price": 1592.3,
+    "predicted_price": 1529.14,
+    "predicted_return": -3.97,
+    "action": "SHORT",
+    "score": 0.51,
+    "confidence": 0.51,
+    "reason": "RF:-3.87% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | News:NEUTRAL | Tech:RSI:66.2 (Neutral) | MACD:12.73/12.03 (Bullish) | SMA10:+1.7% | SMA20:+2.4% | BB:Above Upper (Overbought) | ADX:20.0 (Weak Trend) | Small downside (-3.97%), going SHORT",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Downside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.6,
+      "reason": "RF:-3.87% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | News:NEUTRAL | Tech:RSI:66.2 (Neutral) | MACD:12.73/12.03 (Bullish) | SMA10:+1.7% | SMA20:+2.4% | BB:Above Upper (Overbought) | ADX:20.0 (Weak Trend) | Small downside (-3.97%), going SHORT"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -3.87,
+        "price": 1530.74
+      },
+      "lightgbm": {
+        "return": -4.0,
+        "price": 1528.61
+      },
+      "xgboost": {
+        "return": -4.0,
+        "price": 1528.61
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": 53.6882,
+        "confidence": 0.4977
+      }
+    }
+  },
+  {
+    "symbol": "GOOGL",
+    "timestamp": "2026-01-04T17:19:26.803856",
+    "current_price": 315.15,
+    "predicted_price": 300.13,
+    "predicted_return": -4.77,
+    "action": "SHORT",
+    "score": 0.51,
+    "confidence": 0.51,
+    "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:HOLD | Tech:RSI:59.0 (Neutral) | MACD:4.12/4.9 (Bearish) | SMA10:+1.1% | SMA20:+1.0% | BB:Upper Half | ADX:22.0 (Moderate Trend) | Small downside (-4.77%), going SHORT",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Downside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.6,
+      "reason": "RF:-4.77% | LGBM:-4.77% | XGB:-4.77% | DQN:HOLD | Tech:RSI:59.0 (Neutral) | MACD:4.12/4.9 (Bearish) | SMA10:+1.1% | SMA20:+1.0% | BB:Upper Half | ADX:22.0 (Moderate Trend) | Small downside (-4.77%), going SHORT"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "lightgbm": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "xgboost": {
+        "return": -4.77,
+        "price": 300.13
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": -17.5826,
+        "confidence": 0.4373
+      }
+    }
+  },
+  {
+    "symbol": "MSFT",
+    "timestamp": "2026-01-04T17:19:27.401436",
+    "current_price": 472.94,
+    "predicted_price": 460.86,
+    "predicted_return": -2.56,
+    "action": "SHORT",
+    "score": 0.51,
+    "confidence": 0.51,
+    "reason": "RF:+1.78% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:37.4 (Neutral) | MACD:-2.62/-3.05 (Bullish) | SMA10:-2.5% | SMA20:-2.2% | BB:Lower Half | ADX:17.1 (Weak Trend) | Small downside (-2.56%), going SHORT",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Downside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.6,
+      "reason": "RF:+1.78% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | Tech:RSI:37.4 (Neutral) | MACD:-2.62/-3.05 (Bullish) | SMA10:-2.5% | SMA20:-2.2% | BB:Lower Half | ADX:17.1 (Weak Trend) | Small downside (-2.56%), going SHORT"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": 1.78,
+        "price": 481.35
+      },
+      "lightgbm": {
+        "return": -4.0,
+        "price": 454.02
+      },
+      "xgboost": {
+        "return": -4.0,
+        "price": 454.02
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": -21.4043,
+        "confidence": 0.3912
+      }
+    }
+  },
+  {
+    "symbol": "TSLA",
+    "timestamp": "2026-01-04T17:19:28.211791",
+    "current_price": 438.07,
+    "predicted_price": 401.11,
+    "predicted_return": -8.44,
+    "action": "SHORT",
+    "score": 0.568,
+    "confidence": 0.568,
+    "reason": "RF:-7.10% | LGBM:-8.33% | XGB:-9.99% | DQN:SHORT | Tech:RSI:42.4 (Neutral) | MACD:4.88/9.81 (Bearish) | SMA10:-7.3% | SMA20:-6.0% | BB:Lower Half | ADX:20.0 (Weak Trend) | Price Models (Strong Agreement)",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Strong Agreement)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.2263,
+      "reason": "RF:-7.10% | LGBM:-8.33% | XGB:-9.99% | DQN:SHORT | Tech:RSI:42.4 (Neutral) | MACD:4.88/9.81 (Bearish) | SMA10:-7.3% | SMA20:-6.0% | BB:Lower Half | ADX:20.0 (Weak Trend) | Price Models (Strong Agreement)"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -7.1,
+        "price": 406.95
+      },
+      "lightgbm": {
+        "return": -8.33,
+        "price": 401.58
+      },
+      "xgboost": {
+        "return": -9.99,
+        "price": 394.29
+      },
+      "dqn": {
+        "action": "SHORT",
+        "q_value": -18.4588,
+        "confidence": 0.3683
+      }
+    }
+  },
+  {
+    "symbol": "RELIANCE.NS",
+    "timestamp": "2026-01-04T17:19:28.755976",
+    "current_price": 1592.3,
+    "predicted_price": 1529.14,
+    "predicted_return": -3.97,
+    "action": "SHORT",
+    "score": 0.51,
+    "confidence": 0.51,
+    "reason": "RF:-3.87% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | News:NEUTRAL | Tech:RSI:66.2 (Neutral) | MACD:12.73/12.03 (Bullish) | SMA10:+1.7% | SMA20:+2.4% | BB:Above Upper (Overbought) | ADX:20.0 (Weak Trend) | Small downside (-3.97%), going SHORT",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Small Downside)",
+      "price_agreement": true,
+      "models_align": true,
+      "total_vote": 0.6,
+      "reason": "RF:-3.87% | LGBM:-4.00% | XGB:-4.00% | DQN:HOLD | News:NEUTRAL | Tech:RSI:66.2 (Neutral) | MACD:12.73/12.03 (Bullish) | SMA10:+1.7% | SMA20:+2.4% | BB:Above Upper (Overbought) | ADX:20.0 (Weak Trend) | Small downside (-3.97%), going SHORT"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": -3.87,
+        "price": 1530.74
+      },
+      "lightgbm": {
+        "return": -4.0,
+        "price": 1528.61
+      },
+      "xgboost": {
+        "return": -4.0,
+        "price": 1528.61
+      },
+      "dqn": {
+        "action": "HOLD",
+        "q_value": 51.8429,
+        "confidence": 0.5046
       }
     }
   }

@@ -1,0 +1,26 @@
+{
+  "name": "multi-asset-trading-dashboard",
+  "version": "1.0.0",
+  "description": "Multi-Asset Trading Dashboard - Root Package",
+  "private": true,
+  "scripts": {
+    "dev": "node run-frontend.js",
+    "build": "cd trading-dashboard && npm run build",
+    "preview": "cd trading-dashboard && npm run preview",
+    "install": "cd trading-dashboard && npm install",
+    "install:frontend": "cd trading-dashboard && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "keywords": [
+    "trading",
+    "dashboard",
+    "stocks",
+    "crypto"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

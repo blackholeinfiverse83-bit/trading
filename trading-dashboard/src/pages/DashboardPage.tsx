@@ -2,11 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
 import { useConnection } from '../contexts/ConnectionContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 const DashboardPage = () => {
   const { connectionState } = useConnection();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [dailyChange, setDailyChange] = useState(0);
   const [dailyChangePercent, setDailyChangePercent] = useState(0);
@@ -558,7 +561,7 @@ const DashboardPage = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-xl md:text-2xl font-bold text-white">Dashboard</h1>
+              <h1 className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
               {connectionState.isConnected ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/50 rounded-lg">
                   <CheckCircle2 className="w-3 h-3 text-green-400" />
@@ -571,7 +574,7 @@ const DashboardPage = () => {
                 </div>
               )}
             </div>
-            <p className="text-xs md:text-sm text-gray-400">
+            <p className={`text-xs md:text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
               {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'}
             </p>
           </div>
@@ -587,15 +590,15 @@ const DashboardPage = () => {
 
         {/* Connection Error Banner */}
         {error && error.includes('Unable to connect to backend') && (
-          <div className="bg-red-900/30 border-2 border-red-500/50 rounded-xl p-4">
+          <div className={`${isLight ? 'bg-red-50 border-2 border-red-300' : 'bg-red-900/30 border-2 border-red-500/50'} rounded-xl p-4`}>
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-red-400 font-semibold mb-2">Backend Server Not Running</p>
                 <p className="text-red-300 text-sm mb-3">{error}</p>
-                <div className="bg-slate-800/50 rounded-lg p-3 mt-2">
-                  <p className="text-gray-300 text-xs font-medium mb-1">To start the backend server:</p>
-                  <code className="text-xs text-green-400 block bg-slate-900/50 p-2 rounded">
+                <div className={`${isLight ? 'bg-gray-100' : 'bg-slate-800/50'} rounded-lg p-3 mt-2`}>
+                  <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-xs font-medium mb-1`}>To start the backend server:</p>
+                  <code className={`text-xs ${isLight ? 'text-green-700 bg-gray-200' : 'text-green-400 bg-slate-900/50'} block p-2 rounded`}>
                     cd backend && python api_server.py
                   </code>
                   <p className="text-gray-400 text-xs mt-2">
@@ -633,7 +636,7 @@ const DashboardPage = () => {
 
         {/* General Error Banner */}
         {error && !error.includes('Unable to connect to backend') && (
-          <div className="bg-yellow-900/30 border-2 border-yellow-500/50 rounded-xl p-4">
+          <div className={`${isLight ? 'bg-yellow-50 border-2 border-yellow-300' : 'bg-yellow-900/30 border-2 border-yellow-500/50'} rounded-xl p-4`}>
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -656,24 +659,27 @@ const DashboardPage = () => {
             [1, 2, 3].map((i) => (
               <div 
                 key={i} 
-                className="bg-slate-800/80 md:bg-gradient-to-br md:from-slate-800/80 md:to-slate-700/50 rounded-lg p-4 md:p-6 border border-slate-700/50 animate-pulse"
+                className={`${isLight 
+                  ? 'bg-gray-100 md:bg-gradient-to-br md:from-gray-100 md:to-gray-50 border border-gray-200' 
+                  : 'bg-slate-800/80 md:bg-gradient-to-br md:from-slate-800/80 md:to-slate-700/50 border border-slate-700/50'
+                } rounded-lg p-4 md:p-6 animate-pulse`}
               >
                 <div className="flex items-center justify-between mb-3 md:mb-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-700 rounded-lg"></div>
-                  <div className="w-14 h-5 md:w-16 md:h-6 bg-slate-700 rounded"></div>
+                  <div className={`w-10 h-10 md:w-12 md:h-12 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded-lg`}></div>
+                  <div className={`w-14 h-5 md:w-16 md:h-6 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
                 </div>
-                <div className="w-20 h-3 md:w-24 md:h-4 bg-slate-700 rounded mb-2"></div>
-                <div className="w-28 h-6 md:w-32 md:h-8 bg-slate-700 rounded"></div>
+                <div className={`w-20 h-3 md:w-24 md:h-4 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded mb-2`}></div>
+                <div className={`w-28 h-6 md:w-32 md:h-8 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
               </div>
             ))
           ) : error && error.includes('Unable to connect to backend') ? (
             [1, 2, 3].map((i) => (
               <div 
                 key={i} 
-                className="bg-slate-800/80 rounded-lg p-4 md:p-6 border border-slate-700/50 opacity-50"
+                className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/80 border border-slate-700/50'} rounded-lg p-4 md:p-6 opacity-50`}
               >
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500 text-xs md:text-sm">Backend not connected</p>
+                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm`}>Backend not connected</p>
                 </div>
               </div>
             ))
@@ -683,18 +689,21 @@ const DashboardPage = () => {
               return (
                 <div 
                   key={stat.label} 
-                  className="bg-slate-800/80 md:bg-gradient-to-br md:from-green-500/20 md:to-emerald-500/10 rounded-lg p-4 md:p-6 border border-slate-700/50"
+                  className={`${isLight 
+                    ? 'bg-white md:bg-gradient-to-br md:from-blue-50 md:to-indigo-50 border border-gray-200' 
+                    : 'bg-slate-800/80 md:bg-gradient-to-br md:from-green-500/20 md:to-emerald-500/10 border border-slate-700/50'
+                  } rounded-lg p-4 md:p-6 shadow-sm`}
                 >
                   <div className="flex items-center justify-between mb-2 md:mb-3">
-                    <div className="p-2 bg-slate-700/50 md:bg-white/5 rounded">
-                      <Icon className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
+                    <div className={`p-2 ${isLight ? 'bg-blue-100' : 'bg-slate-700/50 md:bg-white/5'} rounded`}>
+                      <Icon className={`w-4 h-4 md:w-5 md:h-5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
                     </div>
-                    <span className={`${stat.changeColor} text-xs md:text-sm font-semibold px-2 py-0.5 md:py-1 rounded bg-slate-700/50 md:bg-white/5`}>
+                    <span className={`${stat.changeColor} text-xs md:text-sm font-semibold px-2 py-0.5 md:py-1 rounded ${isLight ? 'bg-gray-100' : 'bg-slate-700/50 md:bg-white/5'}`}>
                       {stat.change}
                     </span>
                   </div>
-                  <p className="text-gray-400 text-xs md:text-sm mb-1">{stat.label}</p>
-                  <p className="text-xl md:text-2xl font-bold text-white leading-tight">{stat.value}</p>
+                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs md:text-sm mb-1`}>{stat.label}</p>
+                  <p className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} leading-tight`}>{stat.value}</p>
                 </div>
               );
             })
@@ -703,9 +712,9 @@ const DashboardPage = () => {
 
         <div className="space-y-3 md:space-y-4">
           {/* Portfolio Performance Chart - Full width on mobile */}
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-slate-700/50 w-full">
+          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 md:p-4 shadow-sm w-full`}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
+              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                 <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 flex-shrink-0" />
                 <span>Portfolio Performance</span>
               </h2>
@@ -713,7 +722,7 @@ const DashboardPage = () => {
             {loading ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="skeleton h-10 md:h-12 w-full"></div>
+                  <div key={i} className={`${isLight ? 'bg-gray-200' : 'bg-slate-700'} h-10 md:h-12 w-full rounded animate-pulse`}></div>
                 ))}
               </div>
             ) : chartData.length > 0 ? (
@@ -728,30 +737,31 @@ const DashboardPage = () => {
                     </defs>
                     <CartesianGrid 
                       strokeDasharray="3 3" 
-                      stroke="#374151" 
-                      opacity={0.15}
+                      stroke={isLight ? "#E5E7EB" : "#374151"} 
+                      opacity={isLight ? 0.5 : 0.15}
                     />
                     <XAxis 
                       dataKey="name" 
-                      stroke="#9CA3AF" 
-                      tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                      stroke={isLight ? "#6B7280" : "#9CA3AF"} 
+                      tick={{ fill: isLight ? '#6B7280' : '#9CA3AF', fontSize: 11 }}
                       interval="preserveStartEnd"
                     />
                     <YAxis 
-                      stroke="#9CA3AF"
-                      tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                      stroke={isLight ? "#6B7280" : "#9CA3AF"}
+                      tick={{ fill: isLight ? '#6B7280' : '#9CA3AF', fontSize: 11 }}
                       tickFormatter={(value) => `$${value > 999 ? (value/1000).toFixed(1) + 'k' : value.toLocaleString()}`}
                       width={55}
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: '#1E293B', 
-                        border: '1px solid #475569',
+                        backgroundColor: isLight ? '#FFFFFF' : '#1E293B', 
+                        border: isLight ? '1px solid #E5E7EB' : '1px solid #475569',
                         borderRadius: '8px',
                         padding: '10px',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        color: isLight ? '#111827' : '#E2E8F0'
                       }}
-                      labelStyle={{ color: '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
+                      labelStyle={{ color: isLight ? '#111827' : '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
                       formatter={(value: any) => [`$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Value']}
                       cursor={{ stroke: '#3B82F6', strokeWidth: 1 }}
                     />
@@ -768,17 +778,17 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="text-center py-8 md:py-12">
-                <Sparkles className="w-8 h-8 md:w-12 md:h-12 text-gray-500 mx-auto mb-2 md:mb-3 opacity-50" />
-                <p className="text-gray-400 text-sm md:text-base">No data available</p>
-                <p className="text-gray-500 text-xs md:text-sm mt-1">Predictions will appear here once available</p>
+                <Sparkles className={`w-8 h-8 md:w-12 md:h-12 ${isLight ? 'text-gray-400' : 'text-gray-500'} mx-auto mb-2 md:mb-3 opacity-50`} />
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm md:text-base`}>No data available</p>
+                <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm mt-1`}>Predictions will appear here once available</p>
               </div>
             )}
           </div>
 
           {/* Top Performers */}
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 card-hover">
+          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm card-hover`}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
+              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                 <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
                 Top Performers
               </h2>
@@ -820,22 +830,25 @@ const DashboardPage = () => {
                   return (
                     <div 
                       key={`${stock.symbol}-${index}`} 
-                      className="bg-slate-700/50 rounded-lg border border-slate-600/50 hover:border-blue-500/50 active:border-blue-600/50 transition-all touch-manipulation"
+                      className={`${isLight 
+                        ? 'bg-gray-50 border border-gray-200 hover:border-blue-400 active:border-blue-500' 
+                        : 'bg-slate-700/50 border border-slate-600/50 hover:border-blue-500/50 active:border-blue-600/50'
+                      } rounded-lg transition-all touch-manipulation shadow-sm`}
                     >
                       {/* Mobile: Stacked layout */}
                       <div className="md:hidden p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={`w-12 h-12 flex-shrink-0 rounded-lg flex items-center justify-center font-bold text-white text-sm ${
-                              stock.action === 'LONG' ? 'bg-green-500/20 border border-green-500/50' :
-                              stock.action === 'SHORT' ? 'bg-red-500/20 border border-red-500/50' :
-                              'bg-yellow-500/20 border border-yellow-500/50'
+                            <div className={`w-12 h-12 flex-shrink-0 rounded-lg flex items-center justify-center font-bold ${isLight ? 'text-gray-900' : 'text-white'} text-sm ${
+                              stock.action === 'LONG' ? (isLight ? 'bg-green-100 border border-green-300' : 'bg-green-500/20 border border-green-500/50') :
+                              stock.action === 'SHORT' ? (isLight ? 'bg-red-100 border border-red-300' : 'bg-red-500/20 border border-red-500/50') :
+                              (isLight ? 'bg-yellow-100 border border-yellow-300' : 'bg-yellow-500/20 border border-yellow-500/50')
                             }`}>
                               {stock.symbol.slice(0, 2)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <p className="text-white font-bold text-base">{stock.symbol}</p>
+                                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-base`}>{stock.symbol}</p>
                                 {isUserAdded && (
                                   <span className="text-xs text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">★</span>
                                 )}
@@ -848,7 +861,7 @@ const DashboardPage = () => {
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <p className="text-white font-bold text-lg">
+                                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-lg`}>
                                   ${(stock.predicted_price || stock.current_price || 0).toFixed(2)}
                                 </p>
                                 {stock.predicted_return !== undefined && (
@@ -872,16 +885,16 @@ const DashboardPage = () => {
                       {/* Desktop: Horizontal layout */}
                       <div className="hidden md:flex items-center justify-between p-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`w-12 h-12 flex-shrink-0 rounded-lg flex items-center justify-center font-bold text-white text-sm ${
-                            stock.action === 'LONG' ? 'bg-green-500/20 border border-green-500/50' :
-                            stock.action === 'SHORT' ? 'bg-red-500/20 border border-red-500/50' :
-                            'bg-yellow-500/20 border border-yellow-500/50'
+                          <div className={`w-12 h-12 flex-shrink-0 rounded-lg flex items-center justify-center font-bold ${isLight ? 'text-gray-900' : 'text-white'} text-sm ${
+                            stock.action === 'LONG' ? (isLight ? 'bg-green-100 border border-green-300' : 'bg-green-500/20 border border-green-500/50') :
+                            stock.action === 'SHORT' ? (isLight ? 'bg-red-100 border border-red-300' : 'bg-red-500/20 border border-red-500/50') :
+                            (isLight ? 'bg-yellow-100 border border-yellow-300' : 'bg-yellow-500/20 border border-yellow-500/50')
                           }`}>
                             {stock.symbol.slice(0, 2)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="text-white font-bold text-sm">{stock.symbol}</p>
+                              <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm`}>{stock.symbol}</p>
                               {isUserAdded && (
                                 <span className="text-xs text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">★</span>
                               )}
@@ -906,7 +919,7 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
-                            <p className="text-white font-bold text-sm">
+                            <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm`}>
                               ${(stock.predicted_price || stock.current_price || 0).toFixed(2)}
                             </p>
                             <div className="flex items-center gap-1.5 justify-end mt-0.5">
@@ -939,9 +952,9 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Sparkles className="w-10 h-10 text-gray-500 mx-auto mb-3 opacity-50" />
-                <p className="text-gray-400 text-sm">No predictions available</p>
-                <p className="text-gray-500 text-xs mt-1">Try refreshing or check your connection</p>
+                <Sparkles className={`w-10 h-10 ${isLight ? 'text-gray-400' : 'text-gray-500'} mx-auto mb-3 opacity-50`} />
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm`}>No predictions available</p>
+                <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs mt-1`}>Try refreshing or check your connection</p>
               </div>
             )}
           </div>
@@ -950,9 +963,9 @@ const DashboardPage = () => {
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 sm:p-6 w-full max-w-md animate-fadeIn max-h-[90vh] overflow-y-auto">
+            <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800 border border-slate-700'} rounded-xl p-4 sm:p-6 w-full max-w-md animate-fadeIn max-h-[90vh] overflow-y-auto shadow-xl`}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                   <Trash2 className="w-5 h-5 text-red-400" />
                   {deleteConfirm.isUserAdded ? 'Delete Trade' : 'Hide Trade'}
                 </h3>
@@ -965,7 +978,7 @@ const DashboardPage = () => {
               </div>
 
               <div className="space-y-4">
-                <p className="text-gray-300">
+                <p className={isLight ? 'text-gray-700' : 'text-gray-300'}>
                   {deleteConfirm.isUserAdded 
                     ? `Are you sure you want to permanently delete "${deleteConfirm.symbol}" from Top Performers?`
                     : `Are you sure you want to hide "${deleteConfirm.symbol}" from Top Performers? It will reappear after refresh.`
@@ -982,7 +995,7 @@ const DashboardPage = () => {
                   </button>
                   <button
                     onClick={() => setDeleteConfirm(null)}
-                    className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-all"
+                    className={`px-4 py-2.5 ${isLight ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-slate-700 hover:bg-slate-600 text-white'} rounded-lg font-semibold transition-all`}
                   >
                     Cancel
                   </button>
@@ -995,9 +1008,9 @@ const DashboardPage = () => {
         {/* Add Trade Modal */}
         {showAddTradeModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 xs:p-4 safe-area-inset">
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 xs:p-5 sm:p-6 w-full max-w-md animate-fadeIn max-h-[90vh] overflow-y-auto mx-auto">
+            <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800 border border-slate-700'} rounded-xl p-4 xs:p-5 sm:p-6 w-full max-w-md animate-fadeIn max-h-[90vh] overflow-y-auto mx-auto shadow-xl`}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                   <Plus className="w-5 h-5 text-blue-400" />
                   Add Trade to Top Performers
                 </h3>
@@ -1015,11 +1028,11 @@ const DashboardPage = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className={`block text-sm font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} mb-2`}>
                     Stock Symbol
                   </label>
                   <div className="relative" ref={suggestionsRef}>
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isLight ? 'text-gray-500' : 'text-gray-400'} z-10`} />
                     <input
                       ref={addTradeInputRef}
                       type="text"
@@ -1046,13 +1059,19 @@ const DashboardPage = () => {
                         }
                       }}
                       placeholder="e.g., AAPL, TSLA, GOOGL"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full pl-10 pr-4 py-2.5 ${isLight 
+                        ? 'bg-gray-50 border border-gray-300 text-gray-900 placeholder-gray-500' 
+                        : 'bg-slate-700/50 border border-slate-600 text-white placeholder-gray-400'
+                      } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                       disabled={addTradeLoading}
                     />
                     
                     {/* Suggestions Dropdown */}
                     {showSuggestions && filteredSymbols.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-slate-700 border-2 border-slate-600 rounded-lg shadow-2xl max-h-60 overflow-y-auto z-[9999]">
+                      <div className={`absolute top-full left-0 right-0 mt-1 ${isLight 
+                        ? 'bg-white border-2 border-gray-300' 
+                        : 'bg-slate-700 border-2 border-slate-600'
+                      } rounded-lg shadow-2xl max-h-60 overflow-y-auto z-[9999]`}>
                         {filteredSymbols.map((suggestionSymbol) => {
                           const isExactMatch = suggestionSymbol.toUpperCase() === addTradeSymbol.toUpperCase();
                           return (
@@ -1067,8 +1086,8 @@ const DashboardPage = () => {
                               }}
                               className={`w-full px-3 py-2 text-sm text-left transition-colors ${
                                 isExactMatch 
-                                  ? 'bg-blue-600/50 text-white font-semibold' 
-                                  : 'text-white hover:bg-slate-600'
+                                  ? (isLight ? 'bg-blue-100 text-blue-900 font-semibold' : 'bg-blue-600/50 text-white font-semibold')
+                                  : (isLight ? 'text-gray-900 hover:bg-gray-100' : 'text-white hover:bg-slate-600')
                               }`}
                             >
                               {suggestionSymbol}
@@ -1079,7 +1098,7 @@ const DashboardPage = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mt-1`}>
                     Enter a stock symbol to fetch its prediction and add it to Top Performers
                   </p>
                 </div>
@@ -1117,7 +1136,7 @@ const DashboardPage = () => {
                       setAddTradeSymbol('');
                       setAddTradeError(null);
                     }}
-                    className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-all"
+                    className={`px-4 py-2.5 ${isLight ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-slate-700 hover:bg-slate-600 text-white'} rounded-lg font-semibold transition-all`}
                   >
                     Cancel
                   </button>
@@ -1128,8 +1147,8 @@ const DashboardPage = () => {
         )}
 
         {/* Recent Activity */}
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50">
-          <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+        <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm`}>
+          <h2 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
             <Activity className="w-4 h-4 text-blue-400" />
             Recent Activity
           </h2>
@@ -1140,27 +1159,30 @@ const DashboardPage = () => {
               return (
                 <div 
                   key={index}
-                  className="flex items-center justify-between p-2 bg-gradient-to-r from-slate-700/50 to-slate-600/30 rounded border border-slate-600/50 hover:border-blue-500/50 transition-all group"
+                  className={`flex items-center justify-between p-2 ${isLight 
+                    ? 'bg-gray-50 border border-gray-200 hover:border-blue-400' 
+                    : 'bg-gradient-to-r from-slate-700/50 to-slate-600/30 border border-slate-600/50 hover:border-blue-500/50'
+                  } rounded transition-all group shadow-sm`}
                 >
                   <div className="flex items-center gap-2">
                     <div className={`p-1.5 rounded ${
-                      stock.action === 'LONG' ? 'bg-green-500/20' :
-                      stock.action === 'SHORT' ? 'bg-red-500/20' :
-                      'bg-yellow-500/20'
+                      stock.action === 'LONG' ? (isLight ? 'bg-green-100' : 'bg-green-500/20') :
+                      stock.action === 'SHORT' ? (isLight ? 'bg-red-100' : 'bg-red-500/20') :
+                      (isLight ? 'bg-yellow-100' : 'bg-yellow-500/20')
                     }`}>
                       {stock.action === 'LONG' ? (
-                        <TrendingUp className={`w-4 h-4 ${stock.action === 'LONG' ? 'text-green-400' : 'text-yellow-400'}`} />
+                        <TrendingUp className={`w-4 h-4 ${stock.action === 'LONG' ? (isLight ? 'text-green-600' : 'text-green-400') : (isLight ? 'text-yellow-600' : 'text-yellow-400')}`} />
                       ) : stock.action === 'SHORT' ? (
-                        <TrendingDown className="w-4 h-4 text-red-400" />
+                        <TrendingDown className={`w-4 h-4 ${isLight ? 'text-red-600' : 'text-red-400'}`} />
                       ) : (
-                        <Activity className="w-4 h-4 text-yellow-400" />
+                        <Activity className={`w-4 h-4 ${isLight ? 'text-yellow-600' : 'text-yellow-400'}`} />
                       )}
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm">
+                      <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold text-sm`}>
                         {actionType} {stock.symbol}
                       </p>
-                      <p className="text-gray-400 text-xs">
+                      <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs`}>
                         ${(stock.predicted_price || stock.current_price || 0).toFixed(2)} • 
                         Confidence: {((stock.confidence || 0) * 100).toFixed(0)}%
                       </p>
@@ -1168,18 +1190,18 @@ const DashboardPage = () => {
                   </div>
                   <div className="text-right">
                     {stock.predicted_return !== undefined && (
-                      <span className={`font-bold text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-bold text-sm ${isPositive ? (isLight ? 'text-green-600' : 'text-green-400') : (isLight ? 'text-red-600' : 'text-red-400')}`}>
                         {isPositive ? '+' : ''}{stock.predicted_return.toFixed(2)}%
                       </span>
                     )}
-                    <p className="text-gray-400 text-xs mt-0.5">{new Date().toLocaleTimeString()}</p>
+                    <p className={`${isLight ? 'text-gray-500' : 'text-gray-400'} text-xs mt-0.5`}>{new Date().toLocaleTimeString()}</p>
                   </div>
                 </div>
               );
             })}
             {topStocks.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
-                <Activity className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <div className={`text-center py-8 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
+                <Activity className={`w-12 h-12 mx-auto mb-3 opacity-50 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
                 <p>No recent activity</p>
               </div>
             )}

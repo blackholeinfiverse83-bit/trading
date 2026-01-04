@@ -104,9 +104,9 @@ const ServerStatusIndicator = ({ className = '', showDetails = false }: ServerSt
   const getStatusText = () => {
     switch (connectionStatus) {
       case 'connected':
-        return healthStatus?.status === 'healthy' ? 'Backend Online' : 'Backend Degraded';
+        return healthStatus?.status === 'healthy' ? 'Live' : 'Degraded';
       case 'disconnected':
-        return 'Backend Offline';
+        return 'Offline';
       case 'checking':
         return 'Checking...';
       default:
