@@ -104,7 +104,7 @@ class WebSocketService {
       this.notifyConnectionStatus(false);
     });
 
-    this.socket.on('connect_error', (error) => {
+    this.socket.on('connect_error', () => {
       // Silently handle connection errors - backend may not have WebSocket server yet
       this.reconnectAttempts++;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {

@@ -25,7 +25,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     reconnectAttempts: 0,
     subscribedSymbols: [] as string[],
   });
-  const { token } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Only attempt connection if backend is likely available
@@ -39,8 +39,8 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     // Connect when component mounts (will fail silently if backend doesn't support it)
     const connect = () => {
       try {
-        const authToken = token || localStorage.getItem('token');
-        websocketService.connect(authToken || undefined);
+        const authToken = user?.token || localStorage.getItem('token');
+        websocketService.connect(authToken && authToken !== 'no-auth-required' ? authToken : undefined);
       } catch (error) {
         // Silently fail - WebSocket is optional until backend supports it
       }
@@ -63,7 +63,7 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeStatus();
       websocketService.disconnect();
     };
-  }, [token]);
+  }, [user?.token]);
 
   const subscribeToPrices = useCallback((symbols: string[]) => {
     websocketService.subscribeToPrices(symbols);
