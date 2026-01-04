@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { stockAPI } from '../services/api';
-import { CheckCircle2, XCircle, AlertCircle, Loader2, Activity, Server, Wifi, WifiOff } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Loader2, Server, WifiOff } from 'lucide-react';
 
 interface ServerStatusIndicatorProps {
   className?: string;

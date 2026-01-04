@@ -23,14 +23,24 @@ export interface PredictionItem {
   predicted_price?: number; // Predicted price
   current_price?: number; // Current price
   isUserAdded?: boolean; // Frontend-only flag for user-added trades
+  risk_profile?: string; // Risk profile classification
+  model_version?: string; // Model version used
+  reason?: string; // Explanation/reason for the prediction
+  warnings?: string[]; // Array of warnings
   ensemble_details?: {
-    models_align: boolean;
-    price_agreement: boolean;
+    models_align?: boolean;
+    price_agreement?: boolean;
+    decision_maker?: string;
+    total_vote?: number;
+    [key: string]: unknown; // Allow additional properties
   };
   individual_predictions?: Record<string, {
     action: string;
     predicted_return: number;
     confidence: number;
+    price?: number;
+    return?: number;
+    [key: string]: unknown; // Allow additional properties
   }>;
   horizon_details?: Record<string, unknown>; // Additional horizon-specific details
 }
@@ -62,6 +72,8 @@ export interface AnalyzeResponse {
     horizons: string[];
     timestamp?: string;
     error?: string;
+    consensus?: string; // Consensus prediction
+    average_confidence?: number; // Average confidence across horizons
   };
   predictions: PredictionItem[];
 }
@@ -90,8 +102,17 @@ let requestTimestamps: number[] = [];
  */
 function cleanupOldRequests() {
   const now = Date.now();
-  requestTimestamps = requestTimestamps.filter(ts => now - ts < THROTTLE_WINDOW_MS);
+  const beforeCount = requestTimestamps.length;
+  requestTimestamps = requestTimestamps.filter(ts => {
+    const age = now - ts;
+    return age < THROTTLE_WINDOW_MS;
+  });
   requestCount = requestTimestamps.length;
+  
+  // Debug logging in dev mode
+  if (import.meta.env.DEV && beforeCount !== requestCount) {
+    console.log(`[Rate Limit] Cleaned up ${beforeCount - requestCount} old requests. Current: ${requestCount}/${MAX_REQUESTS}`);
+  }
 }
 
 /**
@@ -122,12 +143,36 @@ export function getRemainingRequests(): number {
 }
 
 /**
+ * Force reset the rate limit (useful for debugging or manual reset)
+ */
+export function resetRateLimit(): void {
+  requestTimestamps = [];
+  requestCount = 0;
+  if (import.meta.env.DEV) {
+    console.log('[Rate Limit] Rate limit manually reset');
+  }
+}
+
+/**
  * Get request limit status
  */
 export function getRequestLimitStatus(): { used: number; limit: number; remaining: number; resetIn: number } {
   cleanupOldRequests();
-  const oldestTimestamp = requestTimestamps.length > 0 ? Math.min(...requestTimestamps) : Date.now();
-  const resetIn = Math.max(0, THROTTLE_WINDOW_MS - (Date.now() - oldestTimestamp));
+  
+  // If no timestamps, we're good
+  if (requestTimestamps.length === 0) {
+    return {
+      used: 0,
+      limit: MAX_REQUESTS,
+      remaining: MAX_REQUESTS,
+      resetIn: 0,
+    };
+  }
+  
+  const oldestTimestamp = Math.min(...requestTimestamps);
+  const now = Date.now();
+  const ageOfOldest = now - oldestTimestamp;
+  const resetIn = Math.max(0, THROTTLE_WINDOW_MS - ageOfOldest);
   
   return {
     used: requestCount,
@@ -259,7 +304,6 @@ api.interceptors.response.use(
       // Handle specific error codes
       if (status === 401) {
         // Unauthorized - try to auto-login if credentials are available
-        const storedUsername = localStorage.getItem('username');
         const storedToken = localStorage.getItem('token');
         
         // Only clear if token was invalid (not if it's missing)
@@ -292,9 +336,9 @@ api.interceptors.response.use(
         if (originalRequest) {
           originalRequest._retry = true; // Prevent retry
         }
-      } else if (error.isThrottled) {
+      } else if ((error as any).isThrottled) {
         // Frontend request throttling - show user-friendly message
-        const throttleStatus = error.throttleStatus || getRequestLimitStatus();
+        const throttleStatus = (error as any).throttleStatus || getRequestLimitStatus();
         message = error.message || 
           `Request limit reached (${throttleStatus.used}/${throttleStatus.limit}). ` +
           `Please wait ${throttleStatus.resetIn} seconds before making more requests.`;
@@ -736,6 +780,21 @@ export const POPULAR_COMMODITIES = [
   'LE=F',      // Live Cattle Futures
   'HE=F',      // Lean Hogs Futures
 ];
+
+// Auto-cleanup when page becomes visible (user comes back to tab)
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // Page became visible - clean up old requests
+      cleanupOldRequests();
+    }
+  });
+
+  // Also cleanup periodically (every 30 seconds) to ensure stale timestamps are removed
+  setInterval(() => {
+    cleanupOldRequests();
+  }, 30000); // Every 30 seconds
+}
 
 export default api;
 
