@@ -58,8 +58,8 @@ const MarketScanContent = () => {
     // Check immediately
     checkConnection();
     
-    // Check every 30 seconds to ensure connection is maintained
-    const interval = setInterval(checkConnection, 30000);
+    // Check every 120 seconds (2 minutes) to reduce API calls and stay under rate limit
+    const interval = setInterval(checkConnection, 120000);
     
     return () => clearInterval(interval);
   }, []); // Empty dependency array - only run on mount

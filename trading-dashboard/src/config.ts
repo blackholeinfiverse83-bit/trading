@@ -24,7 +24,8 @@ export const config = {
   DEBOUNCE_DELAY: 300, // 300ms for search inputs
   
   // Request Throttling (Frontend-side)
-  MAX_REQUESTS_PER_MINUTE: 20, // Maximum requests per minute from frontend
+  // Kept at 20 requests/min until larger bandwidth is available
+  MAX_REQUESTS_PER_MINUTE: 20, // Maximum requests per minute from frontend (conservative limit)
   THROTTLE_WINDOW_MS: 60 * 1000, // 1 minute window for request counting
 };
 
