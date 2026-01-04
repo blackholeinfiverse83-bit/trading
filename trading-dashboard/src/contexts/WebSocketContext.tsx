@@ -28,13 +28,21 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const { token } = useAuth();
 
   useEffect(() => {
-    // Connect when component mounts
+    // Only attempt connection if backend is likely available
+    // Check if we should try WebSocket (optional - can be enabled via config)
+    const shouldConnect = true; // Can be controlled via config flag in future
+
+    if (!shouldConnect) {
+      return;
+    }
+
+    // Connect when component mounts (will fail silently if backend doesn't support it)
     const connect = () => {
       try {
         const authToken = token || localStorage.getItem('token');
         websocketService.connect(authToken || undefined);
       } catch (error) {
-        console.error('Failed to connect WebSocket:', error);
+        // Silently fail - WebSocket is optional until backend supports it
       }
     };
 
@@ -44,11 +52,14 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       setConnectionStatus(websocketService.getConnectionStatus());
     });
 
-    // Initial connection
-    connect();
+    // Delay initial connection slightly to avoid blocking initial render
+    const connectTimer = setTimeout(() => {
+      connect();
+    }, 1000);
 
     // Cleanup on unmount
     return () => {
+      clearTimeout(connectTimer);
       unsubscribeStatus();
       websocketService.disconnect();
     };

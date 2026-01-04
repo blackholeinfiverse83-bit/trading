@@ -39,8 +39,9 @@ class WebSocketService {
   private socket: Socket | null = null;
   private connected: boolean = false;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
-  private reconnectDelay: number = 1000;
+  private maxReconnectAttempts: number = 2; // Reduced attempts to avoid spam
+  private reconnectDelay: number = 2000;
+  private connectionFailed: boolean = false; // Track if connection permanently failed
 
   private priceUpdateCallbacks: Set<PriceUpdateCallback> = new Set();
   private portfolioUpdateCallbacks: Set<PortfolioUpdateCallback> = new Set();
@@ -49,7 +50,8 @@ class WebSocketService {
   private subscribedSymbols: Set<string> = new Set();
 
   connect(token?: string): void {
-    if (this.socket?.connected) {
+    // Don't try to connect if we've already failed or already connected
+    if (this.connectionFailed || this.socket?.connected) {
       return;
     }
 
@@ -58,15 +60,19 @@ class WebSocketService {
 
       this.socket = io(socketUrl, {
         transports: ['websocket', 'polling'],
-        reconnection: true,
+        reconnection: false, // Disable auto-reconnection to prevent spam
         reconnectionDelay: this.reconnectDelay,
-        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionAttempts: 0, // No auto-reconnect
+        timeout: 5000, // 5 second timeout
         auth: token ? { token } : undefined,
+        autoConnect: false, // Don't auto-connect
       });
 
       this.setupEventHandlers();
+      this.socket.connect(); // Manual connect
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      // Silently fail - backend WebSocket not available yet
+      this.connectionFailed = true;
       this.handleConnectionError();
     }
   }
@@ -75,10 +81,13 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('[WebSocket] Connected');
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.log('[WebSocket] Connected');
+      }
       this.connected = true;
       this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
+      this.connectionFailed = false;
       this.notifyConnectionStatus(true);
 
       if (this.subscribedSymbols.size > 0) {
@@ -87,23 +96,34 @@ class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('[WebSocket] Disconnected:', reason);
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.log('[WebSocket] Disconnected:', reason);
+      }
       this.connected = false;
       this.notifyConnectionStatus(false);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('[WebSocket] Connection error:', error);
+      // Silently handle connection errors - backend may not have WebSocket server yet
+      this.reconnectAttempts++;
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        this.connectionFailed = true;
+        if (this.socket) {
+          this.socket.disconnect();
+          this.socket = null;
+        }
+      }
       this.handleConnectionError();
     });
 
-    this.socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log(`[WebSocket] Reconnection attempt ${attemptNumber}`);
-      this.reconnectAttempts = attemptNumber;
+    this.socket.on('reconnect_attempt', () => {
+      // Suppressed - no auto-reconnect enabled
     });
 
     this.socket.on('reconnect_failed', () => {
-      console.error('[WebSocket] Reconnection failed');
+      // Suppressed - no auto-reconnect enabled
+      this.connectionFailed = true;
       this.notifyConnectionStatus(false);
     });
 
@@ -141,16 +161,9 @@ class WebSocketService {
   private handleConnectionError(): void {
     this.connected = false;
     this.notifyConnectionStatus(false);
-
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      setTimeout(() => {
-        if (!this.connected && this.socket) {
-          this.reconnectAttempts++;
-          this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
-          this.socket.connect();
-        }
-      }, this.reconnectDelay);
-    }
+    
+    // Don't attempt reconnection - wait for backend to be ready
+    // User can refresh page when backend WebSocket is available
   }
 
   subscribeToPrices(symbols: string[]): void {
@@ -222,9 +235,8 @@ class WebSocketService {
   emit(event: string, data?: any): void {
     if (this.socket && this.connected) {
       this.socket.emit(event, data);
-    } else {
-      console.warn(`[WebSocket] Cannot emit ${event}: not connected`);
     }
+    // Silently fail if not connected - no warning spam
   }
 
   disconnect(): void {
