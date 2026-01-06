@@ -4,6 +4,7 @@ import { POPULAR_STOCKS, POPULAR_CRYPTO, POPULAR_COMMODITIES } from '../services
 import { useTheme } from '../contexts/ThemeContext';
 import ServerStatusIndicator from './ServerStatusIndicator';
 import NotificationCenter from './NotificationCenter';
+import BackendStatus from './BackendStatus';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
@@ -253,6 +254,9 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
           <div className="hidden sm:block">
             <NotificationCenter />
           </div>
+
+          {/* Backend Status - Shows online/offline with restart button */}
+          <BackendStatus className="hidden sm:flex" />
 
           {/* Theme Switcher - Completely rewritten */}
           <div ref={themeMenuRef} className="relative theme-switcher-container">
