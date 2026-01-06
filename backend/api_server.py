@@ -427,21 +427,10 @@ async def predict(
         if not validate_horizon(data['horizon']):
             raise HTTPException(status_code=400, detail='Invalid horizon. Valid options: intraday, short, long')
         
-        risk_validation = validate_risk_parameters(
-            data.get('stop_loss_pct'), 
-            data.get('capital_risk_pct'), 
-            data.get('drawdown_limit_pct')
-        )
-        if not risk_validation['valid']:
-            raise HTTPException(status_code=400, detail=risk_validation['error'])
-        
         result = mcp_adapter.predict(
             symbols=data['symbols'],
             horizon=data['horizon'],
-            risk_profile=data.get('risk_profile'),
-            stop_loss_pct=data.get('stop_loss_pct'),
-            capital_risk_pct=data.get('capital_risk_pct'),
-            drawdown_limit_pct=data.get('drawdown_limit_pct')
+            risk_profile=data.get('risk_profile')
         )
         
         log_api_request('/tools/predict', data, result, 200)
@@ -744,7 +733,7 @@ if __name__ == '__main__':
             try:
                 # Find process using the port
                 for conn in psutil.net_connections(kind='inet'):
-                    if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
+                    if hasattr(conn, 'laddr') and conn.laddr and hasattr(conn.laddr, 'port') and conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
                         pid = conn.pid
                         if pid:
                             print(f"[INFO] Found process {pid} using port {port}. Killing it...")

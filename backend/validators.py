@@ -5,7 +5,7 @@ Works with FastAPI Pydantic models and direct validation
 """
 
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 
 from config import MAX_SYMBOLS_PER_REQUEST, MAX_SCAN_SYMBOLS
@@ -178,9 +178,9 @@ def sanitize_input(data: Dict[str, Any], max_depth: int = 3, _current_depth: int
     return sanitized
 
 
-def validate_risk_parameters(stop_loss_pct: float = None, 
-                            capital_risk_pct: float = None,
-                            drawdown_limit_pct: float = None) -> dict:
+def validate_risk_parameters(stop_loss_pct: Optional[float] = None, 
+                            capital_risk_pct: Optional[float] = None,
+                            drawdown_limit_pct: Optional[float] = None) -> dict:
     """Validate risk parameter values"""
     errors = []
     
