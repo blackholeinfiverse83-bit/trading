@@ -5,6 +5,7 @@ import { useConnection } from '../contexts/ConnectionContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { formatUSDToINR } from '../utils/currencyConverter';
 
 const DashboardPage = () => {
   const { connectionState } = useConnection();
@@ -580,7 +581,7 @@ const DashboardPage = () => {
   const stats = [
     { 
       label: 'Portfolio Value', 
-      value: `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      value: formatUSDToINR(portfolioValue), 
       icon: DollarSign, 
       change: dailyChangePercent >= 0 ? `+${dailyChangePercent.toFixed(2)}%` : `${dailyChangePercent.toFixed(2)}%`,
       changeColor: dailyChangePercent >= 0 ? 'text-green-400' : 'text-red-400',
@@ -588,7 +589,7 @@ const DashboardPage = () => {
     },
     { 
       label: 'Daily Change', 
-      value: `$${dailyChange.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      value: formatUSDToINR(dailyChange), 
       icon: Activity, 
       change: dailyChangePercent >= 0 ? `+${dailyChangePercent.toFixed(2)}%` : `${dailyChangePercent.toFixed(2)}%`,
       changeColor: dailyChange >= 0 ? 'text-green-400' : 'text-red-400',
@@ -596,7 +597,7 @@ const DashboardPage = () => {
     },
     { 
       label: 'Total Gain', 
-      value: `$${totalGain.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      value: formatUSDToINR(totalGain), 
       icon: TrendingUp, 
       change: totalGainPercent >= 0 ? `+${totalGainPercent.toFixed(2)}%` : `${totalGainPercent.toFixed(2)}%`,
       changeColor: totalGain >= 0 ? 'text-green-400' : 'text-red-400',
@@ -799,7 +800,7 @@ const DashboardPage = () => {
                     <YAxis 
                       stroke={isLight ? "#6B7280" : "#9CA3AF"}
                       tick={{ fill: isLight ? '#6B7280' : '#9CA3AF', fontSize: 11 }}
-                      tickFormatter={(value) => `$${value > 999 ? (value/1000).toFixed(1) + 'k' : value.toLocaleString()}`}
+                      tickFormatter={(value) => formatUSDToINR(value > 999 ? value/1000 : value).replace(/₹/, '₹').slice(0, -3) + (value > 999 ? 'k' : '')}
                       width={55}
                     />
                     <Tooltip 
@@ -812,7 +813,7 @@ const DashboardPage = () => {
                         color: isLight ? '#111827' : '#E2E8F0'
                       }}
                       labelStyle={{ color: isLight ? '#111827' : '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
-                      formatter={(value: any) => [`$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Value']}
+                      formatter={(value: any) => [formatUSDToINR(Number(value)), 'Value']}
                       cursor={{ stroke: '#3B82F6', strokeWidth: 1 }}
                     />
                     <Area 
@@ -925,7 +926,7 @@ const DashboardPage = () => {
                               </div>
                               <div className="flex items-center justify-between">
                                 <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-lg`}>
-                                  ${(stock.predicted_price || stock.current_price || 0).toFixed(2)}
+                                  {formatUSDToINR(stock.predicted_price || stock.current_price || 0)}
                                 </p>
                                 {stock.predicted_return !== undefined && (
                                   <p className={`text-base font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
@@ -983,7 +984,7 @@ const DashboardPage = () => {
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
                             <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm`}>
-                              ${(stock.predicted_price || stock.current_price || 0).toFixed(2)}
+                              {formatUSDToINR(stock.predicted_price || stock.current_price || 0)}
                             </p>
                             <div className="flex items-center gap-1.5 justify-end mt-0.5">
                               <div className={`w-1.5 h-1.5 rounded-full ${
