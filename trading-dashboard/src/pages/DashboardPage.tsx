@@ -176,9 +176,23 @@ const DashboardPage = () => {
       // REMOVED: Duplicate connection check - already checked in useEffect
       // This was causing extra API calls and hitting rate limits
       
-      // Use only 1-2 symbols for dashboard to avoid timeout
-      // Dashboard loads faster with fewer symbols
-      const symbols = ['AAPL']; // Start with just one symbol for faster loading
+      // Only show stocks that user has explicitly selected/added
+      // No auto-loading of default symbols - user must choose what to view
+      if (userAddedTrades.length === 0) {
+        // No user-added stocks - show empty state with prompt to add stocks
+        setTopStocks([]);
+        setPortfolioValue(0);
+        setDailyChange(0);
+        setDailyChangePercent(0);
+        setTotalGain(0);
+        setTotalGainPercent(0);
+        setLastUpdated(new Date());
+        setLoading(false);
+        return;
+      }
+
+      // Load only user-selected symbols
+      const symbols = userAddedTrades.map(t => t.symbol);
       
       // Try predict endpoint with single symbol
       let response;
@@ -487,11 +501,24 @@ const DashboardPage = () => {
         userAddedSymbols: userAddedTrades.map(t => t.symbol),
         topStocksCount: topStocks.length,
         topStockSymbols: topStocks.map(t => t.symbol),
+        hiddenTrades: hiddenTrades,
       });
       
       // Check if trade already exists in BOTH user-added trades AND backend stocks (case-insensitive)
       if (symbolExistsInTopPerformers(symbol)) {
         console.log('[DashboardPage] Duplicate found for symbol:', symbol);
+        // If it's in userAddedTrades, check if it's hidden - if so, unhide it
+        const isInUserTrades = userAddedTrades.some(t => normalizeSymbolForComparison(t.symbol) === symbol);
+        if (isInUserTrades && hiddenTrades.includes(symbol)) {
+          console.log('[DashboardPage] Found AAPL in userAddedTrades but it\'s hidden - unhiding it');
+          setHiddenTrades(hiddenTrades.filter(s => s !== symbol));
+          saveHiddenTrades(hiddenTrades.filter(s => s !== symbol));
+          setShowAddTradeModal(false);
+          setAddTradeSymbol('');
+          setAddTradeError(null);
+          setAddTradeLoading(false);
+          return;
+        }
         setAddTradeError('This symbol is already in your Top Performers');
         setAddTradeLoading(false);
         return;
@@ -568,6 +595,21 @@ const DashboardPage = () => {
   
   // Combine backend stocks and user-added trades
   const allTopStocks = [...visibleTopStocks, ...userAddedTrades];
+  
+  // Debug logging for data consistency
+  React.useEffect(() => {
+    if (userAddedTrades.length > 0 || visibleTopStocks.length > 0) {
+      console.log('[DashboardPage] Data Summary:', {
+        userAddedTradesCount: userAddedTrades.length,
+        userAddedSymbols: userAddedTrades.map(t => t.symbol),
+        visibleTopStocksCount: visibleTopStocks.length,
+        visibleSymbols: visibleTopStocks.map(t => t.symbol),
+        totalCount: allTopStocks.length,
+        allSymbols: allTopStocks.map(t => t.symbol),
+        hiddenTrades: hiddenTrades,
+      });
+    }
+  }, [userAddedTrades, visibleTopStocks, allTopStocks, hiddenTrades]);
 
   // Generate chart data from top stocks (only real data, no fallback)
   const chartData = allTopStocks.length > 0 ? allTopStocks.map((stock) => ({
@@ -855,6 +897,9 @@ const DashboardPage = () => {
               <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                 <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
                 Top Performers
+                <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
+                  {allTopStocks.length}
+                </span>
               </h2>
               <button
                 onClick={() => {
@@ -886,7 +931,7 @@ const DashboardPage = () => {
                 </button>
               </div>
             ) : allTopStocks.length > 0 ? (
-              <div className="space-y-2.5 max-h-[500px] md:max-h-[600px] overflow-y-auto custom-scrollbar">
+              <div className="space-y-2.5 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar rounded-lg">
                 {allTopStocks.map((stock, index) => {
                   const isPositive = (stock.predicted_return || 0) > 0;
                   const confidence = (stock.confidence || 0) * 100;
@@ -1016,9 +1061,24 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Sparkles className={`w-10 h-10 ${isLight ? 'text-gray-400' : 'text-gray-500'} mx-auto mb-3 opacity-50`} />
-                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm`}>No predictions available</p>
-                <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs mt-1`}>Try refreshing or check your connection</p>
+                <Plus className={`w-12 h-12 ${isLight ? 'text-blue-400' : 'text-blue-400'} mx-auto mb-4`} />
+                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-base font-semibold mb-2`}>
+                  No stocks selected yet
+                </p>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm mb-6`}>
+                  Add stocks to your dashboard to view predictions and portfolio performance
+                </p>
+                <button
+                  onClick={() => {
+                    setShowAddTradeModal(true);
+                    setAddTradeError(null);
+                    setTimeout(() => addTradeInputRef.current?.focus(), 100);
+                  }}
+                  className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg font-semibold transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add Your First Stock</span>
+                </button>
               </div>
             )}
           </div>
