@@ -1,43 +1,5 @@
 [
   {
-    "symbol": "AAPL",
-    "timestamp": "2026-01-02T13:27:20.247942",
-    "current_price": 271.86,
-    "predicted_price": 259.92,
-    "predicted_return": -4.39,
-    "action": "SHORT",
-    "score": 0.51,
-    "confidence": 0.51,
-    "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT",
-    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
-    "ensemble_details": {
-      "decision_maker": "Price Models (Small Downside)",
-      "price_agreement": true,
-      "models_align": true,
-      "total_vote": 0.6,
-      "reason": "RF:-4.39% | LGBM:-4.39% | XGB:-4.39% | DQN:HOLD | Tech:RSI:45.7 (Neutral) | MACD:-0.09/0.63 (Bearish) | SMA20:-1.3% | SMA200:+14.9% | BB:Lower Half | ADX:18.7 (Weak Trend) | Small downside (-4.39%), going SHORT"
-    },
-    "individual_predictions": {
-      "random_forest": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "lightgbm": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "xgboost": {
-        "return": -4.39,
-        "price": 259.92
-      },
-      "dqn": {
-        "action": "HOLD",
-        "q_value": 25.602,
-        "confidence": 0.6169
-      }
-    }
-  },
-  {
     "symbol": "GOOGL",
     "timestamp": "2026-01-02T13:27:21.186106",
     "current_price": 313.0,
@@ -37996,6 +37958,44 @@
         "action": "SHORT",
         "q_value": 34.9758,
         "confidence": 0.5698
+      }
+    }
+  },
+  {
+    "symbol": "TATAMOTORS.NS",
+    "timestamp": "2026-01-05T10:04:25.116463",
+    "current_price": 405.85,
+    "predicted_price": 432.95,
+    "predicted_return": 6.68,
+    "action": "LONG",
+    "score": 0.3967,
+    "confidence": 0.3967,
+    "reason": "RF:+6.68% | LGBM:+6.68% | XGB:+6.68% | DQN:SHORT | News:BHAV_NOT_SUPPORTED | Tech:RSI:16.4 (Oversold (Bullish)) | MACD:-80.09/-53.84 (Bearish) | SMA10:-18.5% | SMA20:-44.2% | BB:Lower Half | ADX:39.5 (Strong Trend) | Mixed signals (disagreement resolved)",
+    "model_version": "ensemble-v3(rf+lgbm+xgb+dqn)",
+    "ensemble_details": {
+      "decision_maker": "Price Models (Moderate Disagreement)",
+      "price_agreement": false,
+      "models_align": false,
+      "total_vote": 0.4668,
+      "reason": "RF:+6.68% | LGBM:+6.68% | XGB:+6.68% | DQN:SHORT | News:BHAV_NOT_SUPPORTED | Tech:RSI:16.4 (Oversold (Bullish)) | MACD:-80.09/-53.84 (Bearish) | SMA10:-18.5% | SMA20:-44.2% | BB:Lower Half | ADX:39.5 (Strong Trend) | Mixed signals (disagreement resolved)"
+    },
+    "individual_predictions": {
+      "random_forest": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "lightgbm": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "xgboost": {
+        "return": 6.68,
+        "price": 432.95
+      },
+      "dqn": {
+        "action": "SHORT",
+        "q_value": 28.4927,
+        "confidence": 0.5732
       }
     }
   }

@@ -377,7 +377,8 @@ async def auth_status(request: Request):
 async def health_check():
     """System health and resource usage"""
     try:
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # Use non-blocking CPU check (interval=0 or None for instant check)
+        cpu_percent = psutil.cpu_percent(interval=0.1)  # 100ms instead of 1 second
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('.')
         

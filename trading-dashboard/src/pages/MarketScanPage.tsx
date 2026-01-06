@@ -176,7 +176,7 @@ const MarketScanContent = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await stockAPI.analyze(symbol, [horizon], 2.0, 1.0, 5.0);
+      const response = await stockAPI.analyze(symbol, [horizon]);
       
       // Check for errors in metadata
       if (response.metadata?.error) {

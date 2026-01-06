@@ -28,63 +28,65 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Only attempt connection if backend is likely available
-    // Check if we should try WebSocket (optional - can be enabled via config)
-    const shouldConnect = true; // Can be controlled via config flag in future
-
-    if (!shouldConnect) {
-      return;
-    }
-
-    // Connect when component mounts (will fail silently if backend doesn't support it)
-    const connect = () => {
-      try {
-        const authToken = user?.token || localStorage.getItem('token');
-        websocketService.connect(authToken && authToken !== 'no-auth-required' ? authToken : undefined);
-      } catch (error) {
-        // Silently fail - WebSocket is optional until backend supports it
-      }
-    };
-
-    // Subscribe to connection status
-    const unsubscribeStatus = websocketService.onConnectionStatus((connected) => {
-      setIsConnected(connected);
-      setConnectionStatus(websocketService.getConnectionStatus());
-    });
-
-    // Delay initial connection slightly to avoid blocking initial render
-    const connectTimer = setTimeout(() => {
-      connect();
-    }, 1000);
+    // DISABLED: WebSocket connection disabled
+    // Reason: Backend does NOT support Socket.IO or WebSockets
+    // All real-time updates use REST API polling instead (see DashboardPage.tsx)
+    // 
+    // Previous attempt to connect was causing unwanted connection attempts to:
+    // ws://127.0.0.1:8000/socket.io/?EIO=4&transport=websocket
+    // 
+    // To re-enable WebSocket support in future, uncomment code below
+    // and ensure backend has Socket.IO middleware configured.
+    
+    // const shouldConnect = false; // WebSockets not supported by backend
+    // if (!shouldConnect) return;
+    
+    // const connect = () => {
+    //   try {
+    //     const authToken = user?.token || localStorage.getItem('token');
+    //     websocketService.connect(authToken && authToken !== 'no-auth-required' ? authToken : undefined);
+    //   } catch (error) {
+    //     // Silently fail
+    //   }
+    // };
+    
+    // const unsubscribeStatus = websocketService.onConnectionStatus((connected) => {
+    //   setIsConnected(connected);
+    //   setConnectionStatus(websocketService.getConnectionStatus());
+    // });
+    
+    // const connectTimer = setTimeout(() => {
+    //   connect();
+    // }, 1000);
 
     // Cleanup on unmount
     return () => {
-      clearTimeout(connectTimer);
-      unsubscribeStatus();
-      websocketService.disconnect();
+      // Cleanup code removed - WebSocket disabled
     };
-  }, [user?.token]);
+  }, [user]);
 
   const subscribeToPrices = useCallback((symbols: string[]) => {
-    websocketService.subscribeToPrices(symbols);
-    setConnectionStatus(websocketService.getConnectionStatus());
+    // WebSocket disabled - no real-time price updates
+    // Use REST API polling instead (see dashboard refresh interval)
   }, []);
 
   const unsubscribeFromPrices = useCallback((symbols: string[]) => {
-    websocketService.unsubscribeFromPrices(symbols);
-    setConnectionStatus(websocketService.getConnectionStatus());
+    // WebSocket disabled
   }, []);
 
   const onPriceUpdate = useCallback((callback: (update: PriceUpdate) => void) => {
-    return websocketService.onPriceUpdate(callback);
+    // WebSocket disabled - callback will never be triggered
+    return () => {}; // Return no-op unsubscribe function
   }, []);
 
   const onPortfolioUpdate = useCallback((callback: (update: PortfolioUpdate) => void) => {
-    return websocketService.onPortfolioUpdate(callback);
+    // WebSocket disabled - callback will never be triggered
+    return () => {}; // Return no-op unsubscribe function
   }, []);
 
   const onNotification = useCallback((callback: (update: NotificationUpdate) => void) => {
-    return websocketService.onNotification(callback);
+    // WebSocket disabled - callback will never be triggered
+    return () => {}; // Return no-op unsubscribe function
   }, []);
 
   return (

@@ -3,7 +3,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ConnectionProvider } from './contexts/ConnectionContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import { WebSocketProvider } from './contexts/WebSocketContext';
+// WebSocketProvider disabled: Backend does not support WebSocket/Socket.IO
+// All real-time updates use REST API polling instead
 import { AppRoutes } from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
 import BackendConnectionBanner from './components/BackendConnectionBanner';
@@ -16,12 +17,11 @@ function App() {
         <ThemeProvider>
           <ConnectionProvider>
             <AuthProvider>
-              <WebSocketProvider>
-                <NotificationProvider>
-                  <BackendConnectionBanner />
-                  <AppRoutes />
-                </NotificationProvider>
-              </WebSocketProvider>
+              {/* WebSocketProvider removed - backend uses REST API only */}
+              <NotificationProvider>
+                <BackendConnectionBanner />
+                <AppRoutes />
+              </NotificationProvider>
             </AuthProvider>
           </ConnectionProvider>
         </ThemeProvider>

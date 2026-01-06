@@ -10,20 +10,29 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 import sys
+import os
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-from stock_analysis_complete import (
-    EnhancedDataIngester,
-    FeatureEngineer,
-    predict_stock_price,
-    train_ml_models,
-    DATA_CACHE_DIR,
-    FEATURE_CACHE_DIR,
-    MODEL_DIR,
-    LOGS_DIR
-)
+# Import from the stock_analysis_complete module in the project root
+current_dir = os.getcwd()
+try:
+    # Try to import from project root
+    os.chdir(project_root)
+    from stock_analysis_complete import (
+        EnhancedDataIngester,
+        FeatureEngineer,
+        predict_stock_price,
+        train_ml_models,
+        DATA_CACHE_DIR,
+        FEATURE_CACHE_DIR,
+        MODEL_DIR,
+        LOGS_DIR
+    )
+finally:
+    os.chdir(current_dir)
 
 logger = logging.getLogger(__name__)
 
