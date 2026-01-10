@@ -9,6 +9,19 @@ export default defineConfig({
     host: true,
     open: true,
   },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+      'lucide-react',
+      'cmdk',
+      'react-hotkeys-hook',
+      'axios',
+      'recharts'
+    ]
+  }
 })
 
 

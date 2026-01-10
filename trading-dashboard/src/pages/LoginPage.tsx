@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp } from 'lucide-react';
+import Logo from '../components/Logo';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -30,10 +30,10 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4">
-            <TrendingUp className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <Logo size="xl" showText={false} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Blackhole Infeverse Trading</h1>
           <p className="text-gray-300">Sign in to your trading account</p>
         </div>
 

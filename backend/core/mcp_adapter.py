@@ -1114,7 +1114,7 @@ class MCPAdapter:
                 "timestamp": datetime.now().isoformat(),
                 "request_id": request_id,
                 "service": {
-                    "name": "Stock Prediction API",
+                    "name": "Blackhole Infeverse Trading API",
                     "version": "3.0",
                     "uptime_seconds": time.time() - psutil.boot_time()
                 },

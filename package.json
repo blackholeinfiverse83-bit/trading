@@ -1,30 +1,10 @@
 {
-  "name": "multi-asset-trading-dashboard",
+  "name": "blackhole-infeverse-trading-dashboard",
   "version": "1.0.0",
-  "description": "Multi-Asset Trading Dashboard - Root Package",
-  "private": true,
   "scripts": {
-    "dev": "node run-frontend.js",
-    "backend": "cd backend && python api_server.py",
-    "frontend": "cd trading-dashboard && npm run dev",
-    "start": "npm run dev",
-    "start:all": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev": "cd trading-dashboard && npm run dev",
     "build": "cd trading-dashboard && npm run build",
     "preview": "cd trading-dashboard && npm run preview",
-    "install": "cd trading-dashboard && npm install",
-    "install:frontend": "cd trading-dashboard && npm install"
-  },
-  "repository": {
-    "type": "git",
-    "url": "."
-  },
-  "keywords": [
-    "trading",
-    "dashboard",
-    "stocks",
-    "crypto"
-  ],
-  "author": "",
-  "license": "MIT"
+    "start": "cd trading-dashboard && npm run dev"
+  }
 }
-

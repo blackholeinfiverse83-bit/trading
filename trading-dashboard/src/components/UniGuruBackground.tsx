@@ -38,7 +38,6 @@ const UniGuruBackground = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -53,7 +52,7 @@ const UniGuruBackground = () => {
       stars.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        z: Math.random() * 2000, // Depth
+        z: Math.random() * 2000,
         size: Math.random() * 2 + 0.5,
         speed: Math.random() * 0.5 + 0.1,
         twinkle: Math.random() * Math.PI * 2,
@@ -85,7 +84,6 @@ const UniGuruBackground = () => {
     }
     nebulasRef.current = nebulas;
 
-    // Animation loop
     const animate = () => {
       // Clear with deep space black background
       ctx.fillStyle = '#000000';
@@ -96,7 +94,6 @@ const UniGuruBackground = () => {
         nebula.pulse += nebula.pulseSpeed;
         const currentOpacity = nebula.opacity + Math.sin(nebula.pulse) * 0.1;
         
-        // Create radial gradient for nebula
         const gradient = ctx.createRadialGradient(
           nebula.x, nebula.y, 0,
           nebula.x, nebula.y, nebula.radius
@@ -120,33 +117,22 @@ const UniGuruBackground = () => {
 
       // Draw stars with 3D depth effect
       stars.forEach((star) => {
-        // Update star position (moving towards camera)
         star.z -= star.speed;
         star.twinkle += star.twinkleSpeed;
 
-        // Reset star if it's too close
         if (star.z <= 0) {
           star.z = 2000;
           star.x = Math.random() * canvas.width;
           star.y = Math.random() * canvas.height;
         }
 
-        // Calculate 2D position from 3D
         const x = (star.x - canvas.width / 2) * (1000 / star.z) + canvas.width / 2;
         const y = (star.y - canvas.height / 2) * (1000 / star.z) + canvas.height / 2;
-        
-        // Calculate size based on depth
         const size = (star.size * 1000) / star.z;
-        
-        // Twinkle effect
         const twinkle = (Math.sin(star.twinkle) + 1) / 2;
         const opacity = 0.5 + twinkle * 0.5;
 
         // Draw star with glow
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        
-        // Create glow gradient
         const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
         glowGradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
         glowGradient.addColorStop(0.3, `rgba(255, 255, 255, ${opacity * 0.5})`);
@@ -154,6 +140,8 @@ const UniGuruBackground = () => {
         glowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
         
         ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw bright center
@@ -165,7 +153,7 @@ const UniGuruBackground = () => {
 
       // Draw star trails (motion blur effect)
       stars.forEach((star) => {
-        if (star.z < 500) { // Only draw trails for close stars
+        if (star.z < 500) {
           const x = (star.x - canvas.width / 2) * (1000 / star.z) + canvas.width / 2;
           const y = (star.y - canvas.height / 2) * (1000 / star.z) + canvas.height / 2;
           const prevX = (star.x - canvas.width / 2) * (1000 / (star.z + star.speed * 10)) + canvas.width / 2;

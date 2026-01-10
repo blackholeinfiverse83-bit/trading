@@ -26,14 +26,14 @@ import json
 import psutil
 
 from core.mcp_adapter import MCPAdapter
-# JWT authentication removed - open access API
+from auth import get_current_user, authenticate_user
 from rate_limiter import check_rate_limit, get_rate_limit_status
 from validators import (
     validate_symbols, validate_horizon, validate_horizons_list,
     validate_risk_parameters, sanitize_input, validate_confidence
 )
 import config
-from config import LOGS_DIR
+from config import LOGS_DIR, ENABLE_AUTH
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -85,7 +85,10 @@ SECURITY_LOG_PATH = Path("data/logs/security.jsonl")
 
 
 # ==================== Pydantic Models ====================
-# JWT authentication removed - no login models needed
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=1, max_length=100)
 
 class PredictRequest(BaseModel):
     symbols: List[str] = Field(..., min_length=1, max_length=50)
@@ -334,22 +337,24 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/")
 async def index():
     """API information"""
+    auth_status = "enabled" if ENABLE_AUTH else "disabled"
     return {
-        'name': 'Stock Prediction MCP API',
+        'name': 'Blackhole Infeverse Trading API',
         'version': '4.0',
-        'description': 'MCP-style REST API with open access, rate limiting, and validation',
-        'authentication': 'DISABLED - Open access to all endpoints',
-        'auth_status': 'disabled',
+        'description': 'MCP-style REST API with configurable authentication, rate limiting, and validation for Blackhole Infeverse Trading',
+        'authentication': f'{auth_status.upper()} - {"Login required" if ENABLE_AUTH else "Open access to all endpoints"}',
+        'auth_status': auth_status,
         'endpoints': {
             '/': 'GET - API information',
+            '/auth/login': 'POST - Login (if auth enabled)',
             '/auth/status': 'GET - Check rate limit status',
             '/tools/health': 'GET - System health',
-            '/tools/predict': 'POST - Generate predictions (NO AUTH)',
-            '/tools/scan_all': 'POST - Scan and rank symbols (NO AUTH)',
-            '/tools/analyze': 'POST - Analyze with risk parameters (NO AUTH)',
-            '/tools/feedback': 'POST - Provide feedback (NO AUTH)',
-            '/tools/train_rl': 'POST - Train RL agent (NO AUTH)',
-            '/tools/fetch_data': 'POST - Fetch batch data (NO AUTH)'
+            '/tools/predict': f'POST - Generate predictions ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})',
+            '/tools/scan_all': f'POST - Scan and rank symbols ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})',
+            '/tools/analyze': f'POST - Analyze with risk parameters ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})',
+            '/tools/feedback': f'POST - Provide feedback ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})',
+            '/tools/train_rl': f'POST - Train RL agent ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})',
+            '/tools/fetch_data': f'POST - Fetch batch data ({"AUTH REQUIRED" if ENABLE_AUTH else "NO AUTH"})'
         },
         'rate_limits': {
             'per_minute': config.RATE_LIMIT_PER_MINUTE,
@@ -360,6 +365,29 @@ async def index():
             'redoc': '/redoc'
         }
     }
+
+
+@app.post("/auth/login")
+async def login(login_data: LoginRequest):
+    """Login endpoint - only available if authentication is enabled"""
+    if not ENABLE_AUTH:
+        # If auth is disabled, return success with no-auth token
+        return {
+            'success': True,
+            'username': login_data.username or 'anonymous',
+            'token': 'no-auth-required',
+            'message': 'Authentication is disabled - open access mode'
+        }
+    
+    try:
+        result = authenticate_user(login_data.username, login_data.password)
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=401, detail=result['error'])
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/auth/status")
@@ -413,9 +441,10 @@ async def health_check():
 async def predict(
     request: Request,
     predict_data: PredictRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Generate predictions for symbols (NO AUTH REQUIRED)"""
+    """Generate predictions for symbols"""
     try:
         data = predict_data.dict()
         data = sanitize_input(data)
@@ -450,9 +479,10 @@ async def predict(
 async def scan_all(
     request: Request,
     scan_data: ScanAllRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Scan and rank multiple symbols (NO AUTH REQUIRED)"""
+    """Scan and rank multiple symbols"""
     try:
         data = scan_data.dict()
         data = sanitize_input(data)
@@ -492,9 +522,10 @@ async def scan_all(
 async def analyze(
     request: Request,
     analyze_data: AnalyzeRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Analyze custom tickers with risk parameters (NO AUTH REQUIRED)"""
+    """Analyze custom tickers with risk parameters"""
     try:
         data = analyze_data.dict()
         data = sanitize_input(data)
@@ -540,9 +571,10 @@ async def analyze(
 async def feedback(
     request: Request,
     feedback_data: FeedbackRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Process user feedback for RL fine-tuning (NO AUTH REQUIRED)"""
+    """Process user feedback for RL fine-tuning"""
     try:
         data = feedback_data.dict()
         data = sanitize_input(data)
@@ -629,9 +661,10 @@ async def feedback(
 async def train_rl(
     request: Request,
     train_data: TrainRLRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Train RL agent and return reward statistics (NO AUTH REQUIRED)"""
+    """Train RL agent and return reward statistics"""
     try:
         data = train_data.dict()
         data = sanitize_input(data)
@@ -674,9 +707,10 @@ async def train_rl(
 async def fetch_data(
     request: Request,
     fetch_data_req: FetchDataRequest,
-    client_ip: str = Depends(check_rate_limit)
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Fetch batch data for symbols (NO AUTH REQUIRED)"""
+    """Fetch batch data for symbols"""
     try:
         data = fetch_data_req.dict()
         data = sanitize_input(data)
@@ -763,10 +797,15 @@ if __name__ == '__main__':
         print("[INFO] Continuing anyway...")
     
     print("\n" + "="*80)
-    print(" " * 20 + "MCP API SERVER STARTING")
+    print(" " * 15 + "BLACKHOLE INFEVERSE TRADING API SERVER STARTING")
     print("="*80)
     print("\nSECURITY FEATURES:")
-    print("  [ ] JWT Authentication: DISABLED (Open Access)")
+    if ENABLE_AUTH:
+        print("  [X] JWT Authentication: ENABLED")
+        print(f"      Admin Username: {config.ADMIN_USERNAME}")
+        print(f"      Token Expiration: {config.JWT_EXPIRATION_HOURS} hours")
+    else:
+        print("  [ ] JWT Authentication: DISABLED (Open Access)")
     # Reload config to ensure we get latest values (especially rate limits from env vars)
     import importlib
     if 'config' in sys.modules:
@@ -780,23 +819,31 @@ if __name__ == '__main__':
     print("  [X] FastAPI (Modern, Fast, Async)")
     print("  [X] Automatic OpenAPI Documentation")
     print("  [X] Pydantic Data Validation")
-    print("\nENDPOINTS (ALL OPEN ACCESS - NO AUTH):")
-    print("  GET  /                - API information")
-    print("  GET  /auth/status     - Rate limit status")
-    print("  GET  /tools/health    - System health")
-    print("  POST /tools/predict   - Generate predictions")
-    print("  POST /tools/scan_all  - Scan and rank symbols")
-    print("  POST /tools/analyze   - Analyze with risk parameters")
-    print("  POST /tools/feedback  - Human feedback")
-    print("  POST /tools/train_rl  - Train RL agent")
-    print("  POST /tools/fetch_data - Fetch batch data")
+    print("\nENDPOINTS:")
+    auth_label = "AUTH REQUIRED" if ENABLE_AUTH else "OPEN ACCESS"
+    print(f"  GET  /                - API information")
+    if ENABLE_AUTH:
+        print(f"  POST /auth/login      - User authentication")
+    print(f"  GET  /auth/status     - Rate limit status")
+    print(f"  GET  /tools/health    - System health")
+    print(f"  POST /tools/predict   - Generate predictions ({auth_label})")
+    print(f"  POST /tools/scan_all  - Scan and rank symbols ({auth_label})")
+    print(f"  POST /tools/analyze   - Analyze with risk parameters ({auth_label})")
+    print(f"  POST /tools/feedback  - Human feedback ({auth_label})")
+    print(f"  POST /tools/train_rl  - Train RL agent ({auth_label})")
+    print(f"  POST /tools/fetch_data - Fetch batch data ({auth_label})")
     print("\nDOCUMENTATION:")
     print(f"  Swagger UI: http://{config.UVICORN_HOST}:{config.UVICORN_PORT}/docs")
     print(f"  ReDoc: http://{config.UVICORN_HOST}:{config.UVICORN_PORT}/redoc")
     print("\nACCESS MODE:")
-    print("  Status: OPEN ACCESS")
-    print("  Authentication: None required")
-    print("  All endpoints available without login")
+    if ENABLE_AUTH:
+        print("  Status: AUTHENTICATION ENABLED")
+        print("  Login required for all endpoints")
+        print(f"  Admin credentials: {config.ADMIN_USERNAME} / {config.ADMIN_PASSWORD}")
+    else:
+        print("  Status: OPEN ACCESS")
+        print("  Authentication: None required")
+        print("  All endpoints available without login")
     print(f"\nServer starting on http://{config.UVICORN_HOST}:{config.UVICORN_PORT}")
     print("="*80 + "\n")
     

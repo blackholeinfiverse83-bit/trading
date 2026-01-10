@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { stockAPI, TimeoutError, type PredictionItem, type AnalyzeResponse } from '../services/api';
 import { useAssetType } from '../contexts/AssetTypeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import StocksView from '../components/StocksView';
 import CryptoView from '../components/CryptoView';
 import CommoditiesView from '../components/CommoditiesView';
@@ -13,6 +14,8 @@ import CandlestickChart from '../components/CandlestickChart';
 // Inner component that uses the context (wrapped by Layout)
 const MarketScanContent = () => {
   const { assetType } = useAssetType();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -21,6 +24,50 @@ const MarketScanContent = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [horizon, setHorizon] = useState<'intraday' | 'short' | 'long'>('intraday');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  // Available stocks list - US + Indian stocks
+  const availableStocks = [
+    // US Stocks
+    'AAPL', 'GOOGL', 'MSFT', 'TSLA', 'META', 'AMZN', 'NVDA', 'AMD', 'INTC', 'NFLX',
+    'IBM', 'ORACLE', 'CISCO', 'UBER', 'COIN', 'PYPL', 'SHOP', 'SQ', 'DDOG', 'NET',
+    // Indian Stocks - Banking & Finance
+    'SBIN.NS', 'AXISBANK.NS', 'ICICIBANK.NS', 'KOTAKBANK.NS', 'HDFC.NS', 'BAJAJFINSV.NS',
+    // Indian Stocks - IT & Tech
+    'TCS.NS', 'INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS',
+    // Indian Stocks - Automobiles
+    'TATAMOTORS.NS', 'M&M.NS', 'MARUTI.NS', 'BAJAJ-AUTO.NS', 'EICHERMOT.NS',
+    // Indian Stocks - Steel & Metal
+    'TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'NMDC.NS',
+    // Indian Stocks - Energy
+    'GAIL.NS', 'POWERGRID.NS', 'NTPC.NS', 'COAL.NS', 'BPCL.NS',
+    // Indian Stocks - Infrastructure & Transport
+    'ADANIPORTS.NS', 'ADANIGREEN.NS', 'ADANITRANS.NS', 'LT.NS',
+    // Indian Stocks - Consumer & Others
+    'ASIANPAINT.NS', 'ULTRACEMCO.NS', 'SUNPHARMA.NS', 'NESTLEIND.NS', 'BRITANNIA.NS',
+    'HINDUNILVR.NS', 'ITC.NS'
+  ];
+
+  const handleSymbolInput = (value: string) => {
+    const upperValue = value.toUpperCase();
+    setSearchQuery(upperValue);
+    
+    // Filter suggestions based on input
+    if (upperValue.length > 0) {
+      const filtered = availableStocks.filter(stock => 
+        stock.includes(upperValue)
+      );
+      setSuggestions(filtered.slice(0, 8)); // Show max 8 suggestions
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSelectSuggestion = (symbol: string) => {
+    setSearchQuery(symbol);
+    setSuggestions([]);
+    handleSearch(symbol);
+  };
   const [analyzeResults, setAnalyzeResults] = useState<AnalyzeResponse | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState<PredictionItem | null>(null);
@@ -446,15 +493,15 @@ const MarketScanContent = () => {
     <div className="space-y-4 animate-fadeIn">
       {/* Connection Error Banner - Visible at top if backend is not reachable */}
       {error && error.includes('Unable to connect to backend') && (
-        <div className="bg-red-900/30 border-2 border-red-500/50 rounded-xl p-4">
+        <div className={`${isLight ? 'bg-red-50 border-2 border-red-300' : 'bg-red-900/30 border-2 border-red-500/50'} rounded-xl p-4`}>
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-red-400 font-semibold mb-2">Backend Server Not Running</p>
               <p className="text-red-300 text-sm mb-3">{error}</p>
-              <div className="bg-slate-800/50 rounded-lg p-3 mt-2">
-                <p className="text-gray-300 text-xs font-medium mb-1">To start the backend server:</p>
-                <code className="text-xs text-green-400 block bg-slate-900/50 p-2 rounded">
+              <div className={`${isLight ? 'bg-gray-100 rounded-lg p-3 mt-2' : 'bg-slate-800/50 rounded-lg p-3 mt-2'}`}>
+                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-xs font-medium mb-1`}>To start the backend server:</p>
+                <code className={`text-xs ${isLight ? 'text-green-700 bg-gray-200' : 'text-green-400 bg-slate-900/50'} block p-2 rounded`}>
                   cd backend && python api_server.py
                 </code>
                 <p className="text-gray-400 text-xs mt-2">
@@ -468,9 +515,9 @@ const MarketScanContent = () => {
       
       {/* Loading Indicator - Visible at top */}
       {loading && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3 flex items-center justify-center gap-2">
+        <div className={`${isLight ? 'bg-blue-50 border border-blue-300' : 'bg-blue-500/10 border border-blue-500/30'} rounded p-3 flex items-center justify-center gap-2`}>
           <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-          <span className="text-blue-400 font-semibold text-sm">Fetching data from backend...</span>
+          <span className={`${isLight ? 'text-blue-700' : 'text-blue-400'} font-semibold text-sm`}>Fetching data from backend...</span>
         </div>
       )}
       
@@ -510,12 +557,12 @@ const MarketScanContent = () => {
         
       {/* Detailed Predictions Section (shown for all asset types when predictions exist) */}
         {predictions.length > 0 && (
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 shadow-xl">
+          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-xl`}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <h2 className={`text-sm font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                 <Sparkles className="w-4 h-4 text-yellow-400" />
                 Predictions
-                <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full text-xs font-semibold">
+                <span className={`${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400'} px-2 py-0.5 rounded-full text-xs font-semibold`}>
                   {predictions.length}
                 </span>
               </h2>
@@ -539,7 +586,7 @@ const MarketScanContent = () => {
                 return (
                   <div 
                     key={index} 
-                    className="bg-gradient-to-br from-slate-700/50 to-slate-600/30 rounded-lg p-3 border border-slate-600/50 hover:border-blue-500/50 transition-all card-hover group"
+                    className={`${isLight ? 'bg-gray-50 border border-gray-200 hover:border-blue-400' : 'bg-gradient-to-br from-slate-700/50 to-slate-600/30 border border-slate-600/50 hover:border-blue-500/50'} rounded-lg p-3 transition-all card-hover group`}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     {/* Main Prediction Card */}
@@ -553,7 +600,7 @@ const MarketScanContent = () => {
                           {getActionIcon(pred.action)}
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-bold text-sm mb-1">{pred.symbol}</p>
+                          <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm mb-1`}>{pred.symbol}</p>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
                               pred.action === 'LONG' ? 'bg-green-500/20 text-green-400' :
@@ -562,7 +609,7 @@ const MarketScanContent = () => {
                             }`}>
                               {pred.action === 'LONG' ? 'BUY' : pred.action === 'SHORT' ? 'SELL' : pred.action || 'HOLD'}
                             </span>
-                            <span className="text-xs text-gray-400 bg-slate-600/50 px-2 py-1 rounded-lg capitalize">
+                            <span className={`text-xs ${isLight ? 'text-gray-600 bg-gray-200' : 'text-gray-400 bg-slate-600/50'} px-2 py-1 rounded-lg capitalize`}>
                               {pred.horizon || horizon}
                             </span>
                             {pred.risk_profile && (
@@ -572,8 +619,8 @@ const MarketScanContent = () => {
                             )}
                           </div>
                           {pred.current_price && (
-                            <p className="text-gray-400 text-xs mt-2">
-                              Current: <span className="text-white font-semibold">${pred.current_price.toFixed(2)}</span>
+                            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mt-2`}>
+                              Current: <span className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold`}>${pred.current_price.toFixed(2)}</span>
                             </p>
                           )}
                           {pred.model_version && (
@@ -585,7 +632,7 @@ const MarketScanContent = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-white font-bold text-sm mb-1">
+                        <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm mb-1`}>
                           ${(pred.predicted_price || pred.current_price || 0).toFixed(2)}
                         </p>
                         <div className="flex items-center gap-1.5 justify-end mb-1">
@@ -614,8 +661,8 @@ const MarketScanContent = () => {
                     </div>
                     
                     {pred.reason && (
-                      <div className="bg-slate-800/50 rounded-lg p-3 mb-4">
-                        <p className="text-gray-300 text-sm leading-relaxed">{pred.reason}</p>
+                      <div className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/50'} rounded-lg p-3 mb-4`}>
+                        <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-sm leading-relaxed`}>{pred.reason}</p>
                       </div>
                     )}
                     
@@ -630,34 +677,34 @@ const MarketScanContent = () => {
                         }
                         setExpandedPredictions(newExpanded);
                       }}
-                      className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800/70 rounded-lg transition-colors mb-3"
+                      className={`w-full flex items-center justify-between p-3 ${isLight ? 'bg-gray-100 hover:bg-gray-200 border border-gray-200' : 'bg-slate-800/50 hover:bg-slate-800/70'} rounded-lg transition-colors mb-3`}
                     >
-                      <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                      <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} flex items-center gap-2`}>
                         <BarChart3 className="w-4 h-4" />
                         {isExpanded ? 'Hide' : 'Show'} Detailed Analysis
                       </span>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                      {isExpanded ? <ChevronUp className={`w-4 h-4 ${isLight ? 'text-gray-600' : 'text-gray-400'}`} /> : <ChevronDown className={`w-4 h-4 ${isLight ? 'text-gray-600' : 'text-gray-400'}`} />}
                     </button>
                     
                     {isExpanded && (
-                      <div className="space-y-4 mt-4 border-t border-slate-600/50 pt-4">
+                      <div className={`space-y-4 mt-4 border-t ${isLight ? 'border-gray-200' : 'border-slate-600/50'} pt-4`}>
                         {/* Ensemble Details */}
                         {Object.keys(ensembleDetails).length > 0 && (
-                          <div className="bg-slate-800/50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                          <div className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/50'} rounded-lg p-4`}>
+                            <h4 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
                               <Brain className="w-4 h-4 text-purple-400" />
                               Ensemble Analysis
                             </h4>
                             <div className="grid grid-cols-2 gap-3">
                               {typeof ensembleDetails.decision_maker === 'string' && ensembleDetails.decision_maker && (
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Decision Maker</p>
-                                  <p className="text-sm text-white font-medium">{ensembleDetails.decision_maker}</p>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Decision Maker</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>{ensembleDetails.decision_maker}</p>
                                 </div>
                               )}
                               {ensembleDetails.models_align !== undefined && (
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Models Alignment</p>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Models Alignment</p>
                                   <p className={`text-sm font-medium ${ensembleDetails.models_align ? 'text-green-400' : 'text-yellow-400'}`}>
                                     {ensembleDetails.models_align ? '✓ Aligned' : '⚠ Disagreement'}
                                   </p>
@@ -665,7 +712,7 @@ const MarketScanContent = () => {
                               )}
                               {ensembleDetails.price_agreement !== undefined && (
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Price Agreement</p>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Price Agreement</p>
                                   <p className={`text-sm font-medium ${ensembleDetails.price_agreement ? 'text-green-400' : 'text-yellow-400'}`}>
                                     {ensembleDetails.price_agreement ? '✓ Agreed' : '⚠ Varied'}
                                   </p>
@@ -673,8 +720,8 @@ const MarketScanContent = () => {
                               )}
                               {ensembleDetails.total_vote !== undefined && typeof ensembleDetails.total_vote === 'number' && (
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Total Vote</p>
-                                  <p className="text-sm text-white font-medium">{Number(ensembleDetails.total_vote).toFixed(4)}</p>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Total Vote</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>{Number(ensembleDetails.total_vote).toFixed(4)}</p>
                                 </div>
                               )}
                             </div>
@@ -683,16 +730,16 @@ const MarketScanContent = () => {
                         
                         {/* Individual Model Predictions */}
                         {Object.keys(individualPreds).length > 0 && (
-                          <div className="bg-slate-800/50 rounded p-2">
-                            <h4 className="text-xs font-semibold text-white mb-2 flex items-center gap-1.5">
+                          <div className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/50'} rounded p-2`}>
+                            <h4 className={`text-xs font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-2 flex items-center gap-1.5`}>
                               <Cpu className="w-3 h-3 text-blue-400" />
                               Individual Model Predictions
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
                               {individualPreds.random_forest && (
-                                <div className="bg-slate-700/50 rounded p-2">
-                                  <p className="text-xs text-gray-400 mb-1">Random Forest</p>
-                                  <p className="text-sm text-white font-medium">${individualPreds.random_forest.price?.toFixed(2) || 'N/A'}</p>
+                                <div className={`${isLight ? 'bg-gray-200 border border-gray-300' : 'bg-slate-700/50'} rounded p-2`}>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Random Forest</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>${individualPreds.random_forest.price?.toFixed(2) || 'N/A'}</p>
                                   {individualPreds.random_forest.return !== undefined && (
                                     <p className={`text-xs ${individualPreds.random_forest.return > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                       {individualPreds.random_forest.return > 0 ? '+' : ''}{individualPreds.random_forest.return.toFixed(2)}%
@@ -701,9 +748,9 @@ const MarketScanContent = () => {
                                 </div>
                               )}
                               {individualPreds.lightgbm && (
-                                <div className="bg-slate-700/50 rounded p-2">
-                                  <p className="text-xs text-gray-400 mb-1">LightGBM</p>
-                                  <p className="text-sm text-white font-medium">${individualPreds.lightgbm.price?.toFixed(2) || 'N/A'}</p>
+                                <div className={`${isLight ? 'bg-gray-200 border border-gray-300' : 'bg-slate-700/50'} rounded p-2`}>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>LightGBM</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>${individualPreds.lightgbm.price?.toFixed(2) || 'N/A'}</p>
                                   {individualPreds.lightgbm.return !== undefined && (
                                     <p className={`text-xs ${individualPreds.lightgbm.return > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                       {individualPreds.lightgbm.return > 0 ? '+' : ''}{individualPreds.lightgbm.return.toFixed(2)}%
@@ -712,9 +759,9 @@ const MarketScanContent = () => {
                                 </div>
                               )}
                               {individualPreds.xgboost && (
-                                <div className="bg-slate-700/50 rounded p-2">
-                                  <p className="text-xs text-gray-400 mb-1">XGBoost</p>
-                                  <p className="text-sm text-white font-medium">${individualPreds.xgboost.price?.toFixed(2) || 'N/A'}</p>
+                                <div className={`${isLight ? 'bg-gray-200 border border-gray-300' : 'bg-slate-700/50'} rounded p-2`}>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>XGBoost</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>${individualPreds.xgboost.price?.toFixed(2) || 'N/A'}</p>
                                   {individualPreds.xgboost.return !== undefined && (
                                     <p className={`text-xs ${individualPreds.xgboost.return > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                       {individualPreds.xgboost.return > 0 ? '+' : ''}{individualPreds.xgboost.return.toFixed(2)}%
@@ -723,9 +770,9 @@ const MarketScanContent = () => {
                                 </div>
                               )}
                               {individualPreds.dqn && (
-                                <div className="bg-slate-700/50 rounded p-2">
-                                  <p className="text-xs text-gray-400 mb-1">DQN (RL)</p>
-                                  <p className="text-sm text-white font-medium">
+                                <div className={`${isLight ? 'bg-gray-200 border border-gray-300' : 'bg-slate-700/50'} rounded p-2`}>
+                                  <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>DQN (RL)</p>
+                                  <p className={`text-sm ${isLight ? 'text-gray-900' : 'text-white'} font-medium`}>
                                     {individualPreds.dqn.action || 'N/A'}
                                   </p>
                                   {individualPreds.dqn.confidence !== undefined && (
@@ -741,23 +788,23 @@ const MarketScanContent = () => {
                         
                         {/* Horizon Details */}
                         {Object.keys(horizonDetails).length > 0 && (
-                          <div className="bg-slate-800/50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                          <div className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/50'} rounded-lg p-4`}>
+                            <h4 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
                               <Zap className="w-4 h-4 text-yellow-400" />
                               Horizon Information
                             </h4>
                             <div className="space-y-2">
                               {typeof horizonDetails.description === 'string' && horizonDetails.description && (
-                                <p className="text-xs text-gray-300">{horizonDetails.description}</p>
+                                <p className={`text-xs ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>{horizonDetails.description}</p>
                               )}
                               {horizonDetails.target_days !== undefined && horizonDetails.target_days !== null && (
-                                <p className="text-xs text-gray-400">
-                                  Target Days: <span className="text-white">{String(horizonDetails.target_days)}</span>
+                                <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  Target Days: <span className={`${isLight ? 'text-gray-900' : 'text-white'}`}>{String(horizonDetails.target_days)}</span>
                                 </p>
                               )}
                               {typeof horizonDetails.type === 'string' && horizonDetails.type && (
-                                <p className="text-xs text-gray-400">
-                                  Type: <span className="text-white capitalize">{horizonDetails.type}</span>
+                                <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  Type: <span className={`${isLight ? 'text-gray-900' : 'text-white'} capitalize`}>{horizonDetails.type}</span>
                                 </p>
                               )}
                             </div>
@@ -811,27 +858,27 @@ const MarketScanContent = () => {
         )}
 
         {analyzeResults && analyzeResults.metadata && (
-          <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/20 backdrop-blur-sm rounded-lg p-3 border border-blue-500/30 shadow-xl">
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <div className={`${isLight ? 'bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200' : 'bg-gradient-to-br from-blue-900/30 to-purple-900/20 backdrop-blur-sm border border-blue-500/30'} rounded-lg p-3 shadow-xl`}>
+            <h2 className={`text-sm font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
               <BarChart3 className="w-4 h-4 text-blue-400" />
               Deep Analysis Summary
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
-                <p className="text-gray-400 text-xs mb-1 font-medium">Consensus</p>
-                <p className="text-white font-bold text-sm">{analyzeResults.metadata.consensus || 'N/A'}</p>
+              <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50 border border-slate-700/50'} rounded p-2`}>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1 font-medium`}>Consensus</p>
+                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm`}>{analyzeResults.metadata.consensus || 'N/A'}</p>
               </div>
-              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
-                <p className="text-gray-400 text-xs mb-1 font-medium">Average Confidence</p>
-                <p className="text-white font-bold text-sm">
+              <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50 border border-slate-700/50'} rounded p-2`}>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1 font-medium`}>Average Confidence</p>
+                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm`}>
                   {analyzeResults.metadata.average_confidence 
                     ? (analyzeResults.metadata.average_confidence * 100).toFixed(1) + '%'
                     : 'N/A'}
                 </p>
               </div>
-              <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50">
-                <p className="text-gray-400 text-xs mb-1 font-medium">Horizons Analyzed</p>
-                <p className="text-white font-bold text-sm capitalize">
+              <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50 border border-slate-700/50'} rounded p-2`}>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1 font-medium`}>Horizons Analyzed</p>
+                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-sm capitalize`}>
                   {analyzeResults.metadata.horizons?.join(', ') || 'N/A'}
                 </p>
               </div>
@@ -841,10 +888,10 @@ const MarketScanContent = () => {
 
         {showFeedbackModal && selectedPrediction && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn p-4">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700 max-w-md w-full shadow-2xl animate-slideIn">
+            <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700'} rounded-xl p-6 max-w-md w-full shadow-2xl animate-slideIn`}>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                   <ThumbsUp className="w-5 h-5 text-blue-400" />
                   Provide Feedback
                 </h3>
@@ -856,18 +903,18 @@ const MarketScanContent = () => {
                     setFeedbackText('');
                     setFeedbackError(null);
                   }}
-                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  className={`p-2 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-700'} rounded-lg transition-colors`}
                   disabled={feedbackLoading}
                 >
-                  <X className="w-5 h-5 text-gray-400" />
+                  <X className={`w-5 h-5 ${isLight ? 'text-gray-600' : 'text-gray-400'}`} />
                 </button>
               </div>
 
               {/* Prediction Info Card */}
-              <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 rounded-lg p-4 mb-4 border border-slate-600/50">
+              <div className={`${isLight ? 'bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200' : 'bg-gradient-to-br from-slate-700/50 to-slate-800/50 border border-slate-600/50'} rounded-lg p-4 mb-4`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-white">{selectedPrediction.symbol}</span>
+                    <span className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{selectedPrediction.symbol}</span>
                     <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
                       selectedPrediction.action?.toUpperCase() === 'LONG' || selectedPrediction.action?.toUpperCase() === 'BUY' ? 'bg-green-500/20 text-green-400 border border-green-500/50' :
                       selectedPrediction.action?.toUpperCase() === 'SHORT' || selectedPrediction.action?.toUpperCase() === 'SELL' ? 'bg-red-500/20 text-red-400 border border-red-500/50' :
@@ -881,21 +928,21 @@ const MarketScanContent = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Current Price</p>
-                    <p className="text-sm font-semibold text-white">
+                    <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Current Price</p>
+                    <p className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
                       ${(selectedPrediction.current_price || 0).toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Predicted Price</p>
+                    <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Predicted Price</p>
                     <p className="text-sm font-semibold text-blue-400">
                       ${(selectedPrediction.predicted_price || selectedPrediction.current_price || 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
                 {selectedPrediction.predicted_return !== undefined && (
-                  <div className="mt-2 pt-2 border-t border-slate-600/50">
-                    <p className="text-xs text-gray-400 mb-1">Predicted Return</p>
+                  <div className={`mt-2 pt-2 border-t ${isLight ? 'border-gray-200' : 'border-slate-600/50'}`}>
+                    <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mb-1`}>Predicted Return</p>
                     <p className={`text-sm font-bold ${
                       selectedPrediction.predicted_return >= 0 ? 'text-green-400' : 'text-red-400'
                     }`}>
@@ -908,7 +955,7 @@ const MarketScanContent = () => {
 
               {/* User Feedback Text Input (Required) */}
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-300 mb-2">
+                <label className={`block text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} mb-2`}>
                   Your Feedback <span className="text-red-400">*</span>
                 </label>
                 <textarea
@@ -916,17 +963,17 @@ const MarketScanContent = () => {
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="e.g., Model suggested BUY but price reversed after entry"
                   rows={4}
-                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all resize-none"
+                  className={`w-full px-3 py-2 ${isLight ? 'bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500' : 'bg-slate-700/50 border border-slate-600 text-white focus:ring-blue-500/50 focus:border-blue-500/50'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-all resize-none`}
                   disabled={feedbackLoading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-500'} mt-1`}>
                   Describe your feedback about this prediction (e.g., "correct", "incorrect", "price reversed", etc.)
                 </p>
               </div>
 
               {/* Actual Return Input (Optional) */}
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-300 mb-2">
+                <label className={`block text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} mb-2`}>
                   Actual Return % <span className="text-gray-500">(Optional)</span>
                 </label>
                 <input
@@ -937,18 +984,18 @@ const MarketScanContent = () => {
                   value={actualReturn}
                   onChange={(e) => setActualReturn(e.target.value)}
                   placeholder="e.g., 5.25 or -2.10"
-                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                  className={`w-full px-3 py-2 ${isLight ? 'bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500' : 'bg-slate-700/50 border border-slate-600 text-white focus:ring-blue-500/50 focus:border-blue-500/50'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-all`}
                   disabled={feedbackLoading}
                 />
-                <p className="text-xs text-gray-500 mt-1">Range: -100% to 1000%</p>
+                <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-500'} mt-1`}>Range: -100% to 1000%</p>
               </div>
 
               {/* Error Message */}
               {feedbackError && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <div className={`mb-4 p-3 ${isLight ? 'bg-red-50 border border-red-200' : 'bg-red-500/10 border border-red-500/30'} rounded-lg`}>
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-red-300 whitespace-pre-line">{feedbackError}</p>
+                    <p className={`text-xs ${isLight ? 'text-red-700' : 'text-red-300'} whitespace-pre-line`}>{feedbackError}</p>
                   </div>
                 </div>
               )}
@@ -981,7 +1028,7 @@ const MarketScanContent = () => {
                     setFeedbackError(null);
                   }}
                   disabled={feedbackLoading}
-                  className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-700/50 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-medium"
+                  className={`w-full px-4 py-2 ${isLight ? 'bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-900' : 'bg-slate-700 hover:bg-slate-600 disabled:bg-slate-700/50 text-white'} disabled:cursor-not-allowed rounded-lg transition-all text-sm font-medium`}
                 >
                   Cancel
                 </button>

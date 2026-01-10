@@ -266,14 +266,30 @@ export const stockAPI = {
     capitalRiskPct: number = 1.0,
     drawdownLimitPct: number = 5.0
   ) => {
-    const response = await api.post('/tools/analyze', {
+    const payload = {
       symbol,
       horizons,
       stop_loss_pct: stopLossPct,
       capital_risk_pct: capitalRiskPct,
       drawdown_limit_pct: drawdownLimitPct,
-    });
-    return response.data;
+    };
+    
+    log('Calling /tools/analyze with:', payload);
+    
+    try {
+      const response = await api.post('/tools/analyze', payload);
+      log('Analyze response received:', { status: response.status, data: response.data });
+      return response.data;
+    } catch (error: any) {
+      log('Analyze error:', { 
+        message: error.message, 
+        code: error.code, 
+        status: error.response?.status,
+        hasResponse: !!error.response,
+        responseData: error.response?.data 
+      });
+      throw error;
+    }
   },
   
   fetchData: async (
@@ -297,7 +313,7 @@ export const stockAPI = {
     userFeedback: string,  // Now accepts free text
     actualReturn?: number | null
   ) => {
-    console.log('[API] Feedback request:', { symbol, predictedAction, userFeedback, actualReturn });
+    log('[API] Feedback request:', { symbol, predictedAction, userFeedback, actualReturn });
     
     // Normalize symbol (1-20 characters, uppercase)
     const normalizedSymbol = symbol.trim().toUpperCase();
@@ -344,15 +360,15 @@ export const stockAPI = {
     }
     // If undefined, omit the field entirely (backend will use default None)
     
-    console.log('[API] Sending feedback payload:', JSON.stringify(payload, null, 2));
+    log('[API] Sending feedback payload:', JSON.stringify(payload, null, 2));
     
     try {
       const response = await api.post('/tools/feedback', payload);
-      console.log('[API] Feedback response:', response.data);
+      log('[API] Feedback response:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('[API] Feedback error:', error);
-      console.error('[API] Error response:', error.response?.data);
+      log('[API] Feedback error:', error);
+      log('[API] Error response:', error.response?.data);
       throw error;
     }
   },

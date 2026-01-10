@@ -3,14 +3,60 @@ import Layout from '../components/Layout';
 import { TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
 import { formatUSDToINR } from '../utils/currencyConverter';
+import { useTheme } from '../contexts/ThemeContext';
 
 const PortfolioPage = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [holdings, setHoldings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalValue, setTotalValue] = useState(0);
   const [totalGain, setTotalGain] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPosition, setNewPosition] = useState({ symbol: '', shares: 0, avgPrice: 0 });
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  // Available stocks list - US + Indian stocks
+  const availableStocks = [
+    // US Stocks
+    'AAPL', 'GOOGL', 'MSFT', 'TSLA', 'META', 'AMZN', 'NVDA', 'AMD', 'INTC', 'NFLX',
+    'IBM', 'ORACLE', 'CISCO', 'UBER', 'COIN', 'PYPL', 'SHOP', 'SQ', 'DDOG', 'NET',
+    // Indian Stocks - Banking & Finance
+    'SBIN.NS', 'AXISBANK.NS', 'ICICIBANK.NS', 'KOTAKBANK.NS', 'HDFC.NS', 'BAJAJFINSV.NS',
+    // Indian Stocks - IT & Tech
+    'TCS.NS', 'INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS',
+    // Indian Stocks - Automobiles
+    'TATAMOTORS.NS', 'M&M.NS', 'MARUTI.NS', 'BAJAJ-AUTO.NS', 'EICHERMOT.NS',
+    // Indian Stocks - Steel & Metal
+    'TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'NMDC.NS',
+    // Indian Stocks - Energy
+    'GAIL.NS', 'POWERGRID.NS', 'NTPC.NS', 'COAL.NS', 'BPCL.NS',
+    // Indian Stocks - Infrastructure & Transport
+    'ADANIPORTS.NS', 'ADANIGREEN.NS', 'ADANITRANS.NS', 'LT.NS',
+    // Indian Stocks - Consumer & Others
+    'ASIANPAINT.NS', 'ULTRACEMCO.NS', 'SUNPHARMA.NS', 'NESTLEIND.NS', 'BRITANNIA.NS',
+    'HINDUNILVR.NS', 'ITC.NS'
+  ];
+
+  const handleSymbolInput = (value: string) => {
+    const upperValue = value.toUpperCase();
+    setNewPosition({ ...newPosition, symbol: upperValue });
+    
+    // Filter suggestions based on input
+    if (upperValue.length > 0) {
+      const filtered = availableStocks.filter(stock => 
+        stock.includes(upperValue)
+      );
+      setSuggestions(filtered.slice(0, 6)); // Show max 6 suggestions
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSelectSuggestion = (symbol: string) => {
+    setNewPosition({ ...newPosition, symbol });
+    setSuggestions([]);
+  };
 
   useEffect(() => {
     loadPortfolio();
@@ -180,8 +226,8 @@ const PortfolioPage = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white mb-1">Portfolio</h1>
-            <p className="text-gray-400 text-xs">Manage your holdings</p>
+            <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1`}>Portfolio</h1>
+            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs`}>Manage your holdings</p>
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
@@ -193,54 +239,54 @@ const PortfolioPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-            <p className="text-gray-400 text-xs mb-1">Total Value</p>
-            <p className="text-xl font-bold text-white">{formatUSDToINR(totalValue)}</p>
+          <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-3`}>
+            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1`}>Total Value</p>
+            <p className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{formatUSDToINR(totalValue)}</p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-            <p className="text-gray-400 text-xs mb-1">Total Gain/Loss</p>
+          <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-3`}>
+            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1`}>Total Gain/Loss</p>
             <p className={`text-xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {totalGain >= 0 ? '+' : ''}{formatUSDToINR(totalGain)}
             </p>
           </div>
-          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-            <p className="text-gray-400 text-xs mb-1">Holdings</p>
-            <p className="text-xl font-bold text-white">{holdings.length}</p>
+          <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-3`}>
+            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-1`}>Holdings</p>
+            <p className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{holdings.length}</p>
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="p-3 border-b border-slate-700">
-            <h2 className="text-sm font-semibold text-white">Holdings</h2>
+        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg overflow-hidden`}>
+          <div className={`p-3 ${isLight ? 'border-b border-gray-200 bg-gray-50' : 'border-b border-slate-700'}`}>
+            <h2 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Holdings</h2>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading...</div>
+            <div className={`p-8 text-center ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>Loading...</div>
           ) : holdings.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-700">
+                <thead className={isLight ? 'bg-gray-100' : 'bg-slate-700'}>
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Symbol</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Shares</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Avg Price</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Current Price</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Value</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Gain/Loss</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Symbol</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Shares</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Avg Price</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Current Price</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Value</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Gain/Loss</th>
+                    <th className={`px-3 py-2 text-left text-xs font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} uppercase`}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700">
+                <tbody className={`${isLight ? 'divide-y divide-gray-200' : 'divide-y divide-slate-700'}`}>
                   {holdings.map((holding, index) => {
                     const { gain, gainPercent } = calculateGain(holding);
                     return (
-                      <tr key={index} className="hover:bg-slate-700/50">
+                      <tr key={index} className={`${isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700/50'}`}>
                         <td className="px-3 py-2 whitespace-nowrap">
-                          <span className="text-white font-semibold">{holding.symbol}</span>
+                          <span className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold`}>{holding.symbol}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-300">{holding.shares}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-300">${holding.avgPrice.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-white">${holding.currentPrice.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-white">{formatUSDToINR(holding.value)}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>{holding.shares}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>{formatUSDToINR(holding.avgPrice)}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap ${isLight ? 'text-gray-900' : 'text-white'}`}>{formatUSDToINR(holding.currentPrice)}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap ${isLight ? 'text-gray-900' : 'text-white'}`}>{formatUSDToINR(holding.value)}</td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             {gain >= 0 ? (
@@ -249,7 +295,7 @@ const PortfolioPage = () => {
                               <TrendingDown className="w-4 h-4 text-red-400" />
                             )}
                             <span className={gain >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              ${gain.toFixed(2)} ({gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%)
+                              {formatUSDToINR(gain)} ({gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%)
                             </span>
                           </div>
                         </td>
@@ -307,24 +353,40 @@ const PortfolioPage = () => {
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-400">No holdings found</div>
+            <div className={`p-8 text-center ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>No holdings found</div>
           )}
         </div>
 
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 max-w-md w-full mx-4">
-              <h3 className="text-xl font-semibold text-white mb-4">Add Position</h3>
+            <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-6 max-w-md w-full mx-4`}>
+              <h3 className={`text-xl font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-4`}>Add Position</h3>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
+                <div className="relative">
+                  <label className={`block text-sm font-medium ${isLight ? 'text-gray-700' : 'text-gray-300'} mb-2`}>Symbol</label>
                   <input
                     type="text"
                     value={newPosition.symbol}
-                    onChange={(e) => setNewPosition({ ...newPosition, symbol: e.target.value })}
-                    placeholder="e.g., AAPL"
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleSymbolInput(e.target.value)}
+                    placeholder="e.g., AAPL, TCS.NS"
+                    className={`w-full px-4 py-2 ${isLight ? 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500' : 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   />
+                  
+                  {/* Suggestions Dropdown */}
+                  {suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-lg z-10">
+                      {suggestions.map((stock) => (
+                        <button
+                          key={stock}
+                          type="button"
+                          onClick={() => handleSelectSuggestion(stock)}
+                          className="w-full px-4 py-2 text-left text-white hover:bg-slate-600 transition-colors first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0"
+                        >
+                          {stock}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Shares</label>

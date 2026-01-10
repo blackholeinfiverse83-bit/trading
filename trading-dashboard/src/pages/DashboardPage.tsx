@@ -1,16 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
+import SystemUnavailable from '../components/SystemUnavailable';
 import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
 import { useConnection } from '../contexts/ConnectionContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSystemState } from '../utils/useSystemState';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { formatUSDToINR } from '../utils/currencyConverter';
+import FavoritesPanel from '../components/FavoritesPanel';
+import SmartFilters from '../components/SmartFilters';
+import PredictionCard from '../components/PredictionCard';
+import { useFavorites } from '../utils/useFavorites';
+import { exportToCSV, formatPredictionForExport } from '../utils/exportUtils';
 
 const DashboardPage = () => {
   const { connectionState } = useConnection();
   const { theme } = useTheme();
+  const systemState = useSystemState();
   const isLight = theme === 'light';
+  const isSpace = theme === 'space';
+  const { addRecent } = useFavorites();
+  const [filters, setFilters] = useState({ confidence: 'all', action: 'all' });
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [dailyChange, setDailyChange] = useState(0);
   const [dailyChangePercent, setDailyChangePercent] = useState(0);
@@ -28,6 +39,7 @@ const DashboardPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{symbol: string, isUserAdded: boolean} | null>(null);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [previousPortfolioValue, setPreviousPortfolioValue] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
@@ -35,6 +47,14 @@ const DashboardPage = () => {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const prevConnectionStateRef = useRef<boolean>(true);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Real-time clock update
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load user-added trades and hidden trades from localStorage on mount
   useEffect(() => {
@@ -487,6 +507,7 @@ const DashboardPage = () => {
     }
 
     const symbol = addTradeSymbol.trim().toUpperCase();
+    addRecent(symbol); // Add to recent searches
     
     // Check if the symbol exactly matches a valid symbol from popular stocks
     const exactMatch = POPULAR_STOCKS.find(s => s.toUpperCase() === symbol);
@@ -612,7 +633,24 @@ const DashboardPage = () => {
   const visibleTopStocks = topStocks.filter(stock => !hiddenTrades.includes(stock.symbol));
   
   // Combine backend stocks and user-added trades
-  const allTopStocks = [...visibleTopStocks, ...userAddedTrades];
+  let allTopStocks = [...visibleTopStocks, ...userAddedTrades];
+  
+  // Apply smart filters
+  if (filters.confidence === 'high') {
+    allTopStocks = allTopStocks.filter(stock => (stock.confidence || 0) >= 0.7);
+  }
+  if (filters.action !== 'all') {
+    allTopStocks = allTopStocks.filter(stock => stock.action === filters.action);
+  }
+  
+  // Calculate filter counts
+  const filterCounts = {
+    total: [...visibleTopStocks, ...userAddedTrades].length,
+    high: [...visibleTopStocks, ...userAddedTrades].filter(s => (s.confidence || 0) >= 0.7).length,
+    buy: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'LONG').length,
+    sell: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'SHORT').length,
+    hold: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'HOLD').length,
+  };
   
   // Debug logging for data consistency
   React.useEffect(() => {
@@ -636,6 +674,7 @@ const DashboardPage = () => {
     confidence: (stock.confidence || 0) * 100,
     return: stock.predicted_return || 0,
   })) : [];
+
 
   // Calculate real stats from actual data
   const stats = [
@@ -665,14 +704,57 @@ const DashboardPage = () => {
     },
   ];
 
+  // If system is not operational, show unavailable screen
+  if (!systemState.isOperational && !systemState.isChecking) {
+    return (
+      <SystemUnavailable 
+        message={systemState.errorMessage || 'System unavailable'}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
+
+  // If prediction service is down, show limited functionality
+  if (!systemState.canPredict && !systemState.isChecking) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className={`max-w-md w-full text-center p-8 rounded-lg border ${
+            isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700'
+          }`}>
+            <AlertCircle className={`w-16 h-16 mx-auto mb-4 ${
+              isLight ? 'text-yellow-500' : 'text-yellow-400'
+            }`} />
+            <h1 className={`text-xl font-semibold mb-2 ${
+              isLight ? 'text-gray-900' : 'text-white'
+            }`}>
+              Prediction Engine Unavailable
+            </h1>
+            <p className={`text-sm mb-6 ${
+              isLight ? 'text-gray-600' : 'text-gray-400'
+            }`}>
+              {systemState.errorMessage || 'The prediction service is currently initializing.'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="space-y-3 md:space-y-4 animate-fadeIn w-full relative">
+      <div className="space-y-1 animate-fadeIn w-full relative min-h-screen flex flex-col">
         {/* Added relative for modal positioning */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
+            <div className="flex items-center gap-2">
+              <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
               {connectionState.isConnected ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/50 rounded-lg">
                   <CheckCircle2 className="w-3 h-3 text-green-400" />
@@ -685,8 +767,8 @@ const DashboardPage = () => {
                 </div>
               )}
             </div>
-            <p className={`text-xs md:text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-              {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'}
+            <p className={`text-sm md:text-base ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+              {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'} • Live: {currentTime.toLocaleTimeString()}
             </p>
           </div>
           <button
@@ -765,7 +847,7 @@ const DashboardPage = () => {
         )}
 
         {/* Stats Cards - Full width stacked on mobile, grid on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 flex-shrink-0">
           {loading && topStocks.length === 0 && !error ? (
             [1, 2, 3].map((i) => (
               <div 
@@ -773,24 +855,24 @@ const DashboardPage = () => {
                 className={`${isLight 
                   ? 'bg-gray-100 md:bg-gradient-to-br md:from-gray-100 md:to-gray-50 border border-gray-200' 
                   : 'bg-slate-800/80 md:bg-gradient-to-br md:from-slate-800/80 md:to-slate-700/50 border border-slate-700/50'
-                } rounded-lg p-4 md:p-6 animate-pulse`}
+                } rounded-lg p-2.5 animate-pulse`}
               >
-                <div className="flex items-center justify-between mb-3 md:mb-4">
-                  <div className={`w-10 h-10 md:w-12 md:h-12 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded-lg`}></div>
-                  <div className={`w-14 h-5 md:w-16 md:h-6 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className={`w-8 h-8 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded-lg`}></div>
+                  <div className={`w-12 h-4 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
                 </div>
-                <div className={`w-20 h-3 md:w-24 md:h-4 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded mb-2`}></div>
-                <div className={`w-28 h-6 md:w-32 md:h-8 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
+                <div className={`w-16 h-3 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded mb-1`}></div>
+                <div className={`w-24 h-6 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
               </div>
             ))
           ) : error && error.includes('Unable to connect to backend') ? (
             [1, 2, 3].map((i) => (
               <div 
                 key={i} 
-                className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/80 border border-slate-700/50'} rounded-lg p-4 md:p-6 opacity-50`}
+                className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/80 border border-slate-700/50'} rounded-lg p-3 opacity-50`}
               >
                 <div className="flex items-center justify-center h-full">
-                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm`}>Backend not connected</p>
+                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs`}>Backend not connected</p>
                 </div>
               </div>
             ))
@@ -801,32 +883,51 @@ const DashboardPage = () => {
                 <div 
                   key={stat.label} 
                   className={`${isLight 
-                    ? 'bg-white md:bg-gradient-to-br md:from-blue-50 md:to-indigo-50 border border-gray-200' 
-                    : 'bg-slate-800/80 md:bg-gradient-to-br md:from-green-500/20 md:to-emerald-500/10 border border-slate-700/50'
-                  } rounded-lg p-4 md:p-6 shadow-sm`}
+                    ? 'bg-white md:bg-gradient-to-br md:from-blue-50 md:to-indigo-50 border border-yellow-500/40 shadow-lg shadow-yellow-500/10' 
+                    : isSpace
+                      ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20'
+                      : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'
+                  } rounded-lg p-2.5 shadow-sm`}
                 >
-                  <div className="flex items-center justify-between mb-2 md:mb-3">
-                    <div className={`p-2 ${isLight ? 'bg-blue-100' : 'bg-slate-700/50 md:bg-white/5'} rounded`}>
-                      <Icon className={`w-4 h-4 md:w-5 md:h-5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+                  <div className="flex items-center justify-between mb-1">
+                    <div className={`p-1 ${isLight ? 'bg-blue-100' : 'bg-yellow-500/20 border border-yellow-500/50'} rounded`}>
+                      <Icon className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-yellow-400'}`} />
                     </div>
-                    <span className={`${stat.changeColor} text-xs md:text-sm font-semibold px-2 py-0.5 md:py-1 rounded ${isLight ? 'bg-gray-100' : 'bg-slate-700/50 md:bg-white/5'}`}>
+                    <span className={`${stat.changeColor} text-sm font-medium px-1 py-0.5 rounded ${isLight ? 'bg-gray-100' : 'bg-slate-700/50 md:bg-white/5'}`}>
                       {stat.change}
                     </span>
                   </div>
-                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs md:text-sm mb-1`}>{stat.label}</p>
-                  <p className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} leading-tight`}>{stat.value}</p>
+                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-0.5`}>{stat.label}</p>
+                  <p className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white drop-shadow-sm'} leading-tight`}>{stat.value}</p>
                 </div>
               );
             })
           )}
         </div>
 
-        <div className="space-y-3 md:space-y-4">
-          {/* Portfolio Performance Chart - Full width on mobile */}
-          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 md:p-4 shadow-sm w-full`}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
-                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 flex-shrink-0" />
+        <div className="space-y-1 flex-1 min-h-0">
+          {/* Favorites Panel */}
+          <FavoritesPanel 
+            onSymbolSelect={(symbol) => {
+              setAddTradeSymbol(symbol);
+              setShowAddTradeModal(true);
+            }}
+          />
+          
+          {/* Smart Filters */}
+          {allTopStocks.length > 0 && (
+            <SmartFilters 
+              activeFilters={filters}
+              onFilterChange={setFilters}
+              counts={filterCounts}
+            />
+          )}
+
+          {/* Portfolio Performance Chart */}
+          <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2 shadow-sm w-full`}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-1.5`}>
+                <Sparkles className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
                 <span>Portfolio Performance</span>
               </h2>
             </div>
@@ -842,13 +943,13 @@ const DashboardPage = () => {
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor={isSpace ? "#60a5fa" : "#3B82F6"} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={isSpace ? "#60a5fa" : "#3B82F6"} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid 
                       strokeDasharray="3 3" 
-                      stroke={isLight ? "#E5E7EB" : "#374151"} 
+                      stroke={isLight ? "#E5E7EB" : isSpace ? "#475569" : "#374151"} 
                       opacity={isLight ? 0.5 : 0.15}
                     />
                     <XAxis 
@@ -865,8 +966,8 @@ const DashboardPage = () => {
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: isLight ? '#FFFFFF' : '#1E293B', 
-                        border: isLight ? '1px solid #E5E7EB' : '1px solid #475569',
+                        backgroundColor: isLight ? '#FFFFFF' : isSpace ? '#1e293b' : '#1E293B', 
+                        border: isLight ? '1px solid #E5E7EB' : isSpace ? '1px solid #475569' : '1px solid #475569',
                         borderRadius: '8px',
                         padding: '10px',
                         fontSize: '12px',
@@ -874,13 +975,13 @@ const DashboardPage = () => {
                       }}
                       labelStyle={{ color: isLight ? '#111827' : '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
                       formatter={(value: any) => [formatUSDToINR(Number(value)), 'Value']}
-                      cursor={{ stroke: '#3B82F6', strokeWidth: 1 }}
+                      cursor={{ stroke: isSpace ? '#60a5fa' : '#3B82F6', strokeWidth: 1 }}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="value" 
-                      stroke="#3B82F6" 
-                      strokeWidth={2.5}
+                      stroke={isSpace ? "#60a5fa" : "#3B82F6"} 
+                      strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorValue)"
                     />
@@ -888,20 +989,20 @@ const DashboardPage = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-center py-8 md:py-12">
-                <div className={`${isLight ? 'bg-gray-100' : 'bg-slate-700/50'} rounded-lg p-4 md:p-6`}>
-                  <Activity className={`w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm md:text-base mb-2`}>
+              <div className="text-center py-6">
+                <div className={`${isLight ? 'bg-gray-100' : 'bg-slate-700/50'} rounded-lg p-3`}>
+                  <Activity className={`w-8 h-8 mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm mb-1`}>
                     No data available yet
                   </p>
-                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm mb-3`}>
+                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs mb-2`}>
                     Predictions will appear here once loaded
                   </p>
                   <button
                     onClick={() => loadDashboardData()}
-                    className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs md:text-sm font-medium transition-colors"
+                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors"
                   >
-                    <RefreshCw className="w-3 h-3 md:w-4 md:h-4 inline mr-1" />
+                    <RefreshCw className="w-3 h-3 inline mr-1" />
                     Refresh
                   </button>
                 </div>
@@ -910,26 +1011,38 @@ const DashboardPage = () => {
           </div>
 
           {/* Top Performers */}
-          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm card-hover`}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
-                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
+          <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2 shadow-sm card-hover flex-1 min-h-0`}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-1.5`}>
+                <TrendingUp className="w-3.5 h-3.5 text-green-400" />
                 Top Performers
-                <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
+                <span className={`text-2xs font-normal px-1 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
                   {allTopStocks.length}
                 </span>
               </h2>
-              <button
-                onClick={() => {
-                  setShowAddTradeModal(true);
-                  setAddTradeError(null);
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-semibold transition-all active:scale-95 min-h-[36px]"
-                title="Add trade to Top Performers"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowAddTradeModal(true);
+                    setAddTradeError(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-sm md:text-base font-semibold transition-all active:scale-95 min-h-[36px]"
+                  title="Add trade to Top Performers"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const exportData = formatPredictionForExport(allTopStocks);
+                    exportToCSV(exportData, `predictions-${new Date().toISOString().split('T')[0]}`);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs md:text-sm font-semibold transition-all"
+                  title="Export predictions to CSV"
+                >
+                  Export
+                </button>
+              </div>
             </div>
             {loading ? (
               <div className="space-y-3">
@@ -949,7 +1062,7 @@ const DashboardPage = () => {
                 </button>
               </div>
             ) : allTopStocks.length > 0 ? (
-              <div className="space-y-2.5 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar rounded-lg">
+              <div className="space-y-1.5 max-h-[50vh] overflow-y-auto custom-scrollbar rounded-lg">
                 {allTopStocks.map((stock, index) => {
                   const isPositive = (stock.predicted_return || 0) > 0;
                   const confidence = (stock.confidence || 0) * 100;
@@ -959,7 +1072,7 @@ const DashboardPage = () => {
                       key={`${stock.symbol}-${index}`} 
                       className={`${isLight 
                         ? 'bg-gray-50 border border-gray-200 hover:border-blue-400 active:border-blue-500' 
-                        : 'bg-slate-700/50 border border-slate-600/50 hover:border-blue-500/50 active:border-blue-600/50'
+                        : 'bg-gradient-to-r from-slate-700/80 via-slate-600/70 to-slate-700/80 border border-slate-500/60 hover:border-blue-400/60 active:border-blue-500/60 shadow-md hover:shadow-lg transition-shadow'
                       } rounded-lg transition-all touch-manipulation shadow-sm`}
                     >
                       {/* Mobile: Stacked layout */}
@@ -975,7 +1088,7 @@ const DashboardPage = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-base`}>{stock.symbol}</p>
+                                <p className={`${isLight ? 'text-gray-900' : 'text-white drop-shadow-sm'} font-bold text-base`}>{stock.symbol}</p>
                                 {isUserAdded && (
                                   <span className="text-xs text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">★</span>
                                 )}
@@ -1078,12 +1191,12 @@ const DashboardPage = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Plus className={`w-12 h-12 ${isLight ? 'text-blue-400' : 'text-blue-400'} mx-auto mb-4`} />
-                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-base font-semibold mb-2`}>
+              <div className="text-center py-8">
+                <Plus className={`w-8 h-8 ${isLight ? 'text-blue-400' : 'text-blue-400'} mx-auto mb-3`} />
+                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-sm font-semibold mb-1`}>
                   No stocks selected yet
                 </p>
-                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm mb-6`}>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-4`}>
                   Add stocks to your dashboard to view predictions and portfolio performance
                 </p>
                 <button
@@ -1092,9 +1205,9 @@ const DashboardPage = () => {
                     setAddTradeError(null);
                     setTimeout(() => addTradeInputRef.current?.focus(), 100);
                   }}
-                  className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg font-semibold transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg font-semibold transition-all active:scale-95 inline-flex items-center gap-2 min-h-[40px]"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   <span>Add Your First Stock</span>
                 </button>
               </div>
@@ -1291,12 +1404,12 @@ const DashboardPage = () => {
         )}
 
         {/* Recent Activity */}
-        <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm`}>
-          <h2 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
+        <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2.5 shadow-sm`}>
+          <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-2 flex items-center gap-2`}>
             <Activity className="w-4 h-4 text-blue-400" />
             Recent Activity
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {allTopStocks.slice(0, 3).map((stock, index) => {
               const isPositive = (stock.predicted_return || 0) > 0;
               const actionType = stock.action === 'LONG' ? 'BUY' : stock.action === 'SHORT' ? 'SELL' : 'HOLD';

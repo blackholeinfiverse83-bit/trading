@@ -12,34 +12,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Authentication Configuration
-# JWT authentication permanently disabled - open access API
-ENABLE_AUTH = False
+ENABLE_AUTH = os.getenv('ENABLE_AUTH', 'False').lower() == 'true'
 
-# JWT Configuration - DEPRECATED (auth removed)
-# These settings are kept for backward compatibility but are not used
-# JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-key-for-optional-auth')
-# JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
-# JWT_EXPIRATION_HOURS = int(os.getenv('JWT_EXPIRATION_HOURS', '24'))
+# JWT Configuration
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+JWT_EXPIRATION_HOURS = int(os.getenv('JWT_EXPIRATION_HOURS', '24'))
 
-# Admin Credentials - DEPRECATED (auth removed)
-# ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
-# ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+# Admin Credentials
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
 # Rate Limiting
-# Increased limits for development - can be overridden via environment variables
-# Set to very high limits for development to avoid 429 errors
-# IMPORTANT: These values are used by rate_limiter.py - ensure they match!
-RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '500'))  # Increased from 100 to 500
-RATE_LIMIT_PER_HOUR = int(os.getenv('RATE_LIMIT_PER_HOUR', '10000'))  # Increased from 2000 to 10000
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '20'))
+RATE_LIMIT_PER_HOUR = int(os.getenv('RATE_LIMIT_PER_HOUR', '200'))
 
 # API Limits
 MAX_SYMBOLS_PER_REQUEST = int(os.getenv('MAX_SYMBOLS_PER_REQUEST', '10'))
 MAX_SCAN_SYMBOLS = int(os.getenv('MAX_SCAN_SYMBOLS', '50'))
 
 # FastAPI Configuration
-API_TITLE = "Stock Prediction MCP API"
+API_TITLE = "Blackhole Infeverse Trading API"
 API_VERSION = "3.0"
-API_DESCRIPTION = "Secure MCP-style REST API with JWT auth, rate limiting, and validation"
+API_DESCRIPTION = "Secure MCP-style REST API with JWT auth, rate limiting, and validation for Blackhole Infeverse Trading"
 UVICORN_HOST = os.getenv('UVICORN_HOST', '127.0.0.1')
 UVICORN_PORT = int(os.getenv('UVICORN_PORT', '8000'))
 DEBUG_MODE = os.getenv('DEBUG_MODE', 'False').lower() == 'true'

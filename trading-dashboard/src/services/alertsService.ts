@@ -204,7 +204,7 @@ export const notificationsService = {
       new Notification(notification.title, {
         body: notification.message,
         icon: '/jarvis-logo.png',
-        tag: notification.id,
+        tag: newNotification.id,
       });
     }
     
@@ -285,4 +285,3 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   
   return false;
 };
-

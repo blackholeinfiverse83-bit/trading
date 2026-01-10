@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search, Coins, Loader2, Zap, BarChart3 } from 'lucide-react';
 import { POPULAR_CRYPTO } from '../services/api';
+import { convertUSDToINR, formatINR } from '../utils/currency';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CryptoViewProps {
   onSearch: (symbol: string) => void;
@@ -16,6 +18,8 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // Generate suggestions based on search query
   useEffect(() => {
@@ -35,14 +39,14 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+        <h2 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1 flex items-center gap-2`}>
           <Coins className="w-5 h-5 text-yellow-400" />
           Cryptocurrency Market
         </h2>
-        <p className="text-gray-400 text-xs">Track and analyze cryptocurrencies with real-time predictions</p>
+        <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs`}>Track and analyze cryptocurrencies with real-time predictions</p>
       </div>
 
-      <div className="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 backdrop-blur-sm rounded-lg p-3 border border-yellow-500/30">
+      <div className={`${isLight ? 'bg-gradient-to-br from-yellow-50/50 to-orange-50/50 border border-yellow-300/50' : 'bg-gradient-to-br from-yellow-900/10 to-orange-900/10 backdrop-blur-sm border border-yellow-500/20'} rounded-lg p-3`}>
         <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
             <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
@@ -70,12 +74,12 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
                 }
               }}
               placeholder="Enter crypto symbol (e.g., BTC-USD, ETH-USD, SOL-USD)"
-              className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+              className={`w-full pl-8 pr-3 py-1.5 text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-900 focus:ring-yellow-500 focus:border-yellow-500' : 'bg-slate-700/50 border border-slate-600 text-white focus:ring-yellow-500'} rounded placeholder-gray-400 focus:outline-none focus:ring-1`}
             />
             
             {/* Suggestions Dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+              <div className={`absolute top-full left-0 right-0 mt-1 ${isLight ? 'bg-white border border-gray-300' : 'bg-slate-800 border border-slate-700'} rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto`}>
                 {suggestions.map((symbol) => (
                   <button
                     key={symbol}
@@ -86,7 +90,7 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
                       onSearch(symbol);
                     }}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white transition-colors"
+                    className={`w-full text-left px-4 py-2 text-sm ${isLight ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-300 hover:bg-slate-700 hover:text-white'} transition-colors`}
                   >
                     <span className="font-medium">{symbol}</span>
                   </button>
@@ -98,7 +102,7 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
             <select
               value={horizon}
               onChange={(e) => onHorizonChange(e.target.value as any)}
-              className="px-2.5 py-1.5 text-sm bg-slate-700/50 border border-slate-600 rounded text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 font-medium"
+              className={`px-2.5 py-1.5 text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-900 focus:ring-yellow-500 focus:border-yellow-500' : 'bg-slate-700/50 border border-slate-600 text-white focus:ring-yellow-500'} rounded focus:outline-none focus:ring-1 font-medium`}
             >
               <option value="intraday">📈 Intraday</option>
               <option value="short">📅 Short (5 days)</option>
@@ -126,7 +130,7 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
         </div>
 
         <div>
-          <p className="text-gray-300 mb-3 font-medium flex items-center gap-2">
+          <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} mb-3 font-medium flex items-center gap-2`}>
             <Zap className="w-4 h-4 text-yellow-400" />
             Popular Cryptocurrencies:
           </p>
@@ -135,7 +139,7 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
               <button
                 key={symbol}
                 onClick={() => onSearch(symbol)}
-                className="px-3 py-1.5 bg-slate-700/50 text-gray-300 hover:bg-yellow-500 hover:text-white rounded-lg text-sm font-medium transition-all hover:scale-105"
+                className={`px-3 py-1.5 ${isLight ? 'bg-gray-100 text-gray-700 hover:bg-yellow-500 hover:text-white' : 'bg-slate-700/50 text-gray-300 hover:bg-yellow-500 hover:text-white'} rounded-lg text-sm font-medium transition-all hover:scale-105`}
               >
                 {symbol.replace('-USD', '')}
               </button>
@@ -145,30 +149,30 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
       </div>
 
       {error && (
-        <div className="bg-red-900/30 border-2 border-red-500/50 rounded-xl p-4">
-          <p className="text-red-400">{error}</p>
+        <div className={`${isLight ? 'bg-red-50 border-2 border-red-300' : 'bg-red-900/30 border-2 border-red-500/50'} rounded-xl p-4`}>
+          <p className={`${isLight ? 'text-red-700' : 'text-red-400'}`}>{error}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-slate-800/80 rounded-xl p-8 border border-slate-700/50 text-center">
+        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/30 border border-slate-700/30'} rounded-xl p-8 text-center`}>
           <Loader2 className="w-12 h-12 text-yellow-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Fetching crypto predictions from backend...</p>
-          <p className="text-gray-500 text-sm mt-2">This may take 60-90 seconds for first-time predictions</p>
+          <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'}`}>Fetching crypto predictions from backend...</p>
+          <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-sm mt-2`}>This may take 60-90 seconds for first-time predictions</p>
         </div>
       )}
 
       {!loading && predictions.length === 0 && !error && (
-        <div className="bg-slate-800/80 rounded-xl p-8 border border-slate-700/50 text-center">
+        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/30 border border-slate-700/30'} rounded-xl p-8 text-center`}>
           <Coins className="w-16 h-16 text-yellow-400 mx-auto mb-4 opacity-50" />
-          <h3 className="text-xl font-bold text-white mb-2">Ready to Search Cryptocurrencies</h3>
-          <p className="text-gray-400 mb-4">Enter a crypto symbol (e.g., BTC-USD) above or click a popular crypto to get AI-powered predictions</p>
+          <h3 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-2`}>Ready to Search Cryptocurrencies</h3>
+          <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} mb-4`}>Enter a crypto symbol (e.g., BTC-USD) above or click a popular crypto to get AI-powered predictions</p>
           <div className="flex flex-wrap justify-center gap-2 mt-4">
             {POPULAR_CRYPTO.slice(0, 10).map((symbol) => (
               <button
                 key={symbol}
                 onClick={() => onSearch(symbol)}
-                className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm font-medium transition-all border border-yellow-500/30"
+                className={`px-4 py-2 ${isLight ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300' : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30'} rounded-lg text-sm font-medium transition-all`}
               >
                 {symbol.replace('-USD', '')}
               </button>
@@ -178,8 +182,8 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
       )}
 
       {predictions.length > 0 && (
-        <div className="bg-slate-800/80 rounded-xl p-6 border border-slate-700/50">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/30 border border-slate-700/30'} rounded-xl p-6`}>
+          <h3 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-4 flex items-center gap-2`}>
             <Coins className="w-5 h-5 text-yellow-400" />
             Crypto Predictions
           </h3>
@@ -187,11 +191,11 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
             {predictions.map((pred, index) => {
               const symbol = pred.symbol?.replace('-USD', '') || pred.symbol;
               return (
-                <div key={index} className="bg-gradient-to-br from-yellow-900/20 to-orange-900/10 rounded-lg p-4 border border-yellow-500/30">
+                <div key={index} className={`${isLight ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-300' : 'bg-gradient-to-br from-yellow-900/20 to-orange-900/10 border border-yellow-500/30'} rounded-lg p-4`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Coins className="w-5 h-5 text-yellow-400" />
-                      <span className="text-white font-bold text-lg">{symbol}</span>
+                      <span className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-lg`}>{symbol}</span>
                     </div>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
                       pred.action === 'LONG' ? 'bg-green-500/20 text-green-400' :
@@ -202,12 +206,12 @@ const CryptoView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
                     </span>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-400 text-sm">Current: ${pred.current_price?.toFixed(2) || 'N/A'}</p>
-                    <p className="text-white font-semibold">Predicted: ${pred.predicted_price?.toFixed(2) || 'N/A'}</p>
+                    <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Current: {formatINR(convertUSDToINR(pred.current_price || 0))}</p>
+                    <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold`}>Predicted: {formatINR(convertUSDToINR(pred.predicted_price || 0))}</p>
                     <p className={`text-sm font-semibold ${(pred.predicted_return || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {(pred.predicted_return || 0) > 0 ? '+' : ''}{pred.predicted_return?.toFixed(2) || 0}%
                     </p>
-                    <p className="text-gray-400 text-xs">Confidence: {((pred.confidence || 0) * 100).toFixed(0)}%</p>
+                    <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs`}>Confidence: {((pred.confidence || 0) * 100).toFixed(0)}%</p>
                   </div>
                 </div>
               );
