@@ -8,7 +8,6 @@ import { useConnection } from '../contexts/ConnectionContext';
 
 interface StocksViewProps {
   onSearch: (symbol: string) => void;
-  onAnalyze?: (symbol: string) => void;
   predictions: any[];
   loading: boolean;
   error: string | null;
@@ -18,7 +17,7 @@ interface StocksViewProps {
   onSearchQueryChange?: (query: string) => void;
 }
 
-const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon = 'intraday', onHorizonChange, searchQuery: externalSearchQuery, onSearchQueryChange }: StocksViewProps) => {
+const StocksView = ({ onSearch, predictions, loading, error, horizon = 'intraday', onHorizonChange, searchQuery: externalSearchQuery, onSearchQueryChange }: StocksViewProps) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -115,7 +114,7 @@ const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
     }
     
     // Step 4: Reset state for new symbol (hard reset)
-    setAnalysisState(prev => ({
+    setAnalysisState(() => ({
       selectedSymbol: normalizedSymbol,
       riskParams: {
         stopLossPct: 2.0,
@@ -221,18 +220,42 @@ const StocksView = ({ onSearch, onAnalyze, predictions, loading, error, horizon 
 
   // Generate suggestions based on search query
   useEffect(() => {
-    if (searchQuery && searchQuery.length > 0) {
-      const query = searchQuery.toUpperCase();
-      const filtered = POPULAR_STOCKS.filter(symbol => 
-        symbol.toUpperCase().includes(query) || 
-        symbol.replace('.NS', '').toUpperCase().includes(query)
-      ).slice(0, 8);
-      setSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
+    const fetchSuggestions = async () => {
+      if (searchQuery && searchQuery.length > 0) {
+        const query = searchQuery.toUpperCase();
+        
+        // Get local popular stocks that match the query
+        let localSuggestions = POPULAR_STOCKS.filter(symbol => 
+          symbol.toUpperCase().includes(query) || 
+          symbol.replace('.NS', '').toUpperCase().includes(query)
+        );
+        
+        // If the query is at least 2 characters, also try to fetch from API
+        if (query.length >= 2) {
+          try {
+            const apiSuggestions = await stockAPI.searchSymbols(query);
+            if (apiSuggestions.symbols && Array.isArray(apiSuggestions.symbols)) {
+              // Combine local and API results, removing duplicates
+              const allSuggestions = [...new Set([...localSuggestions, ...apiSuggestions.symbols])];
+              setSuggestions(allSuggestions.slice(0, 10)); // Limit to 10 suggestions
+              setShowSuggestions(allSuggestions.length > 0);
+              return;
+            }
+          } catch (error) {
+            console.warn('Symbol search API failed, using local suggestions only:', error);
+          }
+        }
+        
+        // Fallback to local suggestions only
+        setSuggestions(localSuggestions.slice(0, 10));
+        setShowSuggestions(localSuggestions.length > 0);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    };
+    
+    fetchSuggestions();
   }, [searchQuery]);
 
   // Determine if input should be disabled

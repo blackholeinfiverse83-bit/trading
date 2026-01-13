@@ -6,6 +6,7 @@ import { Brain, Cpu, TrendingUp, Zap, BarChart3, Search } from 'lucide-react';
 import { convertUSDToINR, formatINR } from '../utils/currency';
 import MarketScanner from '../components/MarketScanner';
 import { useTheme } from '../contexts/ThemeContext';
+import { getRefreshInterval } from '../utils/marketHours';
 
 const AnalyticsPage = () => {
   const { theme } = useTheme();
@@ -28,20 +29,64 @@ const AnalyticsPage = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
   const [showScanner, setShowScanner] = useState(false);
+  const [userAddedTrades, setUserAddedTrades] = useState<PredictionItem[]>([]);
+
+  useEffect(() => {
+    // Load user-added trades from localStorage on mount
+    const savedTrades = localStorage.getItem('userAddedTrades');
+    if (savedTrades) {
+      try {
+        const parsed = JSON.parse(savedTrades);
+        setUserAddedTrades(parsed);
+        console.log('[AnalyticsPage] Loaded user-added trades from localStorage:', parsed.map((t: PredictionItem) => t.symbol));
+      } catch (err) {
+        console.error('Failed to load user-added trades:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadAnalytics();
-    // Refresh every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
+    // Refresh with market-hour-appropriate interval to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       loadAnalytics();
-    }, 120000);
+    }, getRefreshInterval());
     return () => clearInterval(interval);
-  }, [selectedPeriod]);
+  }, [selectedPeriod, userAddedTrades]);
 
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA','RELIANCE.NS'];
+      // Load user-added trades only - no default symbols
+      let symbols: string[] = userAddedTrades.map(t => t.symbol);
+      
+      // If no user-added trades, don't load any symbols
+      if (symbols.length === 0) {
+        console.log('[Analytics] No user-added trades, not loading any symbols');
+        // Set empty arrays and return early to show empty state
+        setAnalytics({
+          predictions: [],
+          buyCount: 0,
+          sellCount: 0,
+          holdCount: 0,
+          avgConfidence: 0,
+          avgReturn: 0,
+          totalReturn: 0,
+          ensembleStats: { aligned: 0, priceAgreement: 0, totalPredictions: 0 },
+          modelPerformance: {
+            random_forest: { count: 0, avgReturn: 0 },
+            lightgbm: { count: 0, avgReturn: 0 },
+            xgboost: { count: 0, avgReturn: 0 },
+            dqn: { count: 0, avgReturn: 0 }
+          }
+        });
+        setLoading(false);
+        setError(null);
+        return;
+      }
+      
+      console.log('[Analytics] Loading analytics for symbols:', symbols);
+      
       const response = await stockAPI.scanAll(symbols, 'intraday', 0.3);
       
       // Check for errors in metadata
@@ -176,8 +221,8 @@ const AnalyticsPage = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1`}>Analytics</h1>
-            <p className={isLight ? 'text-gray-600' : 'text-gray-400'}>Detailed analysis and insights</p>
+            <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1`}>Portfolio Analytics</h1>
+            <p className={isLight ? 'text-gray-600' : 'text-gray-400'}>Detailed analysis of your portfolio holdings</p>
           </div>
           <div className="flex gap-2">
             <button

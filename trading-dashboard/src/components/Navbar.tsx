@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, User, Sun, Moon, Sparkles, Menu } from 'lucide-react';
 import { POPULAR_STOCKS, POPULAR_CRYPTO, POPULAR_COMMODITIES } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
-import ServerStatusIndicator from './ServerStatusIndicator';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import UnifiedServerStatus from './UnifiedServerStatus';
 import NotificationCenter from './NotificationCenter';
 
 
@@ -14,6 +16,8 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
@@ -161,12 +165,12 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
               
               {/* Smart Search Container */}
               <div ref={searchContainerRef} className="flex-1 max-w-2xl relative">
-                <form onSubmit={handleSubmit} className="relative group">
+                <form onSubmit={handleSubmit} className="group">
                   <div className="relative">
                     <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${
                       isLight ? 'text-gray-400 group-focus-within:text-blue-500' : 
                       isSpace ? 'text-purple-400 group-focus-within:text-purple-300' : 
-                      'text-gray-400 group-focus-within:text-blue-400'
+                      'text-gray-400 group-focus-within:text-blue-500'
                     }`} />
                     <input
                       type="text"
@@ -189,13 +193,14 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
                   {/* Smart Search Suggestions */}
                   {showSuggestions && filteredSymbols.length > 0 && (
                     <div 
-                      className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-[9999] backdrop-blur-xl border ${
+                      className={`absolute left-0 w-full mt-1 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-[9999] backdrop-blur-xl border ${
                         isLight
                           ? 'bg-white/95 border-gray-200'
                           : isSpace
                             ? 'bg-slate-900/95 border-purple-500/30'
                             : 'bg-slate-800/95 border-slate-600'
                       }`}
+                      style={{ top: 'calc(100% + 6px)', maxHeight: '200px' }}
                     >
                       {filteredSymbols.map((symbol, index) => (
                         <button
@@ -233,12 +238,11 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
                   )}
                 </form>
               </div>
-
-              {/* Right Side Controls */}
+              
               <div className="flex items-center gap-3">
-                {/* Server Status - Smart Visibility */}
+                {/* Server Status Indicator - Hidden on mobile */}
                 <div className="hidden md:block">
-                  <ServerStatusIndicator />
+                  <UnifiedServerStatus variant="simple" />
                 </div>
                 
                 {/* Smart Tab Switcher */}
@@ -347,13 +351,17 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
                 </div>
 
                 {/* User Profile */}
-                <button className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 h-10 w-10 flex items-center justify-center ${
-                  isLight
-                    ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    : isSpace
-                      ? 'text-purple-300 hover:bg-purple-500/20 hover:text-white'
-                      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                }`}>
+                <button 
+                  onClick={() => navigate('/profile')}
+                  className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 h-10 w-10 flex items-center justify-center ${
+                    isLight
+                      ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      : isSpace
+                        ? 'text-purple-300 hover:bg-purple-500/20 hover:text-white'
+                        : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                  }`}
+                  title={`Profile - ${user?.username || 'Guest'}`}
+                >
                   <User className="w-5 h-5" />
                 </button>
               </div>

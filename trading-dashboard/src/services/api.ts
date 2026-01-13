@@ -442,6 +442,20 @@ export const stockAPI = {
     const response = await api.get('/auth/status');
     return response.data;
   },
+  
+  // Search for stock symbols using external API
+  searchSymbols: async (query: string) => {
+    try {
+      // First try to search using the backend's symbol search if available
+      const response = await api.get(`/tools/search_symbols?q=${encodeURIComponent(query)}`);
+      return response.data;
+    } catch (error) {
+      // Fallback: If backend doesn't have symbol search, return empty array
+      // In a real implementation, you might want to connect to a third-party service
+      console.warn('Symbol search endpoint not available, falling back to local search');
+      return { symbols: [] };
+    }
+  },
 };
 
 // Risk Management API (Backend-ready contracts, no implementation)
@@ -463,22 +477,53 @@ export const riskAPI = {
    * Response: { success: boolean, message?: string }
    */
   setStopLoss: async (
-    _symbol: string,
-    _stopLossPrice: number,
-    _side: 'BUY' | 'SELL',
-    _timeframe: string,
-    _source: 'chart' | 'manual'
+    symbol: string,
+    stopLossPrice: number,
+    side: 'BUY' | 'SELL',
+    timeframe: string,
+    source: 'chart' | 'manual'
   ) => {
-    // TODO: Implement when backend is ready
-    // const response = await api.post('/api/risk/stop-loss', {
-    //   symbol: _symbol,
-    //   stopLossPrice: _stopLossPrice,
-    //   side: _side,
-    //   timeframe: _timeframe,
-    //   source: _source,
-    // });
-    // return response.data;
-    throw new Error('Backend API not yet implemented');
+    const response = await api.post('/api/risk/stop-loss', {
+      symbol,
+      stop_loss_price: stopLossPrice,
+      side,
+      timeframe,
+      source,
+    });
+    return response.data;
+  },
+  
+  /**
+   * Assess risk for a position
+   * 
+   * Backend endpoint: POST /api/risk/assess
+   * 
+   * Payload:
+   * {
+   *   symbol: string,
+   *   entry_price: number,
+   *   stop_loss_price: number,
+   *   quantity: number,
+   *   capital_at_risk: number
+   * }
+   * 
+   * Response: { symbol: string, position_size: number, risk_amount: number, risk_percentage: number, ... }
+   */
+  assessRisk: async (
+    symbol: string,
+    entryPrice: number,
+    stopLossPrice: number,
+    quantity: number,
+    capitalAtRisk: number = 0.02
+  ) => {
+    const response = await api.post('/api/risk/assess', {
+      symbol,
+      entry_price: entryPrice,
+      stop_loss_price: stopLossPrice,
+      quantity,
+      capital_at_risk: capitalAtRisk,
+    });
+    return response.data;
   },
 };
 
@@ -502,20 +547,18 @@ export const aiAPI = {
    * Response: { message: string, context?: any }
    */
   chat: async (
-    _message: string,
-    _context?: {
+    message: string,
+    context?: {
       symbol?: string;
       timeframe?: string;
       activeIndicators?: string[];
     }
   ) => {
-    // TODO: Implement when backend is ready
-    // const response = await api.post('/api/ai/chat', {
-    //   message: _message,
-    //   context: _context || {},
-    // });
-    // return response.data;
-    throw new Error('Backend API not yet implemented');
+    const response = await api.post('/api/ai/chat', {
+      message,
+      context: context || {},
+    });
+    return response.data;
   },
 };
 
@@ -549,6 +592,12 @@ export const POPULAR_STOCKS = [
   'KOTAKBANK.NS', 'LICI.NS', 'HCLTECH.NS', 'TITAN.NS', 'ULTRACEMCO.NS',
   'NESTLEIND.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS', 'JSWSTEEL.NS',
   'ADANIPORTS.NS', 'TECHM.NS', 'TATAELXSI.NS', 'TATACOMM.NS',
+  // More Indian Stocks
+  'COALINDIA.NS', 'GRASIM.NS', 'CIPLA.NS', 'DRREDDY.NS', 'EICHERMOT.NS',
+  'GAIL.NS', 'HEROMOTOCO.NS', 'HINDALCO.NS', 'IBULHSGFIN.NS', 'INDUSINDBK.NS',
+  'INFRATEL.NS', 'IOC.NS', 'IRCTC.NS', 'M&M.NS',
+  'NATIONALUM.NS', 'NMDC.NS', 'RECLTD.NS', 'SBILIFE.NS', 'SHREECEM.NS', 'TATACHEM.NS',
+  'UPL.NS', 'VEDL.NS', 'YESBANK.NS', 'ZEEL.NS',
 ];
 
 // Popular crypto symbols (Yahoo Finance format)

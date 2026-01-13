@@ -4,9 +4,8 @@ import Layout from '../components/Layout';
 import { stockAPI, TimeoutError, type PredictionItem, type AnalyzeResponse } from '../services/api';
 import { useAssetType } from '../contexts/AssetTypeContext';
 import { useTheme } from '../contexts/ThemeContext';
-import StocksView from '../components/StocksView';
-import CryptoView from '../components/CryptoView';
-import CommoditiesView from '../components/CommoditiesView';
+import { getRefreshInterval } from '../utils/marketHours';
+import AssetView from '../components/AssetView';
 import { TrendingUp, TrendingDown, Minus, BarChart3, ThumbsUp, Sparkles, Loader2, X, ChevronDown, ChevronUp, Brain, Cpu, Zap, AlertCircle } from 'lucide-react';
 import StopLoss from '../components/StopLoss';
 import CandlestickChart from '../components/CandlestickChart';
@@ -104,8 +103,8 @@ const MarketScanContent = () => {
     // Check immediately
     checkConnection();
     
-    // Check every 120 seconds (2 minutes) to reduce API calls and stay under rate limit
-    const interval = setInterval(checkConnection, 120000);
+    // Check with market-hour-appropriate interval to reduce API calls and stay under rate limit
+    const interval = setInterval(checkConnection, getRefreshInterval());
     
     return () => clearInterval(interval);
   }, []); // Empty dependency array - only run on mount
@@ -434,57 +433,15 @@ const MarketScanContent = () => {
 
   // Render appropriate view based on asset type
   const renderAssetView = () => {
-    if (assetType === 'stocks') {
-      return (
-        <StocksView
-          onSearch={handleSearch}
-          onAnalyze={handleAnalyze}
-          predictions={predictions}
-          loading={loading}
-          error={error}
-          horizon={horizon}
-          onHorizonChange={setHorizon}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-        />
-      );
-    } else if (assetType === 'crypto') {
-      return (
-        <CryptoView
-          onSearch={handleSearch}
-          onAnalyze={handleAnalyze}
-          predictions={predictions}
-          loading={loading}
-          error={error}
-          horizon={horizon}
-          onHorizonChange={setHorizon}
-        />
-      );
-    } else if (assetType === 'commodities') {
-      return (
-        <CommoditiesView
-          onSearch={handleSearch}
-          onAnalyze={handleAnalyze}
-          predictions={predictions}
-          loading={loading}
-          error={error}
-          horizon={horizon}
-          onHorizonChange={setHorizon}
-        />
-      );
-    }
-    // Default fallback
     return (
-      <StocksView
+      <AssetView
+        assetType={assetType}
         onSearch={handleSearch}
-        onAnalyze={handleAnalyze}
         predictions={predictions}
         loading={loading}
         error={error}
         horizon={horizon}
         onHorizonChange={setHorizon}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
       />
     );
   };
@@ -561,7 +518,7 @@ const MarketScanContent = () => {
             <div className="flex items-center justify-between mb-3">
               <h2 className={`text-sm font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                 <Sparkles className="w-4 h-4 text-yellow-400" />
-                Predictions
+                Market Predictions
                 <span className={`${isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400'} px-2 py-0.5 rounded-full text-xs font-semibold`}>
                   {predictions.length}
                 </span>
@@ -861,7 +818,7 @@ const MarketScanContent = () => {
           <div className={`${isLight ? 'bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200' : 'bg-gradient-to-br from-blue-900/30 to-purple-900/20 backdrop-blur-sm border border-blue-500/30'} rounded-lg p-3 shadow-xl`}>
             <h2 className={`text-sm font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
               <BarChart3 className="w-4 h-4 text-blue-400" />
-              Deep Analysis Summary
+              Market Analysis Summary
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50 border border-slate-700/50'} rounded p-2`}>

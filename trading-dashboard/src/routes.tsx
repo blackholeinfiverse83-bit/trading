@@ -16,6 +16,7 @@ import TrainModelPage from './pages/TrainModelPage';
 import ApiTestPage from './pages/ApiTestPage';
 import RiskManagementPage from './pages/RiskManagementPage';
 import EndpointTestPage from './pages/EndpointTestPage';
+import UserProfilePage from './pages/UserProfilePage';
 
 export const AppRoutes = () => {
   return (
@@ -38,6 +39,7 @@ export const AppRoutes = () => {
       <Route path="/endpoint-test" element={<EndpointTestPage />} />
       <Route path="/api-test" element={<ApiTestPage />} />
       <Route path="/test-analyze" element={<TestAnalyzePage />} />
+      <Route path="/profile" element={<UserProfilePage />} />
       {/* Add more routes as needed */}
     </Routes>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import SystemUnavailable from '../components/SystemUnavailable';
 import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
+import type { Holding } from '../types';
 import { useConnection } from '../contexts/ConnectionContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSystemState } from '../utils/useSystemState';
@@ -13,15 +14,29 @@ import SmartFilters from '../components/SmartFilters';
 import PredictionCard from '../components/PredictionCard';
 import { useFavorites } from '../utils/useFavorites';
 import { exportToCSV, formatPredictionForExport } from '../utils/exportUtils';
+import { getRefreshInterval } from '../utils/marketHours';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  getTotalPortfolioValue,
+  getTotalPortfolioGain,
+  getPortfolioHoldings
+} from '../utils/portfolioCalculations';
+
 
 const DashboardPage = () => {
+  const { user, userProfile } = useAuth();
   const { connectionState } = useConnection();
   const { theme } = useTheme();
   const systemState = useSystemState();
   const isLight = theme === 'light';
   const isSpace = theme === 'space';
   const { addRecent } = useFavorites();
-  const [filters, setFilters] = useState({ confidence: 'all', action: 'all' });
+  const lastLogTimeRef = useRef<number>(0);
+    
+  const [filters, setFilters] = useState({ 
+    confidence: 'all' as 'all' | 'high' | 'medium', 
+    action: 'all' as 'all' | 'LONG' | 'SHORT' | 'HOLD' 
+  });
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [dailyChange, setDailyChange] = useState(0);
   const [dailyChangePercent, setDailyChangePercent] = useState(0);
@@ -43,6 +58,11 @@ const DashboardPage = () => {
   const [previousPortfolioValue, setPreviousPortfolioValue] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
+    
+  const userAddedTradesRef = useRef<PredictionItem[]>([]);
+  useEffect(() => {
+    userAddedTradesRef.current = userAddedTrades;
+  }, [userAddedTrades]);
   const addTradeInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const prevConnectionStateRef = useRef<boolean>(true);
@@ -56,7 +76,7 @@ const DashboardPage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Load user-added trades and hidden trades from localStorage on mount
+  // Load user-added trades, portfolio holdings, and hidden trades from localStorage on mount
   useEffect(() => {
     const savedTrades = localStorage.getItem('userAddedTrades');
     if (savedTrades) {
@@ -72,18 +92,48 @@ const DashboardPage = () => {
     const savedHidden = localStorage.getItem('hiddenTrades');
     if (savedHidden) {
       try {
-        setHiddenTrades(JSON.parse(savedHidden));
+        const parsedHidden = JSON.parse(savedHidden);
+        // Check if these are default hidden trades that should be cleared
+        // If all the default popular stocks are hidden, clear them as they might have been auto-hidden
+        const defaultPopularStocks = ['AAPL', 'GOOGL', 'MSFT', 'TSLA'];
+        const allDefaultHidden = defaultPopularStocks.every(symbol => parsedHidden.includes(symbol));
+        
+        if (allDefaultHidden && parsedHidden.length === defaultPopularStocks.length) {
+          // If only the default stocks are hidden, clear them (they might have been auto-hidden)
+          setHiddenTrades([]);
+          localStorage.setItem('hiddenTrades', JSON.stringify([]));
+          console.log('[DashboardPage] Cleared default hidden trades');
+        } else {
+          // Otherwise, use the stored hidden trades
+          setHiddenTrades(parsedHidden);
+        }
       } catch (err) {
         console.error('Failed to load hidden trades:', err);
       }
     }
   }, []);
+  
+  // Listen for changes in portfolio_holdings from PortfolioPage
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'portfolio_holdings' || e.key === 'userAddedTrades') {
+        console.log('[DashboardPage] Detected storage change for:', e.key, 'newValue:', e.newValue);
+        // Reload dashboard data when portfolio holdings change
+        loadDashboardData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []); // Watch for localStorage changes to portfolio holdings
 
   useEffect(() => {
     let isMounted = true;
     let loadingInProgress = false;
     let lastRefreshTime = 0;
-    const REFRESH_INTERVAL = 120000; // 120 seconds (2 minutes) in milliseconds
     
     // Load data without duplicate connection check
     const loadData = async () => {
@@ -92,9 +142,11 @@ const DashboardPage = () => {
         return;
       }
       
-      // Prevent refreshes more frequent than 120 seconds
+      // Use dynamic refresh interval based on market hours
+      const currentRefreshInterval = getRefreshInterval();
+      // Prevent refreshes more frequent than the current interval
       const now = Date.now();
-      if (now - lastRefreshTime < REFRESH_INTERVAL) {
+      if (now - lastRefreshTime < currentRefreshInterval) {
         console.log(`[Dashboard] Skipping refresh - only ${Math.round((now - lastRefreshTime) / 1000)}s since last refresh`);
         return;
       }
@@ -146,13 +198,13 @@ const DashboardPage = () => {
       loadData();
     }
     
-    // Refresh every 120 seconds (2 minutes) - only if connected
+    // Refresh with market-hour-appropriate interval - only if connected
     if (connectionState.isConnected) {
       refreshIntervalRef.current = setInterval(() => {
         if (!loadingInProgress && isMounted && connectionState.isConnected) {
           loadData();
         }
-      }, REFRESH_INTERVAL);
+      }, getRefreshInterval());
     }
     
     return () => {
@@ -196,13 +248,109 @@ const DashboardPage = () => {
       // REMOVED: Duplicate connection check - already checked in useEffect
       // This was causing extra API calls and hitting rate limits
       
-      // Load user-added trades, or use default symbols if none exist
-      let symbols: string[] = userAddedTrades.map(t => t.symbol);
+      // Load user-added trades only - no default symbols
+      // Use ref to get current value to avoid stale closure
+      let symbols: string[] = userAddedTradesRef.current.map(t => t.symbol);
       
-      // If no user-added trades, load some popular stocks by default
+      // Even if no user-added trades, we still need to calculate portfolio value from holdings
       if (symbols.length === 0) {
-        symbols = ['AAPL', 'GOOGL', 'MSFT']; // Default popular stocks
-        console.log('[Dashboard] No user-added trades, loading default symbols:', symbols);
+        console.log('[Dashboard] No user-added trades, not loading any prediction symbols');
+        // Continue to calculate portfolio value from holdings
+        setTopStocks([]);
+        
+        // Calculate portfolio value from holdings only when no symbols to avoid API call
+        // Load portfolio holdings from localStorage to calculate real portfolio value
+        const portfolioHoldings = getPortfolioHoldings();
+        
+        console.log('[DashboardPage] Portfolio holdings after filtering:', portfolioHoldings);
+        
+        // Calculate total portfolio value
+        // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
+        // Priority 2: Fall back to 0 if no holdings
+        let totalValue = 0;
+        let totalReturn = 0;
+        
+        // Filter out fake data from userAddedTrades
+        const realUserAddedTrades = userAddedTradesRef.current.filter(trade => {
+          // Remove fake data with placeholder prices (typically 100.0) and fake symbols
+          // But preserve legitimate RELIANCE.NS stock which is a real Indian stock
+          return !(trade.current_price === 100.0 && trade.symbol === 'RE') &&
+                 !(trade.current_price === 100.0 && trade.symbol === 'REL') &&
+                 !(trade.current_price === 100.0 && trade.symbol === 'RELIANCE' && !trade.symbol.endsWith('.NS')) &&
+                 !trade.symbol.startsWith('FAKE') &&
+                 !trade.symbol.includes('TEST');
+        });
+        
+        console.log('[DashboardPage] Real user added trades:', realUserAddedTrades);
+        
+        if (portfolioHoldings.length > 0) {
+          // Calculate from actual holdings with shares using centralized function
+          totalValue = getTotalPortfolioValue();
+          
+          // Calculate gain from holdings using centralized function
+          totalReturn = getTotalPortfolioGain();
+          
+          console.log('[DashboardPage] Calculated from portfolio holdings - Total Value:', totalValue, 'Total Return:', totalReturn);
+        } else {
+          // Fallback to userAddedTrades (dashboard-only additions)
+          
+          totalValue = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+            const price = pred.current_price || 0;
+            return sum + price;
+          }, 0);
+          
+          // Calculate total gain/loss from predicted returns for user-added stocks only
+          totalReturn = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+            const currentPrice = pred.current_price || 0;
+            const returnPercent = pred.predicted_return || 0;
+            const returnValue = (returnPercent / 100) * currentPrice; // Convert percentage to absolute value
+            return sum + returnValue;
+          }, 0);
+          
+          console.log('[DashboardPage] Calculated from userAddedTrades - Total Value:', totalValue, 'Total Return:', totalReturn);
+        }
+        
+        // Calculate daily change (difference from previous portfolio value)
+        if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
+          const change = totalValue - previousPortfolioValue;
+          const changePercent = (change / previousPortfolioValue) * 100;
+          setDailyChange(change);
+          setDailyChangePercent(changePercent);
+        } else {
+          // First load - use average return as daily change estimate
+          const avgReturn = portfolioHoldings.length > 0 
+            ? portfolioHoldings.reduce((sum, holding) => {
+                const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
+                return sum + gainPercent;
+              }, 0) / portfolioHoldings.length
+            : realUserAddedTrades.length > 0 
+              ? realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+                  return sum + (pred.predicted_return || 0);
+                }, 0) / realUserAddedTrades.length
+              : 0;
+          const estimatedChange = (avgReturn / 100) * totalValue;
+          setDailyChange(estimatedChange);
+          setDailyChangePercent(avgReturn);
+        }
+        
+        setPortfolioValue(totalValue);
+        setTotalGain(totalReturn);
+        // Guard against division by zero
+        setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
+        setPreviousPortfolioValue(totalValue);
+        
+        console.log('[Dashboard] Portfolio Metrics:', {
+          totalValue,
+          totalReturn,
+          gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
+          userAddedTradesCount: userAddedTradesRef.current.length,
+          portfolioHoldingsCount: portfolioHoldings.length,
+        });
+        
+        
+        setLastUpdated(new Date());
+        setLoading(false); // Clear loading state after successful data load
+        return; // Exit early since we don't need to make API call
       }
       
       console.log('[Dashboard] Loading predictions for symbols:', symbols);
@@ -329,58 +477,94 @@ const DashboardPage = () => {
       }
       
       // Calculate real portfolio metrics from predictions
-      if (validPredictions.length > 0) {
-        // Calculate total portfolio value (sum of all current prices)
-        // Using current_price as the base portfolio value
-        const totalValue = validPredictions.reduce((sum: number, pred: PredictionItem) => {
+      // Load portfolio holdings from localStorage to calculate real portfolio value
+      const portfolioHoldings = getPortfolioHoldings();
+      
+      console.log('[DashboardPage] Portfolio holdings after filtering:', portfolioHoldings);
+      
+      // Calculate total portfolio value
+      // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
+      // Priority 2: Fall back to userAddedTrades if no holdings
+      let totalValue = 0;
+      let totalReturn = 0;
+      
+      // Filter out fake data from userAddedTrades
+      const realUserAddedTrades = userAddedTradesRef.current.filter(trade => {
+        // Remove fake data with placeholder prices (typically 100.0) and fake symbols
+        // But preserve legitimate RELIANCE.NS stock which is a real Indian stock
+        return !(trade.current_price === 100.0 && trade.symbol === 'RE') &&
+               !(trade.current_price === 100.0 && trade.symbol === 'REL') &&
+               !(trade.current_price === 100.0 && trade.symbol === 'RELIANCE' && !trade.symbol.endsWith('.NS')) &&
+               !trade.symbol.startsWith('FAKE') &&
+               !trade.symbol.includes('TEST');
+      });
+      
+      console.log('[DashboardPage] Real user added trades:', realUserAddedTrades);
+      
+      if (portfolioHoldings.length > 0) {
+        // Calculate from actual holdings with shares using centralized function
+        totalValue = getTotalPortfolioValue();
+        
+        // Calculate gain from holdings using centralized function
+        totalReturn = getTotalPortfolioGain();
+        
+        console.log('[DashboardPage] Calculated from portfolio holdings - Total Value:', totalValue, 'Total Return:', totalReturn);
+      } else {
+        // Fallback to userAddedTrades (dashboard-only additions)
+        
+        totalValue = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
           const price = pred.current_price || 0;
           return sum + price;
         }, 0);
         
-        // Calculate total gain/loss from predicted returns
-        const totalReturn = validPredictions.reduce((sum: number, pred: PredictionItem) => {
+        // Calculate total gain/loss from predicted returns for user-added stocks only
+        totalReturn = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
           const currentPrice = pred.current_price || 0;
           const returnPercent = pred.predicted_return || 0;
           const returnValue = (returnPercent / 100) * currentPrice; // Convert percentage to absolute value
           return sum + returnValue;
         }, 0);
         
-        // Calculate daily change (difference from previous portfolio value)
-        if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
-          const change = totalValue - previousPortfolioValue;
-          const changePercent = (change / previousPortfolioValue) * 100;
-          setDailyChange(change);
-          setDailyChangePercent(changePercent);
-        } else {
-          // First load - use average return as daily change estimate
-          const avgReturn = validPredictions.length > 0 ? validPredictions.reduce((sum: number, pred: PredictionItem) => {
-            return sum + (pred.predicted_return || 0);
-          }, 0) / validPredictions.length : 0;
-          const estimatedChange = (avgReturn / 100) * totalValue;
-          setDailyChange(estimatedChange);
-          setDailyChangePercent(avgReturn);
-        }
-        
-        setPortfolioValue(totalValue);
-        setTotalGain(totalReturn);
-        // Guard against division by zero
-        setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
-        setPreviousPortfolioValue(totalValue);
-        
-        console.log('[Dashboard] Portfolio Metrics:', {
-          totalValue,
-          totalReturn,
-          gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
-          predictionsCount: validPredictions.length,
-        });
-      } else {
-        // Reset to 0 if no predictions
-        setPortfolioValue(0);
-        setDailyChange(0);
-        setDailyChangePercent(0);
-        setTotalGain(0);
-        setTotalGainPercent(0);
+        console.log('[DashboardPage] Calculated from userAddedTrades - Total Value:', totalValue, 'Total Return:', totalReturn);
       }
+      
+      // Calculate daily change (difference from previous portfolio value)
+      if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
+        const change = totalValue - previousPortfolioValue;
+        const changePercent = (change / previousPortfolioValue) * 100;
+        setDailyChange(change);
+        setDailyChangePercent(changePercent);
+      } else {
+        // First load - use average return as daily change estimate
+        const avgReturn = portfolioHoldings.length > 0 
+          ? portfolioHoldings.reduce((sum, holding) => {
+              const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
+              return sum + gainPercent;
+            }, 0) / portfolioHoldings.length
+          : realUserAddedTrades.length > 0 
+            ? realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+                return sum + (pred.predicted_return || 0);
+              }, 0) / realUserAddedTrades.length
+            : 0;
+        const estimatedChange = (avgReturn / 100) * totalValue;
+        setDailyChange(estimatedChange);
+        setDailyChangePercent(avgReturn);
+      }
+      
+      setPortfolioValue(totalValue);
+      setTotalGain(totalReturn);
+      // Guard against division by zero
+      setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
+      setPreviousPortfolioValue(totalValue);
+      
+      console.log('[Dashboard] Portfolio Metrics:', {
+        totalValue,
+        totalReturn,
+        gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
+        userAddedTradesCount: userAddedTradesRef.current.length,
+        portfolioHoldingsCount: portfolioHoldings.length,
+      });
+      
       
       setLastUpdated(new Date());
       setLoading(false); // Clear loading state after successful data load
@@ -396,7 +580,36 @@ const DashboardPage = () => {
       
       // Handle actual errors
       const err = error instanceof Error ? error : new Error(String(error));
+      
       console.error('Failed to load dashboard data:', err);
+      
+      // Load portfolio holdings from localStorage to calculate real portfolio value
+      const portfolioHoldings = getPortfolioHoldings();
+      
+      console.log('[DashboardPage] Portfolio holdings after filtering (in catch):', portfolioHoldings);
+      
+      // Calculate total portfolio value
+      // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
+      // Priority 2: Fall back to 0 if no holdings
+      let totalValue = 0;
+      let totalReturn = 0;
+      
+      if (portfolioHoldings.length > 0) {
+        // Calculate from actual holdings with shares using centralized function
+        totalValue = getTotalPortfolioValue();
+        
+        // Calculate gain from holdings using centralized function
+        totalReturn = getTotalPortfolioGain();
+        
+        console.log('[DashboardPage] Calculated from portfolio holdings in catch - Total Value:', totalValue, 'Total Return:', totalReturn);
+      } else {
+        console.log('[DashboardPage] No portfolio holdings found in catch');
+      }
+      
+      setPortfolioValue(totalValue);
+      setTotalGain(totalReturn);
+      // Guard against division by zero
+      setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
       
       if (err.message?.includes('Unable to connect') || err.message?.includes('ECONNREFUSED') || err.message?.includes('Network Error')) {
         // Connection error
@@ -418,6 +631,7 @@ const DashboardPage = () => {
   const clearCacheAndReload = () => {
     localStorage.removeItem('userAddedTrades');
     localStorage.removeItem('visibleTopStocks');
+    localStorage.removeItem('hiddenTrades'); // Also clear hidden trades
     setUserAddedTrades([]);
     setTopStocks([]);
     setPortfolioValue(0);
@@ -425,6 +639,7 @@ const DashboardPage = () => {
     setDailyChangePercent(0);
     setTotalGain(0);
     setTotalGainPercent(0);
+    setHiddenTrades([]); // Reset hidden trades state
     setError('Cache cleared. Add stocks to get started!');
     setTimeout(() => setError(null), 3000);
   };
@@ -440,6 +655,13 @@ const DashboardPage = () => {
     setHiddenTrades(symbols);
     localStorage.setItem('hiddenTrades', JSON.stringify(symbols));
   };
+  
+  // Clear all hidden trades
+  const clearAllHiddenTrades = () => {
+    setHiddenTrades([]);
+    localStorage.setItem('hiddenTrades', JSON.stringify([]));
+    console.log('[DashboardPage] Cleared all hidden trades');
+  };
 
   // Normalize symbol for consistent comparison (handle .NS suffix variations)
   const normalizeSymbolForComparison = (symbol: string): string => {
@@ -451,7 +673,7 @@ const DashboardPage = () => {
     const normalized = normalizeSymbolForComparison(checkSymbol);
     
     // Check in user-added trades
-    const inUserTrades = userAddedTrades.some(t => 
+    const inUserTrades = userAddedTradesRef.current.some(t => 
       normalizeSymbolForComparison(t.symbol) === normalized
     );
     
@@ -536,8 +758,8 @@ const DashboardPage = () => {
       // Log state for debugging
       console.log('[DashboardPage] Add Trade - State Check:', {
         inputSymbol: symbol,
-        userAddedTradesCount: userAddedTrades.length,
-        userAddedSymbols: userAddedTrades.map(t => t.symbol),
+        userAddedTradesCount: userAddedTradesRef.current.length,
+        userAddedSymbols: userAddedTradesRef.current.map(t => t.symbol),
         topStocksCount: topStocks.length,
         topStockSymbols: topStocks.map(t => t.symbol),
         hiddenTrades: hiddenTrades,
@@ -547,7 +769,7 @@ const DashboardPage = () => {
       if (symbolExistsInTopPerformers(symbol)) {
         console.log('[DashboardPage] Duplicate found for symbol:', symbol);
         // If it's in userAddedTrades, check if it's hidden - if so, unhide it
-        const isInUserTrades = userAddedTrades.some(t => normalizeSymbolForComparison(t.symbol) === symbol);
+        const isInUserTrades = userAddedTradesRef.current.some(t => normalizeSymbolForComparison(t.symbol) === symbol);
         if (isInUserTrades && hiddenTrades.includes(symbol)) {
           console.log('[DashboardPage] Found AAPL in userAddedTrades but it\'s hidden - unhiding it');
           setHiddenTrades(hiddenTrades.filter(s => s !== symbol));
@@ -593,7 +815,7 @@ const DashboardPage = () => {
         isUserAdded: true, // Mark as user-added
       };
 
-      const updatedTrades = [...userAddedTrades, newTrade];
+      const updatedTrades = [...userAddedTradesRef.current, newTrade];
       console.log('[DashboardPage] Successfully added trade:', { symbol, newTrade, updatedTradesCount: updatedTrades.length });
       saveUserAddedTrades(updatedTrades);
 
@@ -619,7 +841,7 @@ const DashboardPage = () => {
   const handleRemoveTrade = (symbol: string, isUserAdded: boolean) => {
     if (isUserAdded) {
       // Remove from user-added trades (permanent deletion)
-      const updatedTrades = userAddedTrades.filter(t => t.symbol !== symbol);
+      const updatedTrades = userAddedTradesRef.current.filter(t => t.symbol !== symbol);
       saveUserAddedTrades(updatedTrades);
     } else {
       // Hide backend trade (temporary, can be restored by refreshing)
@@ -633,7 +855,7 @@ const DashboardPage = () => {
   const visibleTopStocks = topStocks.filter(stock => !hiddenTrades.includes(stock.symbol));
   
   // Combine backend stocks and user-added trades
-  let allTopStocks = [...visibleTopStocks, ...userAddedTrades];
+  let allTopStocks = [...visibleTopStocks, ...userAddedTradesRef.current];
   
   // Apply smart filters
   if (filters.confidence === 'high') {
@@ -645,25 +867,30 @@ const DashboardPage = () => {
   
   // Calculate filter counts
   const filterCounts = {
-    total: [...visibleTopStocks, ...userAddedTrades].length,
-    high: [...visibleTopStocks, ...userAddedTrades].filter(s => (s.confidence || 0) >= 0.7).length,
-    buy: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'LONG').length,
-    sell: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'SHORT').length,
-    hold: [...visibleTopStocks, ...userAddedTrades].filter(s => s.action === 'HOLD').length,
+    total: [...visibleTopStocks, ...userAddedTradesRef.current].length,
+    high: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => (s.confidence || 0) >= 0.7).length,
+    buy: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'LONG').length,
+    sell: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'SHORT').length,
+    hold: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'HOLD').length,
   };
   
-  // Debug logging for data consistency
+  // Debug logging for data consistency (throttled to avoid spam)
   React.useEffect(() => {
-    if (userAddedTrades.length > 0 || visibleTopStocks.length > 0) {
-      console.log('[DashboardPage] Data Summary:', {
-        userAddedTradesCount: userAddedTrades.length,
-        userAddedSymbols: userAddedTrades.map(t => t.symbol),
-        visibleTopStocksCount: visibleTopStocks.length,
-        visibleSymbols: visibleTopStocks.map(t => t.symbol),
-        totalCount: allTopStocks.length,
-        allSymbols: allTopStocks.map(t => t.symbol),
-        hiddenTrades: hiddenTrades,
-      });
+    if (userAddedTradesRef.current.length > 0 || visibleTopStocks.length > 0) {
+      // Only log if it's been at least 5 seconds since last log
+      const now = Date.now();
+      if (!lastLogTimeRef.current || now - lastLogTimeRef.current > 5000) { // 5 seconds
+        lastLogTimeRef.current = now;
+        console.log('[DashboardPage] Data Summary:', {
+          userAddedTradesCount: userAddedTradesRef.current.length,
+          userAddedSymbols: userAddedTradesRef.current.map(t => t.symbol),
+          visibleTopStocksCount: visibleTopStocks.length,
+          visibleSymbols: visibleTopStocks.map(t => t.symbol),
+          totalCount: allTopStocks.length,
+          allSymbols: allTopStocks.map(t => t.symbol),
+          hiddenTrades: hiddenTrades,
+        });
+      }
     }
   }, [userAddedTrades, visibleTopStocks, allTopStocks, hiddenTrades]);
 
@@ -687,8 +914,8 @@ const DashboardPage = () => {
       bgGradient: 'from-green-500/20 to-emerald-500/10'
     },
     { 
-      label: 'Daily Change', 
-      value: formatUSDToINR(dailyChange), 
+      label: 'Account Balance', 
+      value: formatUSDToINR(userProfile?.accountBalance || 0), 
       icon: Activity, 
       change: dailyChangePercent >= 0 ? `+${dailyChangePercent.toFixed(2)}%` : `${dailyChangePercent.toFixed(2)}%`,
       changeColor: dailyChange >= 0 ? 'text-green-400' : 'text-red-400',
@@ -751,6 +978,32 @@ const DashboardPage = () => {
     <Layout>
       <div className="space-y-1 animate-fadeIn w-full relative min-h-screen flex flex-col">
         {/* Added relative for modal positioning */}
+        
+        {/* Welcome Banner */}
+        {userProfile && (
+          <div className={`${isLight 
+            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200' 
+            : isSpace
+              ? 'bg-gradient-to-r from-slate-800/50 to-purple-900/30 border border-purple-500/30' 
+              : 'bg-gradient-to-r from-slate-800/50 to-slate-700/50 border border-yellow-500/30'
+          } rounded-lg p-4`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  Welcome back, {userProfile.firstName || userProfile.username}! 👋
+                </h2>
+                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+                  Here's your dashboard for today
+                </p>
+              </div>
+              <div className={`text-right ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
+                <p className="text-sm">{currentTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="text-xs mt-1">Account Balance: {formatUSDToINR(userProfile.accountBalance || 0)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -768,7 +1021,7 @@ const DashboardPage = () => {
               )}
             </div>
             <p className={`text-sm md:text-base ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-              {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'} • Live: {currentTime.toLocaleTimeString()}
+              Real-time dashboard overview • Last updated {lastUpdated ? lastUpdated.toLocaleTimeString() : currentTime.toLocaleTimeString()} • Live: {currentTime.toLocaleTimeString()}
             </p>
           </div>
           <button
@@ -1010,12 +1263,12 @@ const DashboardPage = () => {
             )}
           </div>
 
-          {/* Top Performers */}
+          {/* My Portfolio */}
           <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2 shadow-sm card-hover flex-1 min-h-0`}>
             <div className="flex items-center justify-between mb-1">
               <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-1.5`}>
                 <TrendingUp className="w-3.5 h-3.5 text-green-400" />
-                Top Performers
+                My Portfolio
                 <span className={`text-2xs font-normal px-1 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
                   {allTopStocks.length}
                 </span>
@@ -1027,10 +1280,10 @@ const DashboardPage = () => {
                     setAddTradeError(null);
                   }}
                   className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-sm md:text-base font-semibold transition-all active:scale-95 min-h-[36px]"
-                  title="Add trade to Top Performers"
+                  title="Add position to portfolio"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add</span>
+                  <span>Add Position</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1267,7 +1520,7 @@ const DashboardPage = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                   <Plus className="w-5 h-5 text-blue-400" />
-                  Add Trade to Top Performers
+                  Add Position to Portfolio
                 </h3>
                 <button
                   onClick={() => {
@@ -1314,14 +1567,14 @@ const DashboardPage = () => {
                             setShowSuggestions(false);
                           }
                         }}
-                        placeholder="e.g., AAPL, TSLA, GOOGL"
+                        placeholder="e.g., AAPL, TCS.NS, TATAMOTORS.NS (Enter symbol to add to portfolio)"
                         className={`w-full pl-10 pr-4 py-2.5 ${isLight 
                           ? 'bg-gray-50 border border-gray-300 text-gray-900 placeholder-gray-500' 
                           : 'bg-slate-700/50 border border-slate-600 text-white placeholder-gray-400'
                         } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         disabled={addTradeLoading}
                       />
-                      
+                                              
                       {/* Suggestions Dropdown - positioned relative to input, will show above if needed */}
                       {showSuggestions && filteredSymbols.length > 0 && (
                         <div className={`absolute top-full left-0 right-0 mt-1 ${isLight 
@@ -1355,7 +1608,7 @@ const DashboardPage = () => {
                       )}
                     </div>
                     <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mt-1`}>
-                      Enter a stock symbol to fetch its prediction and add it to Top Performers
+                      Add a position to your portfolio to track and receive predictions
                     </p>
                   </div>
                 </div>
@@ -1383,7 +1636,7 @@ const DashboardPage = () => {
                     ) : (
                       <React.Fragment>
                         <Plus className="w-4 h-4" />
-                        <span>Add Trade</span>
+                        <span>Add Position</span>
                       </React.Fragment>
                     )}
                   </button>
@@ -1464,6 +1717,8 @@ const DashboardPage = () => {
             )}
           </div>
         </div>
+        
+
       </div>
     </Layout>
   );

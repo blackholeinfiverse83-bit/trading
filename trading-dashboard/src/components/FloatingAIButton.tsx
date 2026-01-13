@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
-import AIChatPanel from './AIChatPanel';
+import AIChat from './UnifiedAIChat';
 
 const FloatingAIButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,7 +60,8 @@ const FloatingAIButton = () => {
 
       {/* Chat Panel */}
       {isOpen && (
-        <AIChatPanel
+        <AIChat
+          isPanel={true}
           onClose={handleClose}
           onMinimize={handleClose}
         />
@@ -70,4 +71,3 @@ const FloatingAIButton = () => {
 };
 
 export default FloatingAIButton;
-

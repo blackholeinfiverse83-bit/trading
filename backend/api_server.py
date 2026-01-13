@@ -743,6 +743,212 @@ async def fetch_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ==================== Risk Management API ====================
+
+class StopLossRequest(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=20)
+    stop_loss_price: float = Field(..., gt=0)
+    side: str = Field(..., pattern=r'^(BUY|SELL)$')
+    timeframe: str = Field(default='1d')
+    source: str = Field(default='manual', pattern=r'^(chart|manual)$')
+    
+    @field_validator('symbol')
+    @classmethod
+    def validate_symbol_format(cls, v):
+        """Normalize symbol to uppercase"""
+        return v.upper().strip()
+
+
+class RiskAssessmentRequest(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=20)
+    entry_price: float = Field(..., gt=0)
+    stop_loss_price: float = Field(..., gt=0)
+    quantity: int = Field(..., gt=0)
+    capital_at_risk: float = Field(default=0.02, gt=0, le=1)  # Default 2% risk
+    
+    @field_validator('symbol')
+    @classmethod
+    def validate_symbol_format(cls, v):
+        """Normalize symbol to uppercase"""
+        return v.upper().strip()
+
+
+@app.post('/api/risk/stop-loss')
+async def set_stop_loss(
+    request: Request,
+    stop_loss_data: StopLossRequest,
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
+):
+    """Set or update stop-loss for a symbol"""
+    try:
+        data = stop_loss_data.dict()
+        data = sanitize_input(data)
+        
+        # Validate symbol
+        validation = validate_symbols([data['symbol']])
+        if not validation['valid']:
+            raise HTTPException(status_code=400, detail=validation['error'])
+        
+        # Validate side
+        if data['side'] not in ['BUY', 'SELL']:
+            raise HTTPException(status_code=400, detail="side must be 'BUY' or 'SELL'")
+        
+        # Validate timeframe
+        valid_timeframes = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1mo']
+        if data['timeframe'] not in valid_timeframes:
+            raise HTTPException(status_code=400, detail=f"timeframe must be one of: {', '.join(valid_timeframes)}")
+        
+        # Validate source
+        if data['source'] not in ['chart', 'manual']:
+            raise HTTPException(status_code=400, detail="source must be 'chart' or 'manual'")
+        
+        # Simulate setting stop loss (in real implementation, this would store in database)
+        result = {
+            'success': True,
+            'message': f'Stop loss set for {data["symbol"]} at {data["stop_loss_price"]}',
+            'stop_loss': {
+                'symbol': data['symbol'],
+                'price': data['stop_loss_price'],
+                'side': data['side'],
+                'timeframe': data['timeframe'],
+                'source': data['source'],
+                'timestamp': datetime.now().isoformat()
+            }
+        }
+        
+        logger.info(f"Stop loss set for {data['symbol']} at {data['stop_loss_price']}")
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Stop loss error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.post('/api/risk/assess')
+async def assess_risk(
+    request: Request,
+    risk_data: RiskAssessmentRequest,
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
+):
+    """Assess risk for a position"""
+    try:
+        data = risk_data.dict()
+        data = sanitize_input(data)
+        
+        # Validate symbol
+        validation = validate_symbols([data['symbol']])
+        if not validation['valid']:
+            raise HTTPException(status_code=400, detail=validation['error'])
+        
+        # Calculate risk metrics
+        entry_price = data['entry_price']
+        stop_loss_price = data['stop_loss_price']
+        quantity = data['quantity']
+        
+        # Calculate position size and risk
+        position_size = entry_price * quantity
+        risk_amount = abs(entry_price - stop_loss_price) * quantity
+        risk_percentage = (risk_amount / position_size) * 100 if position_size > 0 else 0
+        
+        # Calculate max drawdown potential
+        max_capital_at_risk = position_size * data['capital_at_risk']
+        
+        result = {
+            'symbol': data['symbol'],
+            'position_size': position_size,
+            'risk_amount': risk_amount,
+            'risk_percentage': risk_percentage,
+            'capital_at_risk': data['capital_at_risk'],
+            'max_capital_at_risk': max_capital_at_risk,
+            'recommendation': 'ACCEPTABLE' if risk_percentage <= 5 else 'HIGH_RISK',
+            'suggestions': []
+        }
+        
+        if risk_percentage > 5:
+            result['suggestions'].append('Consider reducing position size to lower risk')
+        if risk_percentage > 10:
+            result['suggestions'].append('Risk level is very high, strongly recommend reducing exposure')
+        
+        logger.info(f"Risk assessment completed for {data['symbol']}: {risk_percentage:.2f}% risk")
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Risk assessment error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== AI Chat API ====================
+
+class AIChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1000)
+    context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+@app.post('/api/ai/chat')
+async def ai_chat(
+    request: Request,
+    chat_data: AIChatRequest,
+    client_ip: str = Depends(check_rate_limit),
+    current_user: dict = Depends(get_current_user)
+):
+    """AI chat assistant for trading advice"""
+    try:
+        data = chat_data.dict()
+        data = sanitize_input(data)
+        
+        # Validate message length
+        if len(data['message']) < 1:
+            raise HTTPException(status_code=400, detail="Message cannot be empty")
+        
+        # Simple AI response generation (in real implementation, this would use an LLM)
+        message_lower = data['message'].lower()
+        response_message = "I'm your AI trading assistant. I can help you analyze markets, explain predictions, and answer trading questions."
+        
+        if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
+            response_message = "Hello! How can I assist you with your trading today?"
+        elif any(word in message_lower for word in ['help', 'assist', 'support']):
+            response_message = "I can help you with market analysis, trading strategies, risk management, and explaining predictions."
+        elif any(word in message_lower for word in ['market', 'trend', 'analysis']):
+            response_message = "Based on current market conditions, I recommend reviewing technical indicators and monitoring volatility. Consider using our market scan feature for comprehensive analysis."
+        elif any(word in message_lower for word in ['risk', 'stop loss', 'position']):
+            response_message = "For risk management, I recommend setting stop losses at 2-3% for intraday trades and 5-8% for swing trades. Never risk more than 1-2% of your capital per trade."
+        elif any(word in message_lower for word in ['prediction', 'forecast', 'future']):
+            response_message = "Our AI models analyze multiple factors including technical indicators, market sentiment, and historical patterns. Remember that all predictions carry uncertainty and should be combined with proper risk management."
+        elif any(word in message_lower for word in ['strategy', 'trade', 'buy', 'sell']):
+            response_message = "Successful trading requires a combination of technical analysis, risk management, and emotional discipline. Consider using our tools to backtest strategies before implementing them."
+        else:
+            response_message = f"Thank you for your question about '{data['message'][:50]}...'. I'm here to help with trading insights, market analysis, and risk management advice."
+        
+        result = {
+            'message': response_message,
+            'timestamp': datetime.now().isoformat(),
+            'context': data.get('context', {}),
+            'intent': 'trading_assistance'
+        }
+        
+        logger.info(f"AI chat response generated for query: {data['message'][:30]}...")
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AI chat error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ==================== Main ====================
 
 if __name__ == '__main__':
@@ -832,6 +1038,9 @@ if __name__ == '__main__':
     print(f"  POST /tools/feedback  - Human feedback ({auth_label})")
     print(f"  POST /tools/train_rl  - Train RL agent ({auth_label})")
     print(f"  POST /tools/fetch_data - Fetch batch data ({auth_label})")
+    print(f"  POST /api/risk/stop-loss - Set stop loss ({auth_label})")
+    print(f"  POST /api/risk/assess - Assess risk ({auth_label})")
+    print(f"  POST /api/ai/chat - AI trading assistant ({auth_label})")
     print("\nDOCUMENTATION:")
     print(f"  Swagger UI: http://{config.UVICORN_HOST}:{config.UVICORN_PORT}/docs")
     print(f"  ReDoc: http://{config.UVICORN_HOST}:{config.UVICORN_PORT}/redoc")

@@ -1,0 +1,337 @@
+{
+  "timestamp": "2026-01-10 11:31:29",
+  "base_url": "http://127.0.0.1:8000",
+  "tests": {
+    "root": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "name": "Blackhole Infeverse Trading API",
+        "version": "4.0",
+        "description": "MCP-style REST API with configurable authentication, rate limiting, and validation for Blackhole Infeverse Trading",
+        "authentication": "DISABLED - Open access to all endpoints",
+        "auth_status": "disabled",
+        "endpoints": {
+          "/": "GET - API information",
+          "/auth/login": "POST - Login (if auth enabled)",
+          "/auth/status": "GET - Check rate limit status",
+          "/tools/health": "GET - System health",
+          "/tools/predict": "POST - Generate predictions (NO AUTH)",
+          "/tools/scan_all": "POST - Scan and rank symbols (NO AUTH)",
+          "/tools/analyze": "POST - Analyze with risk parameters (NO AUTH)",
+          "/tools/feedback": "POST - Provide feedback (NO AUTH)",
+          "/tools/train_rl": "POST - Train RL agent (NO AUTH)",
+          "/tools/fetch_data": "POST - Fetch batch data (NO AUTH)"
+        },
+        "rate_limits": {
+          "per_minute": 500,
+          "per_hour": 10000
+        },
+        "documentation": {
+          "swagger_ui": "/docs",
+          "redoc": "/redoc"
+        }
+      },
+      "error": null
+    },
+    "health": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "status": "healthy",
+        "timestamp": "2026-01-10T11:31:29.839622",
+        "system": {
+          "cpu_usage_percent": 47.9,
+          "memory_total_gb": 15.65,
+          "memory_used_gb": 12.36,
+          "memory_available_gb": 3.29,
+          "memory_percent": 79.0,
+          "disk_total_gb": 195.31,
+          "disk_used_gb": 101.32,
+          "disk_free_gb": 94.0,
+          "disk_percent": 51.9
+        },
+        "models": {
+          "available": true,
+          "total_trained": 146
+        }
+      },
+      "error": null
+    },
+    "predict": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "metadata": {
+          "count": 1,
+          "horizon": "intraday",
+          "risk_profile": "high",
+          "timestamp": "2026-01-10T11:31:29.849836",
+          "request_id": "predict_1768024889_22"
+        },
+        "predictions": [
+          {
+            "symbol": "AAPL",
+            "horizon": "intraday",
+            "action": "LONG",
+            "confidence": 0.6492,
+            "expected_return": 3.8243,
+            "predicted_return": 3.8243,
+            "current_price": 271.86,
+            "predicted_price": 282.26,
+            "score": 0.8975,
+            "reason": "Price pattern suggests long opportunity with MACD showing momentum",
+            "risk_analysis": {
+              "volatility": 2.6328,
+              "max_drawdown": 7.2042,
+              "sharpe_ratio": 1.0789
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": false,
+            "data_quality": "limited",
+            "timestamp": "2026-01-10T11:31:29.848228"
+          }
+        ]
+      },
+      "error": null
+    },
+    "scan_all": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "metadata": {
+          "total_scanned": 2,
+          "predictions_generated": 2,
+          "shortlist_count": 2,
+          "horizon": "intraday",
+          "min_confidence": 0.3,
+          "timestamp": "2026-01-10T11:31:29.876113",
+          "request_id": "scan_all_1768024889_23"
+        },
+        "shortlist": [
+          {
+            "symbol": "AAPL",
+            "horizon": "intraday",
+            "action": "LONG",
+            "confidence": 0.7511,
+            "expected_return": 4.4611,
+            "predicted_return": 4.4611,
+            "current_price": 271.86,
+            "predicted_price": 283.99,
+            "score": 1.0862,
+            "reason": "Volume and volatility patterns support long recommendation",
+            "risk_analysis": {
+              "volatility": 2.248,
+              "max_drawdown": 8.1635,
+              "sharpe_ratio": 1.7368
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": true,
+            "data_quality": "limited",
+            "timestamp": "2026-01-10T11:31:29.861363"
+          },
+          {
+            "symbol": "GOOGL",
+            "horizon": "intraday",
+            "action": "SHORT",
+            "confidence": 0.6292,
+            "expected_return": -4.8525,
+            "predicted_return": -4.8525,
+            "current_price": 313.0,
+            "predicted_price": 297.81,
+            "score": 0.9346,
+            "reason": "Trend analysis with Bollinger Bands suggests short signal",
+            "risk_analysis": {
+              "volatility": 3.6614,
+              "max_drawdown": 2.8359,
+              "sharpe_ratio": 0.99
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": true,
+            "data_quality": "sufficient",
+            "timestamp": "2026-01-10T11:31:29.869758"
+          }
+        ],
+        "all_predictions": [
+          {
+            "symbol": "AAPL",
+            "horizon": "intraday",
+            "action": "LONG",
+            "confidence": 0.7511,
+            "expected_return": 4.4611,
+            "predicted_return": 4.4611,
+            "current_price": 271.86,
+            "predicted_price": 283.99,
+            "score": 1.0862,
+            "reason": "Volume and volatility patterns support long recommendation",
+            "risk_analysis": {
+              "volatility": 2.248,
+              "max_drawdown": 8.1635,
+              "sharpe_ratio": 1.7368
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": true,
+            "data_quality": "limited",
+            "timestamp": "2026-01-10T11:31:29.861363"
+          },
+          {
+            "symbol": "GOOGL",
+            "horizon": "intraday",
+            "action": "SHORT",
+            "confidence": 0.6292,
+            "expected_return": -4.8525,
+            "predicted_return": -4.8525,
+            "current_price": 313.0,
+            "predicted_price": 297.81,
+            "score": 0.9346,
+            "reason": "Trend analysis with Bollinger Bands suggests short signal",
+            "risk_analysis": {
+              "volatility": 3.6614,
+              "max_drawdown": 2.8359,
+              "sharpe_ratio": 0.99
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": true,
+            "data_quality": "sufficient",
+            "timestamp": "2026-01-10T11:31:29.869758"
+          }
+        ]
+      },
+      "error": null
+    },
+    "analyze": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "metadata": {
+          "symbol": "AAPL",
+          "horizons": [
+            "intraday"
+          ],
+          "count": 1,
+          "average_confidence": 0.715,
+          "consensus": "Strong HOLD - All horizons agree",
+          "risk_parameters": {
+            "stop_loss_pct": 2.0,
+            "capital_risk_pct": 1.0,
+            "drawdown_limit_pct": 5.0
+          },
+          "timestamp": "2026-01-10T11:31:29.889252",
+          "request_id": "analyze_1768024889_24"
+        },
+        "predictions": [
+          {
+            "symbol": "AAPL",
+            "horizon": "intraday",
+            "action": "HOLD",
+            "confidence": 0.715,
+            "expected_return": -0.5393,
+            "predicted_return": -0.5393,
+            "current_price": 271.86,
+            "predicted_price": 270.39,
+            "score": 0.7536,
+            "reason": "Volume and volatility patterns support hold recommendation",
+            "risk_analysis": {
+              "volatility": 1.0379,
+              "max_drawdown": 7.996,
+              "sharpe_ratio": 1.8502
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": true,
+            "data_quality": "sufficient",
+            "timestamp": "2026-01-10T11:31:29.886271"
+          }
+        ]
+      },
+      "error": null
+    },
+    "fetch_data": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "metadata": {
+          "total_symbols": 1,
+          "successful": 0,
+          "cached": 1,
+          "failed": 0,
+          "period": "1d",
+          "include_features": false,
+          "force_refresh": false,
+          "timestamp": "2026-01-10T11:31:29.900380",
+          "request_id": "fetch_data_1768024889_25"
+        },
+        "results": [
+          {
+            "symbol": "AAPL",
+            "status": "cached",
+            "message": "Data already cached",
+            "rows": 22,
+            "date_range": {
+              "start": "1970-01-01 00:00:00",
+              "end": "1970-01-01 00:00:00.000000021"
+            },
+            "latest_price": 271.86
+          }
+        ]
+      },
+      "error": null
+    },
+    "feedback": {
+      "status_code": 400,
+      "success": false,
+      "response": {
+        "detail": {
+          "error": "string indices must be integers, not 'str'",
+          "validation_warning": null,
+          "suggested_feedback": null
+        }
+      },
+      "error": null
+    },
+    "train_rl": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "status": "skipped",
+        "message": "Model already exists for AAPL (intraday). Use force_retrain=true to retrain.",
+        "model_path": "models\\AAPL_intraday_dqn_agent.pt",
+        "symbol": "AAPL",
+        "horizon": "intraday",
+        "timestamp": "2026-01-10T11:31:29.924801"
+      },
+      "error": null
+    },
+    "auth_status": {
+      "status_code": 200,
+      "success": true,
+      "response": {
+        "client_ip": "127.0.0.1",
+        "requests_last_minute": 7,
+        "requests_last_hour": 27,
+        "limit_per_minute": 500,
+        "limit_per_hour": 10000,
+        "remaining_minute": 493,
+        "remaining_hour": 9973
+      },
+      "error": null
+    }
+  }
+}

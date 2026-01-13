@@ -32,17 +32,15 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const { theme } = useTheme();
 
   const menuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', badge: null },
-    { path: '/market-scan', icon: Search, label: 'Market Scan', badge: 'AI' },
-    { path: '/portfolio', icon: Briefcase, label: 'Portfolio', badge: null },
-    { path: '/trading-history', icon: History, label: 'Trading History', badge: null },
-    { path: '/watchlist', icon: Star, label: 'Watch List', badge: null },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', badge: 'Main' },
+    { path: '/portfolio', icon: Briefcase, label: 'Positions', badge: 'Core' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics', badge: 'Pro' },
+    { path: '/market-scan', icon: Search, label: 'Market Scan', badge: 'AI' },
+    { path: '/watchlist', icon: Star, label: 'Watch List', badge: null },
+    { path: '/trading-history', icon: History, label: 'Trade History', badge: null },
     { path: '/alerts', icon: Bell, label: 'Alerts', badge: null },
     { path: '/compare', icon: GitCompare, label: 'Compare', badge: null },
     { path: '/train-model', icon: Brain, label: 'Train Model', badge: 'ML' },
-    { path: '/risk-management', icon: Shield, label: 'Risk Management', badge: null },
-    { path: '/endpoint-test', icon: Zap, label: 'Endpoint Test', badge: 'Dev' },
     { path: '/settings', icon: Settings, label: 'Settings', badge: null },
   ];
 

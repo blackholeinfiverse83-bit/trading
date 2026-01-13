@@ -82,4 +82,24 @@ export interface AnalyzeResponse {
     summary?: string;
     warnings?: string[];
   };
+};
+
+// Holding Type Definition for Portfolio Management
+export interface Holding {
+  symbol: string;
+  shares: number;
+  avgPrice: number;
+  currentPrice: number;
+  value: number;
+}
+
+// Transaction Type Definition for Trade History
+export interface Transaction {
+  id: string;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  shares: number;
+  price: number;
+  timestamp: string;
+  totalValue: number;
 }
