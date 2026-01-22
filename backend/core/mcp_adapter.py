@@ -9,32 +9,21 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 from pathlib import Path
-import sys
-import os
 
-# Add parent directory to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import from the stock_analysis_complete module in the project root
-current_dir = os.getcwd()
-try:
-    # Try to import from project root
-    os.chdir(project_root)
-    from stock_analysis_complete import (
-        EnhancedDataIngester,
-        FeatureEngineer,
-        predict_stock_price,
-        train_ml_models,
-        DATA_CACHE_DIR,
-        FEATURE_CACHE_DIR,
-        MODEL_DIR,
-        LOGS_DIR
-    )
-finally:
-    os.chdir(current_dir)
+# Import from the new ML package structure
+from .ml.data import EnhancedDataIngester
+from .ml.features import FeatureEngineer
+from .ml.model import predict_stock_price, train_ml_models, DQNTradingAgent
+from .ml.feedback import provide_feedback, load_feedback_memory
 
 logger = logging.getLogger(__name__)
+
+# Define Directory constants directly
+DATA_DIR = Path("data")
+DATA_CACHE_DIR = DATA_DIR / "cache"
+FEATURE_CACHE_DIR = DATA_DIR / "features"
+MODEL_DIR = Path("models")
+LOGS_DIR = DATA_DIR / "logs"
 
 # Request/Response logging
 MCP_LOG_DIR = LOGS_DIR / "mcp_requests"
@@ -209,7 +198,6 @@ class MCPAdapter:
                         print(f"            This will take 60-90 seconds...\n", flush=True)
                         logger.info(f"[{request_id}] Models not found for {symbol} ({horizon}). Training...")
                         try:
-                            from stock_analysis_complete import train_ml_models
                             training_result = train_ml_models(symbol, horizon, verbose=True)
                             
                             # Handle both dict and bool return formats
@@ -404,7 +392,6 @@ class MCPAdapter:
                         print(f"[STEP 3/4] Training 4 ML models (60-90 seconds)...", flush=True)
                         logger.info(f"[{request_id}] Models not found for {symbol} ({horizon}). Training...")
                         try:
-                            from stock_analysis_complete import train_ml_models
                             training_result = train_ml_models(symbol, horizon, verbose=True)
                             
                             # Handle both dict and bool return formats
@@ -572,7 +559,6 @@ class MCPAdapter:
                         print(f"[ANALYZE] Training models for {horizon} horizon (60-90 seconds)...", flush=True)
                         logger.info(f"[{request_id}] Models not found for {symbol} ({horizon}). Training...")
                         try:
-                            from stock_analysis_complete import train_ml_models
                             training_result = train_ml_models(symbol, horizon, verbose=True)
                             
                             # Handle both dict and bool return formats
@@ -769,7 +755,6 @@ class MCPAdapter:
             
             # STEP 3: Train all models (includes DQN)
             logger.info(f"[{request_id}] Starting training for horizon: {horizon}")
-            from stock_analysis_complete import train_ml_models, DQNTradingAgent
             
             training_result = train_ml_models(symbol, horizon, verbose=True)
             
@@ -1198,9 +1183,6 @@ class MCPAdapter:
             
             logger.info(f"[{request_id}] Processing feedback for {symbol}: {user_feedback}")
             
-            # Call the provide_feedback function from stock_analysis_complete
-            from stock_analysis_complete import provide_feedback, load_feedback_memory
-            
             # Save the feedback with validation
             feedback_result = provide_feedback(symbol, predicted_action, user_feedback, actual_return)
             
@@ -1228,7 +1210,7 @@ class MCPAdapter:
                 return error_response
             
             # Load feedback memory to get stats
-            feedback_memory = load_feedback_memory()
+            feedback_memory = load_feedback_memory().get('feedback_records', [])
             
             # Calculate statistics
             total_feedback = len(feedback_memory)

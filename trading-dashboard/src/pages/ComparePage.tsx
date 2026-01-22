@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { GitCompare, Plus, X, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { stockAPI, POPULAR_STOCKS, type PredictionItem } from '../services/api';
+import { useNotification } from '../contexts/NotificationContext';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { convertUSDToINR, formatINR } from '../utils/currency';
 
 const ComparePage = () => {
+  const { showNotification } = useNotification();
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
   const [predictions, setPredictions] = useState<PredictionItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ const ComparePage = () => {
       setNewSymbol('');
       setSuggestions([]);
       setShowAddModal(false);
+      showNotification('success', 'Symbol Added', `${newSymbol} added to comparison.`);
     }
   };
 
@@ -65,11 +67,13 @@ const ComparePage = () => {
       setNewSymbol('');
       setSuggestions([]);
       setShowAddModal(false);
+      showNotification('success', 'Symbol Added', `${symbol} added to comparison.`);
     }
   };
 
   const handleRemoveSymbol = (symbol: string) => {
     setSelectedSymbols(selectedSymbols.filter(s => s !== symbol));
+    showNotification('info', 'Symbol Removed', `${symbol} removed from comparison.`);
   };
 
   useEffect(() => {
@@ -87,10 +91,16 @@ const ComparePage = () => {
       if (response.predictions) {
         const valid = response.predictions.filter((p: PredictionItem) => !p.error);
         setPredictions(valid);
+        showNotification('success', 'Comparison Loaded', `Compared ${valid.length} symbols. Ready for analysis.`);
+      } else {
+        showNotification('warning', 'No Predictions', 'Could not load predictions for selected symbols.');
+        setPredictions([]);
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to load predictions';
       console.error('Failed to load predictions:', error);
       setPredictions([]);
+      showNotification('error', 'Comparison Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -154,7 +164,7 @@ const ComparePage = () => {
         ) : (
           <>
             {/* Comparison Table */}
-            <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden">
+            <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-slate-700">
@@ -184,7 +194,7 @@ const ComparePage = () => {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-white">
-                            {formatINR(convertUSDToINR(pred.predicted_price || pred.current_price || 0))}
+                            ${(pred.predicted_price || pred.current_price || 0).toFixed(2)}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
@@ -216,7 +226,7 @@ const ComparePage = () => {
             </div>
 
             {/* Comparison Chart */}
-            <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-6">
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Visual Comparison</h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>

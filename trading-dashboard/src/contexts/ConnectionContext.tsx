@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { stockAPI } from '../services/api';
-import { getRefreshInterval } from '../utils/marketHours';
 
 interface ConnectionState {
   isConnected: boolean;
@@ -72,10 +71,10 @@ export const ConnectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Initial check
     checkConnection();
 
-    // Check with market-hour-appropriate interval to reduce API calls and avoid rate limits
+    // Check every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
       checkConnection();
-    }, getRefreshInterval()); // Use dynamic interval based on market hours
+    }, 120000); // Changed to 120 seconds (2 minutes) to reduce rate limit issues
 
     return () => clearInterval(interval);
   }, [checkConnection]); // Include checkConnection in dependencies

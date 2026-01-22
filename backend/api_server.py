@@ -25,7 +25,6 @@ from datetime import datetime
 import json
 import psutil
 
-from core.mcp_adapter import MCPAdapter
 from auth import get_current_user, authenticate_user
 from rate_limiter import check_rate_limit, get_rate_limit_status
 from validators import (
@@ -34,6 +33,7 @@ from validators import (
 )
 import config
 from config import LOGS_DIR, ENABLE_AUTH
+from auth_routes import router as auth_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -43,6 +43,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Include authentication routes
+app.include_router(auth_router)
 
 # CORS middleware
 app.add_middleware(
@@ -72,12 +75,20 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize MCP Adapter
-try:
-    mcp_adapter = MCPAdapter()
-    logger.info("MCP Adapter initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize MCP Adapter: {e}", exc_info=True)
-    raise
+mcp_adapter = None
+
+def get_mcp_adapter():
+    """Lazy load MCP adapter on first use"""
+    global mcp_adapter
+    if mcp_adapter is None:
+        try:
+            from core.mcp_adapter import MCPAdapter
+            mcp_adapter = MCPAdapter()
+            logger.info("MCP Adapter initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize MCP Adapter: {e}", exc_info=True)
+            raise
+    return mcp_adapter
 
 # API request logging
 API_LOG_PATH = Path("data/logs/api_requests.jsonl")
@@ -456,7 +467,7 @@ async def predict(
         if not validate_horizon(data['horizon']):
             raise HTTPException(status_code=400, detail='Invalid horizon. Valid options: intraday, short, long')
         
-        result = mcp_adapter.predict(
+        result = get_mcp_adapter().predict(
             symbols=data['symbols'],
             horizon=data['horizon'],
             risk_profile=data.get('risk_profile')
@@ -497,7 +508,7 @@ async def scan_all(
         if not validate_confidence(data['min_confidence']):
             raise HTTPException(status_code=400, detail='min_confidence must be between 0.0 and 1.0')
         
-        result = mcp_adapter.scan_all(
+        result = get_mcp_adapter().scan_all(
             symbols=data['symbols'],
             horizon=data['horizon'],
             min_confidence=data['min_confidence'],
@@ -546,7 +557,7 @@ async def analyze(
         if not risk_validation['valid']:
             raise HTTPException(status_code=400, detail=risk_validation['error'])
         
-        result = mcp_adapter.analyze(
+        result = get_mcp_adapter().analyze(
             symbol=data['symbol'],
             horizons=data['horizons'],
             stop_loss_pct=data['stop_loss_pct'],
@@ -621,7 +632,7 @@ async def feedback(
                 # Default to incorrect if ambiguous (conservative approach)
                 feedback_sentiment = 'incorrect'
         
-        result = mcp_adapter.process_feedback(
+        result = get_mcp_adapter().process_feedback(
             symbol=data['symbol'],
             predicted_action=normalized_action,  # Use normalized LONG/SHORT/HOLD
             user_feedback=feedback_sentiment,  # Use correct/incorrect for RL training
@@ -683,7 +694,7 @@ async def train_rl(
         except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail='n_episodes must be an integer')
         
-        result = mcp_adapter.train_rl(
+        result = get_mcp_adapter().train_rl(
             symbol=data['symbol'],
             horizon=data['horizon'],
             n_episodes=n_episodes,
@@ -723,7 +734,7 @@ async def fetch_data(
         if data['period'] not in valid_periods:
             raise HTTPException(status_code=400, detail=f'Invalid period. Valid options: {", ".join(valid_periods)}')
         
-        result = mcp_adapter.fetch_data(
+        result = get_mcp_adapter().fetch_data(
             symbols=data['symbols'],
             period=data['period'],
             include_features=data['include_features'],
@@ -887,6 +898,100 @@ async def assess_risk(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Trade Execution API ====================
+
+class TradeExecutionRequest(BaseModel):
+    """Request model for trade execution"""
+    symbol: str = Field(..., min_length=1, max_length=20)
+    quantity: int = Field(..., gt=0)
+    entry_price: float = Field(..., gt=0)
+    stop_loss_price: float = Field(..., gt=0)
+    side: str = Field(..., pattern=r'^(BUY|SELL)$')
+    order_type: str = Field(default='market', pattern=r'^(market|limit)$')
+    
+    @field_validator('symbol')
+    @classmethod
+    def validate_symbol_format(cls, v):
+        """Normalize symbol to uppercase"""
+        return v.upper().strip()
+
+
+@app.post('/tools/execute')
+async def execute_trade(
+    data: TradeExecutionRequest,
+    request: Request,
+    rate_limit_info: Dict = Depends(check_rate_limit)
+):
+    """Execute a trade order with validated risk parameters"""
+    try:
+        # Validate input
+        data_dict = data.model_dump()
+        symbol = data_dict['symbol']
+        quantity = data_dict['quantity']
+        entry_price = data_dict['entry_price']
+        stop_loss_price = data_dict['stop_loss_price']
+        side = data_dict['side']
+        order_type = data_dict['order_type']
+        
+        # Validate symbol format
+        validate_symbols([symbol])
+        
+        # Calculate position metrics
+        position_size = entry_price * quantity
+        risk_amount = abs(entry_price - stop_loss_price) * quantity
+        risk_percentage = (risk_amount / position_size) * 100 if position_size > 0 else 0
+        
+        # Validate trade parameters
+        if side not in ['BUY', 'SELL']:
+            raise ValueError("Side must be BUY or SELL")
+        
+        if order_type not in ['market', 'limit']:
+            raise ValueError("Order type must be market or limit")
+        
+        # Check if risk is within acceptable limits (> 20% is too risky)
+        if risk_percentage > 20:
+            raise ValueError(f"Risk is too high: {risk_percentage:.2f}%. Cannot execute trade.")
+        
+        # Generate order ID (simulated)
+        import uuid
+        order_id = str(uuid.uuid4())[:8].upper()
+        
+        # Simulate order execution (in production, this would connect to a broker)
+        execution_time = datetime.now().isoformat()
+        
+        result = {
+            'success': True,
+            'order_id': order_id,
+            'symbol': symbol,
+            'side': side,
+            'quantity': quantity,
+            'entry_price': entry_price,
+            'stop_loss_price': stop_loss_price,
+            'execution_price': entry_price,  # In real scenario, actual filled price
+            'position_size': position_size,
+            'risk_amount': risk_amount,
+            'risk_percentage': risk_percentage,
+            'order_type': order_type,
+            'timestamp': execution_time,
+            'status': 'executed',
+            'message': f'Trade order {order_id} executed successfully'
+        }
+        
+        # Log the trade execution
+        logger.info(f"Trade executed: {symbol} {side} {quantity} @ ${entry_price} (Risk: {risk_percentage:.2f}%)")
+        log_api_request('/tools/execute', data_dict, result, 200)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.warning(f"Trade execution validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Trade execution error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ==================== AI Chat API ====================
 
@@ -1040,6 +1145,7 @@ if __name__ == '__main__':
     print(f"  POST /tools/fetch_data - Fetch batch data ({auth_label})")
     print(f"  POST /api/risk/stop-loss - Set stop loss ({auth_label})")
     print(f"  POST /api/risk/assess - Assess risk ({auth_label})")
+    print(f"  POST /tools/execute   - Execute trade ({auth_label})")
     print(f"  POST /api/ai/chat - AI trading assistant ({auth_label})")
     print("\nDOCUMENTATION:")
     print(f"  Swagger UI: http://{config.UVICORN_HOST}:{config.UVICORN_PORT}/docs")

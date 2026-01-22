@@ -1,42 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
-import SystemUnavailable from '../components/SystemUnavailable';
 import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
-import type { Holding } from '../types';
 import { useConnection } from '../contexts/ConnectionContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useSystemState } from '../utils/useSystemState';
 import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { formatUSDToINR } from '../utils/currencyConverter';
-import FavoritesPanel from '../components/FavoritesPanel';
-import SmartFilters from '../components/SmartFilters';
-import PredictionCard from '../components/PredictionCard';
-import { useFavorites } from '../utils/useFavorites';
-import { exportToCSV, formatPredictionForExport } from '../utils/exportUtils';
-import { getRefreshInterval } from '../utils/marketHours';
-import { useAuth } from '../contexts/AuthContext';
-import {
-  getTotalPortfolioValue,
-  getTotalPortfolioGain,
-  getPortfolioHoldings
-} from '../utils/portfolioCalculations';
-
 
 const DashboardPage = () => {
-  const { user, userProfile } = useAuth();
   const { connectionState } = useConnection();
   const { theme } = useTheme();
-  const systemState = useSystemState();
   const isLight = theme === 'light';
-  const isSpace = theme === 'space';
-  const { addRecent } = useFavorites();
-  const lastLogTimeRef = useRef<number>(0);
-    
-  const [filters, setFilters] = useState({ 
-    confidence: 'all' as 'all' | 'high' | 'medium', 
-    action: 'all' as 'all' | 'LONG' | 'SHORT' | 'HOLD' 
-  });
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [dailyChange, setDailyChange] = useState(0);
   const [dailyChangePercent, setDailyChangePercent] = useState(0);
@@ -54,29 +28,15 @@ const DashboardPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{symbol: string, isUserAdded: boolean} | null>(null);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [previousPortfolioValue, setPreviousPortfolioValue] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
-    
-  const userAddedTradesRef = useRef<PredictionItem[]>([]);
-  useEffect(() => {
-    userAddedTradesRef.current = userAddedTrades;
-  }, [userAddedTrades]);
   const addTradeInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const prevConnectionStateRef = useRef<boolean>(true);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Real-time clock update
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Load user-added trades, portfolio holdings, and hidden trades from localStorage on mount
+  // Load user-added trades and hidden trades from localStorage on mount
   useEffect(() => {
     const savedTrades = localStorage.getItem('userAddedTrades');
     if (savedTrades) {
@@ -92,48 +52,18 @@ const DashboardPage = () => {
     const savedHidden = localStorage.getItem('hiddenTrades');
     if (savedHidden) {
       try {
-        const parsedHidden = JSON.parse(savedHidden);
-        // Check if these are default hidden trades that should be cleared
-        // If all the default popular stocks are hidden, clear them as they might have been auto-hidden
-        const defaultPopularStocks = ['AAPL', 'GOOGL', 'MSFT', 'TSLA'];
-        const allDefaultHidden = defaultPopularStocks.every(symbol => parsedHidden.includes(symbol));
-        
-        if (allDefaultHidden && parsedHidden.length === defaultPopularStocks.length) {
-          // If only the default stocks are hidden, clear them (they might have been auto-hidden)
-          setHiddenTrades([]);
-          localStorage.setItem('hiddenTrades', JSON.stringify([]));
-          console.log('[DashboardPage] Cleared default hidden trades');
-        } else {
-          // Otherwise, use the stored hidden trades
-          setHiddenTrades(parsedHidden);
-        }
+        setHiddenTrades(JSON.parse(savedHidden));
       } catch (err) {
         console.error('Failed to load hidden trades:', err);
       }
     }
   }, []);
-  
-  // Listen for changes in portfolio_holdings from PortfolioPage
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'portfolio_holdings' || e.key === 'userAddedTrades') {
-        console.log('[DashboardPage] Detected storage change for:', e.key, 'newValue:', e.newValue);
-        // Reload dashboard data when portfolio holdings change
-        loadDashboardData();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []); // Watch for localStorage changes to portfolio holdings
 
   useEffect(() => {
     let isMounted = true;
     let loadingInProgress = false;
     let lastRefreshTime = 0;
+    const REFRESH_INTERVAL = 120000; // 120 seconds (2 minutes) in milliseconds
     
     // Load data without duplicate connection check
     const loadData = async () => {
@@ -142,11 +72,9 @@ const DashboardPage = () => {
         return;
       }
       
-      // Use dynamic refresh interval based on market hours
-      const currentRefreshInterval = getRefreshInterval();
-      // Prevent refreshes more frequent than the current interval
+      // Prevent refreshes more frequent than 120 seconds
       const now = Date.now();
-      if (now - lastRefreshTime < currentRefreshInterval) {
+      if (now - lastRefreshTime < REFRESH_INTERVAL) {
         console.log(`[Dashboard] Skipping refresh - only ${Math.round((now - lastRefreshTime) / 1000)}s since last refresh`);
         return;
       }
@@ -198,13 +126,13 @@ const DashboardPage = () => {
       loadData();
     }
     
-    // Refresh with market-hour-appropriate interval - only if connected
+    // Refresh every 120 seconds (2 minutes) - only if connected
     if (connectionState.isConnected) {
       refreshIntervalRef.current = setInterval(() => {
         if (!loadingInProgress && isMounted && connectionState.isConnected) {
           loadData();
         }
-      }, getRefreshInterval());
+      }, REFRESH_INTERVAL);
     }
     
     return () => {
@@ -248,109 +176,13 @@ const DashboardPage = () => {
       // REMOVED: Duplicate connection check - already checked in useEffect
       // This was causing extra API calls and hitting rate limits
       
-      // Load user-added trades only - no default symbols
-      // Use ref to get current value to avoid stale closure
-      let symbols: string[] = userAddedTradesRef.current.map(t => t.symbol);
+      // Load user-added trades, or use default symbols if none exist
+      let symbols: string[] = userAddedTrades.map(t => t.symbol);
       
-      // Even if no user-added trades, we still need to calculate portfolio value from holdings
+      // If no user-added trades, load some popular stocks by default
       if (symbols.length === 0) {
-        console.log('[Dashboard] No user-added trades, not loading any prediction symbols');
-        // Continue to calculate portfolio value from holdings
-        setTopStocks([]);
-        
-        // Calculate portfolio value from holdings only when no symbols to avoid API call
-        // Load portfolio holdings from localStorage to calculate real portfolio value
-        const portfolioHoldings = getPortfolioHoldings();
-        
-        console.log('[DashboardPage] Portfolio holdings after filtering:', portfolioHoldings);
-        
-        // Calculate total portfolio value
-        // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
-        // Priority 2: Fall back to 0 if no holdings
-        let totalValue = 0;
-        let totalReturn = 0;
-        
-        // Filter out fake data from userAddedTrades
-        const realUserAddedTrades = userAddedTradesRef.current.filter(trade => {
-          // Remove fake data with placeholder prices (typically 100.0) and fake symbols
-          // But preserve legitimate RELIANCE.NS stock which is a real Indian stock
-          return !(trade.current_price === 100.0 && trade.symbol === 'RE') &&
-                 !(trade.current_price === 100.0 && trade.symbol === 'REL') &&
-                 !(trade.current_price === 100.0 && trade.symbol === 'RELIANCE' && !trade.symbol.endsWith('.NS')) &&
-                 !trade.symbol.startsWith('FAKE') &&
-                 !trade.symbol.includes('TEST');
-        });
-        
-        console.log('[DashboardPage] Real user added trades:', realUserAddedTrades);
-        
-        if (portfolioHoldings.length > 0) {
-          // Calculate from actual holdings with shares using centralized function
-          totalValue = getTotalPortfolioValue();
-          
-          // Calculate gain from holdings using centralized function
-          totalReturn = getTotalPortfolioGain();
-          
-          console.log('[DashboardPage] Calculated from portfolio holdings - Total Value:', totalValue, 'Total Return:', totalReturn);
-        } else {
-          // Fallback to userAddedTrades (dashboard-only additions)
-          
-          totalValue = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
-            const price = pred.current_price || 0;
-            return sum + price;
-          }, 0);
-          
-          // Calculate total gain/loss from predicted returns for user-added stocks only
-          totalReturn = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
-            const currentPrice = pred.current_price || 0;
-            const returnPercent = pred.predicted_return || 0;
-            const returnValue = (returnPercent / 100) * currentPrice; // Convert percentage to absolute value
-            return sum + returnValue;
-          }, 0);
-          
-          console.log('[DashboardPage] Calculated from userAddedTrades - Total Value:', totalValue, 'Total Return:', totalReturn);
-        }
-        
-        // Calculate daily change (difference from previous portfolio value)
-        if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
-          const change = totalValue - previousPortfolioValue;
-          const changePercent = (change / previousPortfolioValue) * 100;
-          setDailyChange(change);
-          setDailyChangePercent(changePercent);
-        } else {
-          // First load - use average return as daily change estimate
-          const avgReturn = portfolioHoldings.length > 0 
-            ? portfolioHoldings.reduce((sum, holding) => {
-                const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
-                return sum + gainPercent;
-              }, 0) / portfolioHoldings.length
-            : realUserAddedTrades.length > 0 
-              ? realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
-                  return sum + (pred.predicted_return || 0);
-                }, 0) / realUserAddedTrades.length
-              : 0;
-          const estimatedChange = (avgReturn / 100) * totalValue;
-          setDailyChange(estimatedChange);
-          setDailyChangePercent(avgReturn);
-        }
-        
-        setPortfolioValue(totalValue);
-        setTotalGain(totalReturn);
-        // Guard against division by zero
-        setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
-        setPreviousPortfolioValue(totalValue);
-        
-        console.log('[Dashboard] Portfolio Metrics:', {
-          totalValue,
-          totalReturn,
-          gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
-          userAddedTradesCount: userAddedTradesRef.current.length,
-          portfolioHoldingsCount: portfolioHoldings.length,
-        });
-        
-        
-        setLastUpdated(new Date());
-        setLoading(false); // Clear loading state after successful data load
-        return; // Exit early since we don't need to make API call
+        symbols = ['AAPL', 'GOOGL', 'MSFT']; // Default popular stocks
+        console.log('[Dashboard] No user-added trades, loading default symbols:', symbols);
       }
       
       console.log('[Dashboard] Loading predictions for symbols:', symbols);
@@ -477,94 +309,58 @@ const DashboardPage = () => {
       }
       
       // Calculate real portfolio metrics from predictions
-      // Load portfolio holdings from localStorage to calculate real portfolio value
-      const portfolioHoldings = getPortfolioHoldings();
-      
-      console.log('[DashboardPage] Portfolio holdings after filtering:', portfolioHoldings);
-      
-      // Calculate total portfolio value
-      // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
-      // Priority 2: Fall back to userAddedTrades if no holdings
-      let totalValue = 0;
-      let totalReturn = 0;
-      
-      // Filter out fake data from userAddedTrades
-      const realUserAddedTrades = userAddedTradesRef.current.filter(trade => {
-        // Remove fake data with placeholder prices (typically 100.0) and fake symbols
-        // But preserve legitimate RELIANCE.NS stock which is a real Indian stock
-        return !(trade.current_price === 100.0 && trade.symbol === 'RE') &&
-               !(trade.current_price === 100.0 && trade.symbol === 'REL') &&
-               !(trade.current_price === 100.0 && trade.symbol === 'RELIANCE' && !trade.symbol.endsWith('.NS')) &&
-               !trade.symbol.startsWith('FAKE') &&
-               !trade.symbol.includes('TEST');
-      });
-      
-      console.log('[DashboardPage] Real user added trades:', realUserAddedTrades);
-      
-      if (portfolioHoldings.length > 0) {
-        // Calculate from actual holdings with shares using centralized function
-        totalValue = getTotalPortfolioValue();
-        
-        // Calculate gain from holdings using centralized function
-        totalReturn = getTotalPortfolioGain();
-        
-        console.log('[DashboardPage] Calculated from portfolio holdings - Total Value:', totalValue, 'Total Return:', totalReturn);
-      } else {
-        // Fallback to userAddedTrades (dashboard-only additions)
-        
-        totalValue = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+      if (validPredictions.length > 0) {
+        // Calculate total portfolio value (sum of all current prices)
+        // Using current_price as the base portfolio value
+        const totalValue = validPredictions.reduce((sum: number, pred: PredictionItem) => {
           const price = pred.current_price || 0;
           return sum + price;
         }, 0);
         
-        // Calculate total gain/loss from predicted returns for user-added stocks only
-        totalReturn = realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
+        // Calculate total gain/loss from predicted returns
+        const totalReturn = validPredictions.reduce((sum: number, pred: PredictionItem) => {
           const currentPrice = pred.current_price || 0;
           const returnPercent = pred.predicted_return || 0;
           const returnValue = (returnPercent / 100) * currentPrice; // Convert percentage to absolute value
           return sum + returnValue;
         }, 0);
         
-        console.log('[DashboardPage] Calculated from userAddedTrades - Total Value:', totalValue, 'Total Return:', totalReturn);
-      }
-      
-      // Calculate daily change (difference from previous portfolio value)
-      if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
-        const change = totalValue - previousPortfolioValue;
-        const changePercent = (change / previousPortfolioValue) * 100;
-        setDailyChange(change);
-        setDailyChangePercent(changePercent);
+        // Calculate daily change (difference from previous portfolio value)
+        if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
+          const change = totalValue - previousPortfolioValue;
+          const changePercent = (change / previousPortfolioValue) * 100;
+          setDailyChange(change);
+          setDailyChangePercent(changePercent);
+        } else {
+          // First load - use average return as daily change estimate
+          const avgReturn = validPredictions.length > 0 ? validPredictions.reduce((sum: number, pred: PredictionItem) => {
+            return sum + (pred.predicted_return || 0);
+          }, 0) / validPredictions.length : 0;
+          const estimatedChange = (avgReturn / 100) * totalValue;
+          setDailyChange(estimatedChange);
+          setDailyChangePercent(avgReturn);
+        }
+        
+        setPortfolioValue(totalValue);
+        setTotalGain(totalReturn);
+        // Guard against division by zero
+        setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
+        setPreviousPortfolioValue(totalValue);
+        
+        console.log('[Dashboard] Portfolio Metrics:', {
+          totalValue,
+          totalReturn,
+          gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
+          predictionsCount: validPredictions.length,
+        });
       } else {
-        // First load - use average return as daily change estimate
-        const avgReturn = portfolioHoldings.length > 0 
-          ? portfolioHoldings.reduce((sum, holding) => {
-              const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
-              return sum + gainPercent;
-            }, 0) / portfolioHoldings.length
-          : realUserAddedTrades.length > 0 
-            ? realUserAddedTrades.reduce((sum: number, pred: PredictionItem) => {
-                return sum + (pred.predicted_return || 0);
-              }, 0) / realUserAddedTrades.length
-            : 0;
-        const estimatedChange = (avgReturn / 100) * totalValue;
-        setDailyChange(estimatedChange);
-        setDailyChangePercent(avgReturn);
+        // Reset to 0 if no predictions
+        setPortfolioValue(0);
+        setDailyChange(0);
+        setDailyChangePercent(0);
+        setTotalGain(0);
+        setTotalGainPercent(0);
       }
-      
-      setPortfolioValue(totalValue);
-      setTotalGain(totalReturn);
-      // Guard against division by zero
-      setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
-      setPreviousPortfolioValue(totalValue);
-      
-      console.log('[Dashboard] Portfolio Metrics:', {
-        totalValue,
-        totalReturn,
-        gainPercent: totalValue > 0 ? (totalReturn / totalValue) * 100 : 0,
-        userAddedTradesCount: userAddedTradesRef.current.length,
-        portfolioHoldingsCount: portfolioHoldings.length,
-      });
-      
       
       setLastUpdated(new Date());
       setLoading(false); // Clear loading state after successful data load
@@ -580,36 +376,7 @@ const DashboardPage = () => {
       
       // Handle actual errors
       const err = error instanceof Error ? error : new Error(String(error));
-      
       console.error('Failed to load dashboard data:', err);
-      
-      // Load portfolio holdings from localStorage to calculate real portfolio value
-      const portfolioHoldings = getPortfolioHoldings();
-      
-      console.log('[DashboardPage] Portfolio holdings after filtering (in catch):', portfolioHoldings);
-      
-      // Calculate total portfolio value
-      // Priority 1: Use portfolio holdings (from PortfolioPage) which has actual shares and prices
-      // Priority 2: Fall back to 0 if no holdings
-      let totalValue = 0;
-      let totalReturn = 0;
-      
-      if (portfolioHoldings.length > 0) {
-        // Calculate from actual holdings with shares using centralized function
-        totalValue = getTotalPortfolioValue();
-        
-        // Calculate gain from holdings using centralized function
-        totalReturn = getTotalPortfolioGain();
-        
-        console.log('[DashboardPage] Calculated from portfolio holdings in catch - Total Value:', totalValue, 'Total Return:', totalReturn);
-      } else {
-        console.log('[DashboardPage] No portfolio holdings found in catch');
-      }
-      
-      setPortfolioValue(totalValue);
-      setTotalGain(totalReturn);
-      // Guard against division by zero
-      setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
       
       if (err.message?.includes('Unable to connect') || err.message?.includes('ECONNREFUSED') || err.message?.includes('Network Error')) {
         // Connection error
@@ -631,7 +398,6 @@ const DashboardPage = () => {
   const clearCacheAndReload = () => {
     localStorage.removeItem('userAddedTrades');
     localStorage.removeItem('visibleTopStocks');
-    localStorage.removeItem('hiddenTrades'); // Also clear hidden trades
     setUserAddedTrades([]);
     setTopStocks([]);
     setPortfolioValue(0);
@@ -639,7 +405,6 @@ const DashboardPage = () => {
     setDailyChangePercent(0);
     setTotalGain(0);
     setTotalGainPercent(0);
-    setHiddenTrades([]); // Reset hidden trades state
     setError('Cache cleared. Add stocks to get started!');
     setTimeout(() => setError(null), 3000);
   };
@@ -655,13 +420,6 @@ const DashboardPage = () => {
     setHiddenTrades(symbols);
     localStorage.setItem('hiddenTrades', JSON.stringify(symbols));
   };
-  
-  // Clear all hidden trades
-  const clearAllHiddenTrades = () => {
-    setHiddenTrades([]);
-    localStorage.setItem('hiddenTrades', JSON.stringify([]));
-    console.log('[DashboardPage] Cleared all hidden trades');
-  };
 
   // Normalize symbol for consistent comparison (handle .NS suffix variations)
   const normalizeSymbolForComparison = (symbol: string): string => {
@@ -673,7 +431,7 @@ const DashboardPage = () => {
     const normalized = normalizeSymbolForComparison(checkSymbol);
     
     // Check in user-added trades
-    const inUserTrades = userAddedTradesRef.current.some(t => 
+    const inUserTrades = userAddedTrades.some(t => 
       normalizeSymbolForComparison(t.symbol) === normalized
     );
     
@@ -729,7 +487,6 @@ const DashboardPage = () => {
     }
 
     const symbol = addTradeSymbol.trim().toUpperCase();
-    addRecent(symbol); // Add to recent searches
     
     // Check if the symbol exactly matches a valid symbol from popular stocks
     const exactMatch = POPULAR_STOCKS.find(s => s.toUpperCase() === symbol);
@@ -758,8 +515,8 @@ const DashboardPage = () => {
       // Log state for debugging
       console.log('[DashboardPage] Add Trade - State Check:', {
         inputSymbol: symbol,
-        userAddedTradesCount: userAddedTradesRef.current.length,
-        userAddedSymbols: userAddedTradesRef.current.map(t => t.symbol),
+        userAddedTradesCount: userAddedTrades.length,
+        userAddedSymbols: userAddedTrades.map(t => t.symbol),
         topStocksCount: topStocks.length,
         topStockSymbols: topStocks.map(t => t.symbol),
         hiddenTrades: hiddenTrades,
@@ -769,7 +526,7 @@ const DashboardPage = () => {
       if (symbolExistsInTopPerformers(symbol)) {
         console.log('[DashboardPage] Duplicate found for symbol:', symbol);
         // If it's in userAddedTrades, check if it's hidden - if so, unhide it
-        const isInUserTrades = userAddedTradesRef.current.some(t => normalizeSymbolForComparison(t.symbol) === symbol);
+        const isInUserTrades = userAddedTrades.some(t => normalizeSymbolForComparison(t.symbol) === symbol);
         if (isInUserTrades && hiddenTrades.includes(symbol)) {
           console.log('[DashboardPage] Found AAPL in userAddedTrades but it\'s hidden - unhiding it');
           setHiddenTrades(hiddenTrades.filter(s => s !== symbol));
@@ -815,7 +572,7 @@ const DashboardPage = () => {
         isUserAdded: true, // Mark as user-added
       };
 
-      const updatedTrades = [...userAddedTradesRef.current, newTrade];
+      const updatedTrades = [...userAddedTrades, newTrade];
       console.log('[DashboardPage] Successfully added trade:', { symbol, newTrade, updatedTradesCount: updatedTrades.length });
       saveUserAddedTrades(updatedTrades);
 
@@ -841,7 +598,7 @@ const DashboardPage = () => {
   const handleRemoveTrade = (symbol: string, isUserAdded: boolean) => {
     if (isUserAdded) {
       // Remove from user-added trades (permanent deletion)
-      const updatedTrades = userAddedTradesRef.current.filter(t => t.symbol !== symbol);
+      const updatedTrades = userAddedTrades.filter(t => t.symbol !== symbol);
       saveUserAddedTrades(updatedTrades);
     } else {
       // Hide backend trade (temporary, can be restored by refreshing)
@@ -855,42 +612,20 @@ const DashboardPage = () => {
   const visibleTopStocks = topStocks.filter(stock => !hiddenTrades.includes(stock.symbol));
   
   // Combine backend stocks and user-added trades
-  let allTopStocks = [...visibleTopStocks, ...userAddedTradesRef.current];
+  const allTopStocks = [...visibleTopStocks, ...userAddedTrades];
   
-  // Apply smart filters
-  if (filters.confidence === 'high') {
-    allTopStocks = allTopStocks.filter(stock => (stock.confidence || 0) >= 0.7);
-  }
-  if (filters.action !== 'all') {
-    allTopStocks = allTopStocks.filter(stock => stock.action === filters.action);
-  }
-  
-  // Calculate filter counts
-  const filterCounts = {
-    total: [...visibleTopStocks, ...userAddedTradesRef.current].length,
-    high: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => (s.confidence || 0) >= 0.7).length,
-    buy: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'LONG').length,
-    sell: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'SHORT').length,
-    hold: [...visibleTopStocks, ...userAddedTradesRef.current].filter(s => s.action === 'HOLD').length,
-  };
-  
-  // Debug logging for data consistency (throttled to avoid spam)
+  // Debug logging for data consistency
   React.useEffect(() => {
-    if (userAddedTradesRef.current.length > 0 || visibleTopStocks.length > 0) {
-      // Only log if it's been at least 5 seconds since last log
-      const now = Date.now();
-      if (!lastLogTimeRef.current || now - lastLogTimeRef.current > 5000) { // 5 seconds
-        lastLogTimeRef.current = now;
-        console.log('[DashboardPage] Data Summary:', {
-          userAddedTradesCount: userAddedTradesRef.current.length,
-          userAddedSymbols: userAddedTradesRef.current.map(t => t.symbol),
-          visibleTopStocksCount: visibleTopStocks.length,
-          visibleSymbols: visibleTopStocks.map(t => t.symbol),
-          totalCount: allTopStocks.length,
-          allSymbols: allTopStocks.map(t => t.symbol),
-          hiddenTrades: hiddenTrades,
-        });
-      }
+    if (userAddedTrades.length > 0 || visibleTopStocks.length > 0) {
+      console.log('[DashboardPage] Data Summary:', {
+        userAddedTradesCount: userAddedTrades.length,
+        userAddedSymbols: userAddedTrades.map(t => t.symbol),
+        visibleTopStocksCount: visibleTopStocks.length,
+        visibleSymbols: visibleTopStocks.map(t => t.symbol),
+        totalCount: allTopStocks.length,
+        allSymbols: allTopStocks.map(t => t.symbol),
+        hiddenTrades: hiddenTrades,
+      });
     }
   }, [userAddedTrades, visibleTopStocks, allTopStocks, hiddenTrades]);
 
@@ -901,7 +636,6 @@ const DashboardPage = () => {
     confidence: (stock.confidence || 0) * 100,
     return: stock.predicted_return || 0,
   })) : [];
-
 
   // Calculate real stats from actual data
   const stats = [
@@ -914,8 +648,8 @@ const DashboardPage = () => {
       bgGradient: 'from-green-500/20 to-emerald-500/10'
     },
     { 
-      label: 'Account Balance', 
-      value: formatUSDToINR(userProfile?.accountBalance || 0), 
+      label: 'Daily Change', 
+      value: formatUSDToINR(dailyChange), 
       icon: Activity, 
       change: dailyChangePercent >= 0 ? `+${dailyChangePercent.toFixed(2)}%` : `${dailyChangePercent.toFixed(2)}%`,
       changeColor: dailyChange >= 0 ? 'text-green-400' : 'text-red-400',
@@ -931,83 +665,14 @@ const DashboardPage = () => {
     },
   ];
 
-  // If system is not operational, show unavailable screen
-  if (!systemState.isOperational && !systemState.isChecking) {
-    return (
-      <SystemUnavailable 
-        message={systemState.errorMessage || 'System unavailable'}
-        onRetry={() => window.location.reload()}
-      />
-    );
-  }
-
-  // If prediction service is down, show limited functionality
-  if (!systemState.canPredict && !systemState.isChecking) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className={`max-w-md w-full text-center p-8 rounded-lg border ${
-            isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700'
-          }`}>
-            <AlertCircle className={`w-16 h-16 mx-auto mb-4 ${
-              isLight ? 'text-yellow-500' : 'text-yellow-400'
-            }`} />
-            <h1 className={`text-xl font-semibold mb-2 ${
-              isLight ? 'text-gray-900' : 'text-white'
-            }`}>
-              Prediction Engine Unavailable
-            </h1>
-            <p className={`text-sm mb-6 ${
-              isLight ? 'text-gray-600' : 'text-gray-400'
-            }`}>
-              {systemState.errorMessage || 'The prediction service is currently initializing.'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div className="space-y-1 animate-fadeIn w-full relative min-h-screen flex flex-col">
+      <div className="space-y-3 md:space-y-4 animate-fadeIn w-full relative">
         {/* Added relative for modal positioning */}
-        
-        {/* Welcome Banner */}
-        {userProfile && (
-          <div className={`${isLight 
-            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200' 
-            : isSpace
-              ? 'bg-gradient-to-r from-slate-800/50 to-purple-900/30 border border-purple-500/30' 
-              : 'bg-gradient-to-r from-slate-800/50 to-slate-700/50 border border-yellow-500/30'
-          } rounded-lg p-4`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  Welcome back, {userProfile.firstName || userProfile.username}! 👋
-                </h2>
-                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-                  Here's your dashboard for today
-                </p>
-              </div>
-              <div className={`text-right ${isLight ? 'text-gray-700' : 'text-gray-300'}`}>
-                <p className="text-sm">{currentTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                <p className="text-xs mt-1">Account Balance: {formatUSDToINR(userProfile.accountBalance || 0)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
               {connectionState.isConnected ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/50 rounded-lg">
                   <CheckCircle2 className="w-3 h-3 text-green-400" />
@@ -1020,8 +685,8 @@ const DashboardPage = () => {
                 </div>
               )}
             </div>
-            <p className={`text-sm md:text-base ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-              Real-time dashboard overview • Last updated {lastUpdated ? lastUpdated.toLocaleTimeString() : currentTime.toLocaleTimeString()} • Live: {currentTime.toLocaleTimeString()}
+            <p className={`text-xs md:text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
+              {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'}
             </p>
           </div>
           <button
@@ -1100,7 +765,7 @@ const DashboardPage = () => {
         )}
 
         {/* Stats Cards - Full width stacked on mobile, grid on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 flex-shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           {loading && topStocks.length === 0 && !error ? (
             [1, 2, 3].map((i) => (
               <div 
@@ -1108,24 +773,24 @@ const DashboardPage = () => {
                 className={`${isLight 
                   ? 'bg-gray-100 md:bg-gradient-to-br md:from-gray-100 md:to-gray-50 border border-gray-200' 
                   : 'bg-slate-800/80 md:bg-gradient-to-br md:from-slate-800/80 md:to-slate-700/50 border border-slate-700/50'
-                } rounded-lg p-2.5 animate-pulse`}
+                } rounded-lg p-4 md:p-6 animate-pulse`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className={`w-8 h-8 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded-lg`}></div>
-                  <div className={`w-12 h-4 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <div className={`w-10 h-10 md:w-12 md:h-12 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded-lg`}></div>
+                  <div className={`w-14 h-5 md:w-16 md:h-6 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
                 </div>
-                <div className={`w-16 h-3 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded mb-1`}></div>
-                <div className={`w-24 h-6 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
+                <div className={`w-20 h-3 md:w-24 md:h-4 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded mb-2`}></div>
+                <div className={`w-28 h-6 md:w-32 md:h-8 ${isLight ? 'bg-gray-300' : 'bg-slate-700'} rounded`}></div>
               </div>
             ))
           ) : error && error.includes('Unable to connect to backend') ? (
             [1, 2, 3].map((i) => (
               <div 
                 key={i} 
-                className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/80 border border-slate-700/50'} rounded-lg p-3 opacity-50`}
+                className={`${isLight ? 'bg-gray-100 border border-gray-200' : 'bg-slate-800/80 border border-slate-700/50'} rounded-lg p-4 md:p-6 opacity-50`}
               >
                 <div className="flex items-center justify-center h-full">
-                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs`}>Backend not connected</p>
+                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm`}>Backend not connected</p>
                 </div>
               </div>
             ))
@@ -1136,51 +801,32 @@ const DashboardPage = () => {
                 <div 
                   key={stat.label} 
                   className={`${isLight 
-                    ? 'bg-white md:bg-gradient-to-br md:from-blue-50 md:to-indigo-50 border border-yellow-500/40 shadow-lg shadow-yellow-500/10' 
-                    : isSpace
-                      ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20'
-                      : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'
-                  } rounded-lg p-2.5 shadow-sm`}
+                    ? 'bg-white md:bg-gradient-to-br md:from-blue-50 md:to-indigo-50 border border-gray-200' 
+                    : 'bg-slate-800/80 md:bg-gradient-to-br md:from-green-500/20 md:to-emerald-500/10 border border-slate-700/50'
+                  } rounded-lg p-4 md:p-6 shadow-sm`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <div className={`p-1 ${isLight ? 'bg-blue-100' : 'bg-yellow-500/20 border border-yellow-500/50'} rounded`}>
-                      <Icon className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-yellow-400'}`} />
+                  <div className="flex items-center justify-between mb-2 md:mb-3">
+                    <div className={`p-2 ${isLight ? 'bg-blue-100' : 'bg-slate-700/50 md:bg-white/5'} rounded`}>
+                      <Icon className={`w-4 h-4 md:w-5 md:h-5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
                     </div>
-                    <span className={`${stat.changeColor} text-sm font-medium px-1 py-0.5 rounded ${isLight ? 'bg-gray-100' : 'bg-slate-700/50 md:bg-white/5'}`}>
+                    <span className={`${stat.changeColor} text-xs md:text-sm font-semibold px-2 py-0.5 md:py-1 rounded ${isLight ? 'bg-gray-100' : 'bg-slate-700/50 md:bg-white/5'}`}>
                       {stat.change}
                     </span>
                   </div>
-                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-0.5`}>{stat.label}</p>
-                  <p className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white drop-shadow-sm'} leading-tight`}>{stat.value}</p>
+                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs md:text-sm mb-1`}>{stat.label}</p>
+                  <p className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} leading-tight`}>{stat.value}</p>
                 </div>
               );
             })
           )}
         </div>
 
-        <div className="space-y-1 flex-1 min-h-0">
-          {/* Favorites Panel */}
-          <FavoritesPanel 
-            onSymbolSelect={(symbol) => {
-              setAddTradeSymbol(symbol);
-              setShowAddTradeModal(true);
-            }}
-          />
-          
-          {/* Smart Filters */}
-          {allTopStocks.length > 0 && (
-            <SmartFilters 
-              activeFilters={filters}
-              onFilterChange={setFilters}
-              counts={filterCounts}
-            />
-          )}
-
-          {/* Portfolio Performance Chart */}
-          <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2 shadow-sm w-full`}>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-1.5`}>
-                <Sparkles className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+        <div className="space-y-3 md:space-y-4">
+          {/* Portfolio Performance Chart - Full width on mobile */}
+          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 md:p-4 shadow-sm w-full`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
+                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 flex-shrink-0" />
                 <span>Portfolio Performance</span>
               </h2>
             </div>
@@ -1196,13 +842,13 @@ const DashboardPage = () => {
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={isSpace ? "#60a5fa" : "#3B82F6"} stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor={isSpace ? "#60a5fa" : "#3B82F6"} stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid 
                       strokeDasharray="3 3" 
-                      stroke={isLight ? "#E5E7EB" : isSpace ? "#475569" : "#374151"} 
+                      stroke={isLight ? "#E5E7EB" : "#374151"} 
                       opacity={isLight ? 0.5 : 0.15}
                     />
                     <XAxis 
@@ -1219,8 +865,8 @@ const DashboardPage = () => {
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: isLight ? '#FFFFFF' : isSpace ? '#1e293b' : '#1E293B', 
-                        border: isLight ? '1px solid #E5E7EB' : isSpace ? '1px solid #475569' : '1px solid #475569',
+                        backgroundColor: isLight ? '#FFFFFF' : '#1E293B', 
+                        border: isLight ? '1px solid #E5E7EB' : '1px solid #475569',
                         borderRadius: '8px',
                         padding: '10px',
                         fontSize: '12px',
@@ -1228,13 +874,13 @@ const DashboardPage = () => {
                       }}
                       labelStyle={{ color: isLight ? '#111827' : '#E2E8F0', fontWeight: 'bold', fontSize: '11px' }}
                       formatter={(value: any) => [formatUSDToINR(Number(value)), 'Value']}
-                      cursor={{ stroke: isSpace ? '#60a5fa' : '#3B82F6', strokeWidth: 1 }}
+                      cursor={{ stroke: '#3B82F6', strokeWidth: 1 }}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="value" 
-                      stroke={isSpace ? "#60a5fa" : "#3B82F6"} 
-                      strokeWidth={2}
+                      stroke="#3B82F6" 
+                      strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#colorValue)"
                     />
@@ -1242,20 +888,20 @@ const DashboardPage = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-center py-6">
-                <div className={`${isLight ? 'bg-gray-100' : 'bg-slate-700/50'} rounded-lg p-3`}>
-                  <Activity className={`w-8 h-8 mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm mb-1`}>
+              <div className="text-center py-8 md:py-12">
+                <div className={`${isLight ? 'bg-gray-100' : 'bg-slate-700/50'} rounded-lg p-4 md:p-6`}>
+                  <Activity className={`w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm md:text-base mb-2`}>
                     No data available yet
                   </p>
-                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs mb-2`}>
+                  <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs md:text-sm mb-3`}>
                     Predictions will appear here once loaded
                   </p>
                   <button
                     onClick={() => loadDashboardData()}
-                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors"
+                    className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs md:text-sm font-medium transition-colors"
                   >
-                    <RefreshCw className="w-3 h-3 inline mr-1" />
+                    <RefreshCw className="w-3 h-3 md:w-4 md:h-4 inline mr-1" />
                     Refresh
                   </button>
                 </div>
@@ -1263,39 +909,27 @@ const DashboardPage = () => {
             )}
           </div>
 
-          {/* My Portfolio */}
-          <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2 shadow-sm card-hover flex-1 min-h-0`}>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-1.5`}>
-                <TrendingUp className="w-3.5 h-3.5 text-green-400" />
-                My Portfolio
-                <span className={`text-2xs font-normal px-1 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
+          {/* Top Performers */}
+          <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm card-hover`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className={`text-base md:text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
+                Top Performers
+                <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${isLight ? 'bg-gray-200 text-gray-700' : 'bg-slate-700 text-slate-300'}`}>
                   {allTopStocks.length}
                 </span>
               </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setShowAddTradeModal(true);
-                    setAddTradeError(null);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-sm md:text-base font-semibold transition-all active:scale-95 min-h-[36px]"
-                  title="Add position to portfolio"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Position</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const exportData = formatPredictionForExport(allTopStocks);
-                    exportToCSV(exportData, `predictions-${new Date().toISOString().split('T')[0]}`);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs md:text-sm font-semibold transition-all"
-                  title="Export predictions to CSV"
-                >
-                  Export
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setShowAddTradeModal(true);
+                  setAddTradeError(null);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-semibold transition-all active:scale-95 min-h-[36px]"
+                title="Add trade to Top Performers"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
             </div>
             {loading ? (
               <div className="space-y-3">
@@ -1315,7 +949,7 @@ const DashboardPage = () => {
                 </button>
               </div>
             ) : allTopStocks.length > 0 ? (
-              <div className="space-y-1.5 max-h-[50vh] overflow-y-auto custom-scrollbar rounded-lg">
+              <div className="space-y-2.5 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar rounded-lg">
                 {allTopStocks.map((stock, index) => {
                   const isPositive = (stock.predicted_return || 0) > 0;
                   const confidence = (stock.confidence || 0) * 100;
@@ -1325,7 +959,7 @@ const DashboardPage = () => {
                       key={`${stock.symbol}-${index}`} 
                       className={`${isLight 
                         ? 'bg-gray-50 border border-gray-200 hover:border-blue-400 active:border-blue-500' 
-                        : 'bg-gradient-to-r from-slate-700/80 via-slate-600/70 to-slate-700/80 border border-slate-500/60 hover:border-blue-400/60 active:border-blue-500/60 shadow-md hover:shadow-lg transition-shadow'
+                        : 'bg-slate-700/50 border border-slate-600/50 hover:border-blue-500/50 active:border-blue-600/50'
                       } rounded-lg transition-all touch-manipulation shadow-sm`}
                     >
                       {/* Mobile: Stacked layout */}
@@ -1341,7 +975,7 @@ const DashboardPage = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <p className={`${isLight ? 'text-gray-900' : 'text-white drop-shadow-sm'} font-bold text-base`}>{stock.symbol}</p>
+                                <p className={`${isLight ? 'text-gray-900' : 'text-white'} font-bold text-base`}>{stock.symbol}</p>
                                 {isUserAdded && (
                                   <span className="text-xs text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">★</span>
                                 )}
@@ -1444,12 +1078,12 @@ const DashboardPage = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Plus className={`w-8 h-8 ${isLight ? 'text-blue-400' : 'text-blue-400'} mx-auto mb-3`} />
-                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-sm font-semibold mb-1`}>
+              <div className="text-center py-12">
+                <Plus className={`w-12 h-12 ${isLight ? 'text-blue-400' : 'text-blue-400'} mx-auto mb-4`} />
+                <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} text-base font-semibold mb-2`}>
                   No stocks selected yet
                 </p>
-                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs mb-4`}>
+                <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm mb-6`}>
                   Add stocks to your dashboard to view predictions and portfolio performance
                 </p>
                 <button
@@ -1458,9 +1092,9 @@ const DashboardPage = () => {
                     setAddTradeError(null);
                     setTimeout(() => addTradeInputRef.current?.focus(), 100);
                   }}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg font-semibold transition-all active:scale-95 inline-flex items-center gap-2 min-h-[40px]"
+                  className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg font-semibold transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   <span>Add Your First Stock</span>
                 </button>
               </div>
@@ -1520,7 +1154,7 @@ const DashboardPage = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
                   <Plus className="w-5 h-5 text-blue-400" />
-                  Add Position to Portfolio
+                  Add Trade to Top Performers
                 </h3>
                 <button
                   onClick={() => {
@@ -1567,14 +1201,14 @@ const DashboardPage = () => {
                             setShowSuggestions(false);
                           }
                         }}
-                        placeholder="e.g., AAPL, TCS.NS, TATAMOTORS.NS (Enter symbol to add to portfolio)"
+                        placeholder="e.g., AAPL, TSLA, GOOGL"
                         className={`w-full pl-10 pr-4 py-2.5 ${isLight 
                           ? 'bg-gray-50 border border-gray-300 text-gray-900 placeholder-gray-500' 
                           : 'bg-slate-700/50 border border-slate-600 text-white placeholder-gray-400'
                         } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         disabled={addTradeLoading}
                       />
-                                              
+                      
                       {/* Suggestions Dropdown - positioned relative to input, will show above if needed */}
                       {showSuggestions && filteredSymbols.length > 0 && (
                         <div className={`absolute top-full left-0 right-0 mt-1 ${isLight 
@@ -1608,7 +1242,7 @@ const DashboardPage = () => {
                       )}
                     </div>
                     <p className={`text-xs ${isLight ? 'text-gray-600' : 'text-gray-400'} mt-1`}>
-                      Add a position to your portfolio to track and receive predictions
+                      Enter a stock symbol to fetch its prediction and add it to Top Performers
                     </p>
                   </div>
                 </div>
@@ -1636,7 +1270,7 @@ const DashboardPage = () => {
                     ) : (
                       <React.Fragment>
                         <Plus className="w-4 h-4" />
-                        <span>Add Position</span>
+                        <span>Add Trade</span>
                       </React.Fragment>
                     )}
                   </button>
@@ -1657,12 +1291,12 @@ const DashboardPage = () => {
         )}
 
         {/* Recent Activity */}
-        <div className={`${isLight ? 'bg-white border border-yellow-500/40 shadow-lg shadow-yellow-500/10' : isSpace ? 'bg-slate-800/30 backdrop-blur-md border border-purple-500/30 shadow-lg shadow-purple-500/20' : 'bg-gradient-to-br from-black via-gray-900 to-black border border-yellow-500/30 shadow-xl shadow-yellow-500/10'} rounded-lg p-2.5 shadow-sm`}>
-          <h2 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-2 flex items-center gap-2`}>
+        <div className={`${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80 backdrop-blur-sm border border-slate-700/50'} rounded-lg p-3 shadow-sm`}>
+          <h2 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'} mb-3 flex items-center gap-2`}>
             <Activity className="w-4 h-4 text-blue-400" />
             Recent Activity
           </h2>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {allTopStocks.slice(0, 3).map((stock, index) => {
               const isPositive = (stock.predicted_return || 0) > 0;
               const actionType = stock.action === 'LONG' ? 'BUY' : stock.action === 'SHORT' ? 'SELL' : 'HOLD';
@@ -1717,8 +1351,6 @@ const DashboardPage = () => {
             )}
           </div>
         </div>
-        
-
       </div>
     </Layout>
   );

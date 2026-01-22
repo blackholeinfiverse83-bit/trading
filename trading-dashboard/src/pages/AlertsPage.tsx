@@ -5,11 +5,8 @@ import { priceAlertsService, predictionAlertsService, requestNotificationPermiss
 import { PriceAlert, PredictionAlert } from '../types/alerts';
 import { stockAPI, POPULAR_STOCKS } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
-import { useTheme } from '../contexts/ThemeContext';
 
 const AlertsPage = () => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const { addNotification } = useNotifications();
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
   const [predictionAlerts, setPredictionAlerts] = useState<PredictionAlert[]>([]);
@@ -57,21 +54,21 @@ const AlertsPage = () => {
 
   const handleAddPriceAlert = () => {
     if (!newPriceAlert.symbol) {
-      alert('Please enter a symbol');
+      window.alert('Please enter a symbol');
       return;
     }
 
     if (newPriceAlert.type !== 'change' && !newPriceAlert.targetPrice) {
-      alert('Please enter a target price');
+      window.alert('Please enter a target price');
       return;
     }
 
     if (newPriceAlert.type === 'change' && !newPriceAlert.changePercent) {
-      alert('Please enter a change percentage');
+      window.alert('Please enter a change percentage');
       return;
     }
 
-    const alert = priceAlertsService.add({
+    const newAlert = priceAlertsService.add({
       symbol: newPriceAlert.symbol.toUpperCase(),
       type: newPriceAlert.type,
       targetPrice: newPriceAlert.type !== 'change' ? parseFloat(newPriceAlert.targetPrice) : undefined,
@@ -82,8 +79,8 @@ const AlertsPage = () => {
     addNotification({
       type: 'price',
       title: 'Price Alert Created',
-      message: `Alert set for ${alert.symbol} ${alert.type === 'above' ? 'above' : alert.type === 'below' ? 'below' : 'change'} ${alert.targetPrice || alert.changePercent}%`,
-      symbol: alert.symbol,
+      message: `Alert set for ${newAlert.symbol} ${newAlert.type === 'above' ? 'above' : newAlert.type === 'below' ? 'below' : 'change'} ${newAlert.targetPrice || newAlert.changePercent}%`,
+      symbol: newAlert.symbol,
     });
 
     setNewPriceAlert({ symbol: '', type: 'above', targetPrice: '', changePercent: '' });
@@ -93,11 +90,11 @@ const AlertsPage = () => {
 
   const handleAddPredictionAlert = () => {
     if (!newPredictionAlert.symbol) {
-      alert('Please enter a symbol');
+      window.alert('Please enter a symbol');
       return;
     }
 
-    const alert = predictionAlertsService.add({
+    const newAlert = predictionAlertsService.add({
       symbol: newPredictionAlert.symbol.toUpperCase(),
       action: newPredictionAlert.action,
       isActive: true,
@@ -106,8 +103,8 @@ const AlertsPage = () => {
     addNotification({
       type: 'prediction',
       title: 'Prediction Alert Created',
-      message: `Alert set for ${alert.symbol} when prediction changes to ${alert.action}`,
-      symbol: alert.symbol,
+      message: `Alert set for ${newAlert.symbol} when prediction changes to ${newAlert.action}`,
+      symbol: newAlert.symbol,
     });
 
     setNewPredictionAlert({ symbol: '', action: 'LONG' });
@@ -150,8 +147,8 @@ const AlertsPage = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1`}>Alerts & Notifications</h1>
-            <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Manage your price and prediction alerts</p>
+            <h1 className="text-2xl font-bold text-white mb-1">Alerts & Notifications</h1>
+            <p className="text-gray-400 text-sm">Manage your price and prediction alerts</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -193,16 +190,16 @@ const AlertsPage = () => {
         )}
 
         {/* Price Alerts */}
-        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg overflow-hidden`}>
-          <div className={`p-4 ${isLight ? 'border-b border-gray-200 bg-gray-50' : 'border-b border-slate-700'}`}>
-            <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'} flex items-center gap-2`}>
+        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-700">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-green-400" />
               Price Alerts ({priceAlerts.length})
             </h2>
           </div>
           {priceAlerts.length === 0 ? (
-            <div className={`p-8 text-center ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-              <Bell className={`w-12 h-12 mx-auto mb-3 opacity-50 ${isLight ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="p-8 text-center text-gray-400">
+              <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No price alerts set</p>
             </div>
           ) : (
@@ -262,7 +259,7 @@ const AlertsPage = () => {
         </div>
 
         {/* Prediction Alerts */}
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden">
+        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           <div className="p-4 border-b border-slate-700">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-purple-400" />

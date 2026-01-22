@@ -1,0 +1,96 @@
+{"request_id": "predict_1768900196_1", "tool": "predict", "timestamp": "2026-01-20T14:39:56.763613", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900205_2", "tool": "predict", "timestamp": "2026-01-20T14:40:05.473229", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900217_3", "tool": "predict", "timestamp": "2026-01-20T14:40:17.501535", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900217_4", "tool": "predict", "timestamp": "2026-01-20T14:40:17.529019", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900228_5", "tool": "predict", "timestamp": "2026-01-20T14:40:28.429017", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900228_6", "tool": "predict", "timestamp": "2026-01-20T14:40:28.448890", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900266_7", "tool": "predict", "timestamp": "2026-01-20T14:41:06.006976", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900342_8", "tool": "predict", "timestamp": "2026-01-20T14:42:22.891004", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900503_9", "tool": "predict", "timestamp": "2026-01-20T14:45:03.458887", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900706_1", "tool": "predict", "timestamp": "2026-01-20T14:48:26.007009", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900711_2", "tool": "predict", "timestamp": "2026-01-20T14:48:31.587941", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900711_3", "tool": "predict", "timestamp": "2026-01-20T14:48:31.677379", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900718_4", "tool": "predict", "timestamp": "2026-01-20T14:48:38.121500", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900718_5", "tool": "predict", "timestamp": "2026-01-20T14:48:38.163666", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900832_6", "tool": "predict", "timestamp": "2026-01-20T14:50:32.276334", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900838_7", "tool": "predict", "timestamp": "2026-01-20T14:50:38.029016", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768900958_8", "tool": "predict", "timestamp": "2026-01-20T14:52:38.032228", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901072_9", "tool": "predict", "timestamp": "2026-01-20T14:54:32.270904", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901192_10", "tool": "predict", "timestamp": "2026-01-20T14:56:32.270500", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901198_11", "tool": "predict", "timestamp": "2026-01-20T14:56:38.032756", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901312_12", "tool": "predict", "timestamp": "2026-01-20T14:58:32.394063", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901432_13", "tool": "predict", "timestamp": "2026-01-20T15:00:32.276146", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901438_14", "tool": "predict", "timestamp": "2026-01-20T15:00:38.034133", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901558_15", "tool": "predict", "timestamp": "2026-01-20T15:02:38.032077", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901589_16", "tool": "predict", "timestamp": "2026-01-20T15:03:09.188604", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901678_17", "tool": "predict", "timestamp": "2026-01-20T15:04:38.033018", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901716_18", "tool": "predict", "timestamp": "2026-01-20T15:05:16.416946", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901798_19", "tool": "predict", "timestamp": "2026-01-20T15:06:38.028581", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768901956_20", "tool": "predict", "timestamp": "2026-01-20T15:09:16.619694", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902038_21", "tool": "predict", "timestamp": "2026-01-20T15:10:38.027445", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902158_22", "tool": "predict", "timestamp": "2026-01-20T15:12:38.029435", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902196_23", "tool": "predict", "timestamp": "2026-01-20T15:13:16.488159", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902316_24", "tool": "predict", "timestamp": "2026-01-20T15:15:16.501193", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902398_25", "tool": "predict", "timestamp": "2026-01-20T15:16:38.014400", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902409_26", "tool": "predict", "timestamp": "2026-01-20T15:16:49.319075", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902412_27", "tool": "predict", "timestamp": "2026-01-20T15:16:52.748069", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902414_28", "tool": "predict", "timestamp": "2026-01-20T15:16:54.225459", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "scan_all_1768902432_29", "tool": "scan_all", "timestamp": "2026-01-20T15:17:12.399673", "request": {"symbols": ["AAPL", "GOOGL"], "horizon": "intraday", "min_confidence": 0.0}}
+{"request_id": "scan_all_1768902432_30", "tool": "scan_all", "timestamp": "2026-01-20T15:17:12.566121", "request": {"symbols": ["AAPL", "GOOGL"], "horizon": "intraday", "min_confidence": 0.0}}
+{"request_id": "scan_all_1768902441_31", "tool": "scan_all", "timestamp": "2026-01-20T15:17:21.078094", "request": {"symbols": ["AAPL", "GOOGL"], "horizon": "intraday", "min_confidence": 0.0}}
+{"request_id": "scan_all_1768902441_32", "tool": "scan_all", "timestamp": "2026-01-20T15:17:21.115317", "request": {"symbols": ["AAPL", "GOOGL"], "horizon": "intraday", "min_confidence": 0.0}}
+{"request_id": "predict_1768902518_33", "tool": "predict", "timestamp": "2026-01-20T15:18:38.117112", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902638_34", "tool": "predict", "timestamp": "2026-01-20T15:20:38.026972", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902758_35", "tool": "predict", "timestamp": "2026-01-20T15:22:38.039094", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902919_36", "tool": "predict", "timestamp": "2026-01-20T15:25:19.435185", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902919_37", "tool": "predict", "timestamp": "2026-01-20T15:25:19.484692", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768902998_38", "tool": "predict", "timestamp": "2026-01-20T15:26:38.026659", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903040_39", "tool": "predict", "timestamp": "2026-01-20T15:27:20.283057", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903118_40", "tool": "predict", "timestamp": "2026-01-20T15:28:38.142601", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903160_41", "tool": "predict", "timestamp": "2026-01-20T15:29:20.292359", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903358_42", "tool": "predict", "timestamp": "2026-01-20T15:32:38.022710", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903400_43", "tool": "predict", "timestamp": "2026-01-20T15:33:20.262641", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903478_44", "tool": "predict", "timestamp": "2026-01-20T15:34:38.036506", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903520_45", "tool": "predict", "timestamp": "2026-01-20T15:35:20.411393", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903718_46", "tool": "predict", "timestamp": "2026-01-20T15:38:38.137612", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903816_47", "tool": "predict", "timestamp": "2026-01-20T15:40:16.446304", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768903838_48", "tool": "predict", "timestamp": "2026-01-20T15:40:38.024580", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904056_49", "tool": "predict", "timestamp": "2026-01-20T15:44:16.363733", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904078_50", "tool": "predict", "timestamp": "2026-01-20T15:44:38.020445", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904176_51", "tool": "predict", "timestamp": "2026-01-20T15:46:16.264350", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904318_52", "tool": "predict", "timestamp": "2026-01-20T15:48:38.120175", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904416_53", "tool": "predict", "timestamp": "2026-01-20T15:50:16.269881", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768904438_54", "tool": "predict", "timestamp": "2026-01-20T15:50:38.018327", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768905442_55", "tool": "predict", "timestamp": "2026-01-20T16:07:22.453277", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768905443_56", "tool": "predict", "timestamp": "2026-01-20T16:07:23.524304", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768905638_57", "tool": "predict", "timestamp": "2026-01-20T16:10:38.020381", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768905758_58", "tool": "predict", "timestamp": "2026-01-20T16:12:38.021373", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768905878_59", "tool": "predict", "timestamp": "2026-01-20T16:14:38.021484", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906118_60", "tool": "predict", "timestamp": "2026-01-20T16:18:38.119230", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906127_61", "tool": "predict", "timestamp": "2026-01-20T16:18:47.841073", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906127_62", "tool": "predict", "timestamp": "2026-01-20T16:18:47.962566", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906136_63", "tool": "predict", "timestamp": "2026-01-20T16:18:56.066010", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906136_64", "tool": "predict", "timestamp": "2026-01-20T16:18:56.189274", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906166_65", "tool": "predict", "timestamp": "2026-01-20T16:19:26.218987", "request": {"symbols": ["RELIANCE.NS", "TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906183_66", "tool": "predict", "timestamp": "2026-01-20T16:19:43.613144", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906183_67", "tool": "predict", "timestamp": "2026-01-20T16:19:43.668001", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906195_68", "tool": "predict", "timestamp": "2026-01-20T16:19:55.394785", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906208_69", "tool": "predict", "timestamp": "2026-01-20T16:20:08.127570", "request": {"symbols": ["RELIANCE.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906223_70", "tool": "predict", "timestamp": "2026-01-20T16:20:23.788717", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906304_71", "tool": "predict", "timestamp": "2026-01-20T16:21:44.238777", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906358_72", "tool": "predict", "timestamp": "2026-01-20T16:22:38.024472", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906371_73", "tool": "predict", "timestamp": "2026-01-20T16:22:51.285854", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906371_74", "tool": "predict", "timestamp": "2026-01-20T16:22:51.570641", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906409_75", "tool": "predict", "timestamp": "2026-01-20T16:23:29.929821", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906478_76", "tool": "predict", "timestamp": "2026-01-20T16:24:38.024358", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906491_77", "tool": "predict", "timestamp": "2026-01-20T16:24:51.442327", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906598_78", "tool": "predict", "timestamp": "2026-01-20T16:26:38.025764", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906731_79", "tool": "predict", "timestamp": "2026-01-20T16:28:51.261703", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906838_80", "tool": "predict", "timestamp": "2026-01-20T16:30:38.026109", "request": {"symbols": ["AAPL", "GOOGL", "MSFT"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906861_81", "tool": "predict", "timestamp": "2026-01-20T16:31:01.104408", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768906898_82", "tool": "predict", "timestamp": "2026-01-20T16:31:38.961049", "request": {"symbols": ["RELIANCE.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768907028_83", "tool": "predict", "timestamp": "2026-01-20T16:33:48.668146", "request": {"symbols": ["RELIANCE.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768907042_84", "tool": "predict", "timestamp": "2026-01-20T16:34:02.649451", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768907220_85", "tool": "predict", "timestamp": "2026-01-20T16:37:00.959584", "request": {"symbols": ["RELIANCE.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768907300_86", "tool": "predict", "timestamp": "2026-01-20T16:38:20.381035", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}
+{"request_id": "predict_1768907409_87", "tool": "predict", "timestamp": "2026-01-20T16:40:09.213222", "request": {"symbols": ["TATAMOTORS.NS"], "horizon": "intraday", "risk_profile": null}}

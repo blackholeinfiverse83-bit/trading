@@ -2,25 +2,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ConnectionProvider } from './contexts/ConnectionContext';
+import { HealthProvider } from './contexts/HealthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+// WebSocketProvider disabled: Backend does not support WebSocket/Socket.IO
+// All real-time updates use REST API polling instead
 import { AppRoutes } from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
-import { CommandPalette } from './components/ui/CommandPalette';
-import { ModalContainer } from './components/ui/ModalContainer';
-import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import './App.css';
-
-function AppContent() {
-  useGlobalShortcuts();
-  
-  return (
-    <>
-      <AppRoutes />
-      <CommandPalette />
-      <ModalContainer />
-    </>
-  );
-}
 
 function App() {
   return (
@@ -28,11 +16,14 @@ function App() {
       <BrowserRouter>
         <ThemeProvider>
           <ConnectionProvider>
-            <AuthProvider>
-              <NotificationProvider>
-                <AppContent />
-              </NotificationProvider>
-            </AuthProvider>
+            <HealthProvider>
+              <AuthProvider>
+                {/* WebSocketProvider removed - backend uses REST API only */}
+                <NotificationProvider>
+                  <AppRoutes />
+                </NotificationProvider>
+              </AuthProvider>
+            </HealthProvider>
           </ConnectionProvider>
         </ThemeProvider>
       </BrowserRouter>

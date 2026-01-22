@@ -30,76 +30,13 @@ export interface PredictionItem {
 
 // Analyze Response Type Definition
 export interface AnalyzeResponse {
-  metadata: {
-    symbol: string;
-    horizons: string[];
-    count: number;
-    average_confidence: number;
-    consensus: string;
-    risk_parameters?: {
-      stop_loss_pct?: number;
-      capital_risk_pct?: number;
-      drawdown_limit_pct?: number;
-    };
-    timestamp: string;
-    request_id: string;
-    error?: string;
-  };
+  symbol: string;
   predictions: PredictionItem[];
-  analysis?: {
-    symbol: string;
-    horizons: Array<{
-      horizon: string;
-      action: string;
-      confidence: number;
-      predicted_return: number;
-      predicted_price?: number;
-      current_price?: number;
-      reason?: string;
-      technical_indicators?: {
-        macd?: {
-          signal: 'bullish' | 'bearish' | 'neutral';
-          value?: number;
-        };
-        rsi?: {
-          value: number;
-          signal?: 'overbought' | 'oversold' | 'neutral';
-        };
-        moving_averages?: {
-          trend: 'upward' | 'downward' | 'sideways';
-          sma_20?: number;
-          sma_50?: number;
-        };
-      };
-    }>;
-    risk_analysis?: {
-      stop_loss_price?: number;
-      stop_loss_pct?: number;
-      position_size?: number;
-      capital_risk_pct?: number;
-      max_loss?: number;
-    };
-    summary?: string;
-    warnings?: string[];
+  metadata?: {
+    consensus?: string;
+    average_confidence?: number;
+    horizons?: string[];
+    [key: string]: unknown;
   };
-};
-
-// Holding Type Definition for Portfolio Management
-export interface Holding {
-  symbol: string;
-  shares: number;
-  avgPrice: number;
-  currentPrice: number;
-  value: number;
-}
-
-// Transaction Type Definition for Trade History
-export interface Transaction {
-  id: string;
-  symbol: string;
-  type: 'BUY' | 'SELL';
-  shares: number;
-  price: number;
-  timestamp: string;
-  totalValue: number;
+  error?: string;
 }

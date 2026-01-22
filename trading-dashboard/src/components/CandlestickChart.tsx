@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, ColorType, CrosshairMode } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, Time, LineData } from 'lightweight-charts';
 import { stockAPI } from '../services/api';
-import { getRefreshInterval } from '../utils/marketHours';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -54,8 +53,7 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [drawingsLocked, setDrawingsLocked] = useState(false);
   const [drawingsVisible, setDrawingsVisible] = useState(true);
-  const liveUpdateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentIntervalRef = useRef<number>(getRefreshInterval());
+  const liveUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timeframe options
   const timeframes = [
@@ -236,28 +234,28 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
             
             // Update chart with latest candle if we have a series
             if (candlestickSeriesRef.current && chartRef.current) {
+              const now = Math.floor(Date.now() / 1000) as Time;
               const allData = candlestickSeriesRef.current.data();
               const lastCandle = allData.length > 0 ? allData[allData.length - 1] : null;
               
-              if (lastCandle && 'open' in lastCandle && 'high' in lastCandle && 'low' in lastCandle && 'close' in lastCandle) {
+              if (lastCandle) {
                 // Update last candle with new close price
                 candlestickSeriesRef.current.update({
                   time: lastCandle.time,
-                  open: Number(lastCandle.open),
-                  high: Math.max(Number(lastCandle.high), currentPrice, Number(latest.high || latest.High || currentPrice)),
-                  low: Math.min(Number(lastCandle.low), currentPrice, Number(latest.low || latest.Low || currentPrice)),
+                  open: lastCandle.open,
+                  high: Math.max(lastCandle.high, currentPrice, latest.high || latest.High || currentPrice),
+                  low: Math.min(lastCandle.low, currentPrice, latest.low || latest.Low || currentPrice),
                   close: currentPrice,
                 });
-              } else {
-                // If lastCandle doesn't have required properties, add a new data point instead
-                const newCandle = {
-                  time: Date.now() as Time,
-                  open: currentPrice,
-                  high: currentPrice,
-                  low: currentPrice,
+              } else if (allData.length === 0) {
+                // Create new candle if no data exists
+                candlestickSeriesRef.current.update({
+                  time: now,
+                  open: latest.open || latest.Open || currentPrice,
+                  high: latest.high || latest.High || currentPrice,
+                  low: latest.low || latest.Low || currentPrice,
                   close: currentPrice,
-                };
-                candlestickSeriesRef.current.update(newCandle);
+                });
               }
             }
           }
@@ -495,42 +493,23 @@ const CandlestickChart = ({ symbol, exchange = 'NSE', onClose, onPriceUpdate }: 
     fetchChartData();
   }, [symbol, timeframe]);
 
-  // Start live updates with conditional interval based on market hours
+  // Start live updates (every 1 second)
   useEffect(() => {
     if (!symbol) return;
 
     // Initial fetch
     fetchLivePrice();
 
-    // Set up interval for live updates with market-hour-appropriate interval
-    const initialInterval = getRefreshInterval();
-    currentIntervalRef.current = initialInterval;
+    // Set up interval for live updates
     liveUpdateIntervalRef.current = setInterval(() => {
       fetchLivePrice();
-    }, initialInterval);
-
-    // Set up interval to periodically check if market hours have changed
-    // and adjust the refresh rate accordingly
-    const marketHoursCheckInterval = setInterval(() => {
-      const newInterval = getRefreshInterval();
-      // Only reset interval if it has changed
-      if (newInterval !== currentIntervalRef.current) {
-        if (liveUpdateIntervalRef.current) {
-          clearInterval(liveUpdateIntervalRef.current);
-        }
-        liveUpdateIntervalRef.current = setInterval(() => {
-          fetchLivePrice();
-        }, newInterval);
-        currentIntervalRef.current = newInterval;
-      }
-    }, 60000); // Check every minute if market hours have changed
+    }, 1000); // Update every 1 second
 
     return () => {
       if (liveUpdateIntervalRef.current) {
         clearInterval(liveUpdateIntervalRef.current);
         liveUpdateIntervalRef.current = null;
       }
-      clearInterval(marketHoursCheckInterval);
     };
   }, [symbol, fetchLivePrice]);
 

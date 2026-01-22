@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-10 11:31:29",
+  "timestamp": "2026-01-19 17:59:42",
   "base_url": "http://127.0.0.1:8000",
   "tests": {
     "root": {
@@ -39,21 +39,21 @@
       "success": true,
       "response": {
         "status": "healthy",
-        "timestamp": "2026-01-10T11:31:29.839622",
+        "timestamp": "2026-01-19T17:59:42.596044",
         "system": {
-          "cpu_usage_percent": 47.9,
+          "cpu_usage_percent": 5.7,
           "memory_total_gb": 15.65,
-          "memory_used_gb": 12.36,
-          "memory_available_gb": 3.29,
-          "memory_percent": 79.0,
+          "memory_used_gb": 12.76,
+          "memory_available_gb": 2.89,
+          "memory_percent": 81.5,
           "disk_total_gb": 195.31,
-          "disk_used_gb": 101.32,
-          "disk_free_gb": 94.0,
-          "disk_percent": 51.9
+          "disk_used_gb": 103.57,
+          "disk_free_gb": 91.74,
+          "disk_percent": 53.0
         },
         "models": {
           "available": true,
-          "total_trained": 146
+          "total_trained": 188
         }
       },
       "error": null
@@ -66,33 +66,33 @@
           "count": 1,
           "horizon": "intraday",
           "risk_profile": "high",
-          "timestamp": "2026-01-10T11:31:29.849836",
-          "request_id": "predict_1768024889_22"
+          "timestamp": "2026-01-19T17:59:42.608594",
+          "request_id": "predict_1768825782_743"
         },
         "predictions": [
           {
             "symbol": "AAPL",
             "horizon": "intraday",
-            "action": "LONG",
-            "confidence": 0.6492,
-            "expected_return": 3.8243,
-            "predicted_return": 3.8243,
+            "action": "SHORT",
+            "confidence": 0.4113,
+            "expected_return": -3.9989,
+            "predicted_return": -3.9989,
             "current_price": 271.86,
-            "predicted_price": 282.26,
-            "score": 0.8975,
-            "reason": "Price pattern suggests long opportunity with MACD showing momentum",
+            "predicted_price": 260.99,
+            "score": 0.5757,
+            "reason": "Trend analysis with Bollinger Bands suggests short signal",
             "risk_analysis": {
-              "volatility": 2.6328,
-              "max_drawdown": 7.2042,
-              "sharpe_ratio": 1.0789
+              "volatility": 3.981,
+              "max_drawdown": 9.6313,
+              "sharpe_ratio": 0.5889
             },
             "horizon_details": {
               "days": 1,
               "description": "Same day / Next day"
             },
-            "has_overfitting_risk": false,
-            "data_quality": "limited",
-            "timestamp": "2026-01-10T11:31:29.848228"
+            "has_overfitting_risk": true,
+            "data_quality": "sufficient",
+            "timestamp": "2026-01-19T17:59:42.606984"
           }
         ]
       },
@@ -108,107 +108,107 @@
           "shortlist_count": 2,
           "horizon": "intraday",
           "min_confidence": 0.3,
-          "timestamp": "2026-01-10T11:31:29.876113",
-          "request_id": "scan_all_1768024889_23"
+          "timestamp": "2026-01-19T17:59:42.626829",
+          "request_id": "scan_all_1768825782_744"
         },
         "shortlist": [
-          {
-            "symbol": "AAPL",
-            "horizon": "intraday",
-            "action": "LONG",
-            "confidence": 0.7511,
-            "expected_return": 4.4611,
-            "predicted_return": 4.4611,
-            "current_price": 271.86,
-            "predicted_price": 283.99,
-            "score": 1.0862,
-            "reason": "Volume and volatility patterns support long recommendation",
-            "risk_analysis": {
-              "volatility": 2.248,
-              "max_drawdown": 8.1635,
-              "sharpe_ratio": 1.7368
-            },
-            "horizon_details": {
-              "days": 1,
-              "description": "Same day / Next day"
-            },
-            "has_overfitting_risk": true,
-            "data_quality": "limited",
-            "timestamp": "2026-01-10T11:31:29.861363"
-          },
           {
             "symbol": "GOOGL",
             "horizon": "intraday",
             "action": "SHORT",
-            "confidence": 0.6292,
-            "expected_return": -4.8525,
-            "predicted_return": -4.8525,
+            "confidence": 0.8089,
+            "expected_return": -2.7105,
+            "predicted_return": -2.7105,
             "current_price": 313.0,
-            "predicted_price": 297.81,
-            "score": 0.9346,
-            "reason": "Trend analysis with Bollinger Bands suggests short signal",
+            "predicted_price": 304.52,
+            "score": 1.0282,
+            "reason": "Moving averages alignment indicates short position is favorable",
             "risk_analysis": {
-              "volatility": 3.6614,
-              "max_drawdown": 2.8359,
-              "sharpe_ratio": 0.99
+              "volatility": 3.6107,
+              "max_drawdown": 9.8107,
+              "sharpe_ratio": 1.9584
             },
             "horizon_details": {
               "days": 1,
               "description": "Same day / Next day"
             },
-            "has_overfitting_risk": true,
+            "has_overfitting_risk": false,
             "data_quality": "sufficient",
-            "timestamp": "2026-01-10T11:31:29.869758"
+            "timestamp": "2026-01-19T17:59:42.624986"
+          },
+          {
+            "symbol": "AAPL",
+            "horizon": "intraday",
+            "action": "HOLD",
+            "confidence": 0.856,
+            "expected_return": -0.2765,
+            "predicted_return": -0.2765,
+            "current_price": 271.86,
+            "predicted_price": 271.11,
+            "score": 0.8797,
+            "reason": "Moving averages alignment indicates hold position is favorable",
+            "risk_analysis": {
+              "volatility": 1.7984,
+              "max_drawdown": 3.2949,
+              "sharpe_ratio": 1.9456
+            },
+            "horizon_details": {
+              "days": 1,
+              "description": "Same day / Next day"
+            },
+            "has_overfitting_risk": false,
+            "data_quality": "limited",
+            "timestamp": "2026-01-19T17:59:42.616201"
           }
         ],
         "all_predictions": [
           {
             "symbol": "AAPL",
             "horizon": "intraday",
-            "action": "LONG",
-            "confidence": 0.7511,
-            "expected_return": 4.4611,
-            "predicted_return": 4.4611,
+            "action": "HOLD",
+            "confidence": 0.856,
+            "expected_return": -0.2765,
+            "predicted_return": -0.2765,
             "current_price": 271.86,
-            "predicted_price": 283.99,
-            "score": 1.0862,
-            "reason": "Volume and volatility patterns support long recommendation",
+            "predicted_price": 271.11,
+            "score": 0.8797,
+            "reason": "Moving averages alignment indicates hold position is favorable",
             "risk_analysis": {
-              "volatility": 2.248,
-              "max_drawdown": 8.1635,
-              "sharpe_ratio": 1.7368
+              "volatility": 1.7984,
+              "max_drawdown": 3.2949,
+              "sharpe_ratio": 1.9456
             },
             "horizon_details": {
               "days": 1,
               "description": "Same day / Next day"
             },
-            "has_overfitting_risk": true,
+            "has_overfitting_risk": false,
             "data_quality": "limited",
-            "timestamp": "2026-01-10T11:31:29.861363"
+            "timestamp": "2026-01-19T17:59:42.616201"
           },
           {
             "symbol": "GOOGL",
             "horizon": "intraday",
             "action": "SHORT",
-            "confidence": 0.6292,
-            "expected_return": -4.8525,
-            "predicted_return": -4.8525,
+            "confidence": 0.8089,
+            "expected_return": -2.7105,
+            "predicted_return": -2.7105,
             "current_price": 313.0,
-            "predicted_price": 297.81,
-            "score": 0.9346,
-            "reason": "Trend analysis with Bollinger Bands suggests short signal",
+            "predicted_price": 304.52,
+            "score": 1.0282,
+            "reason": "Moving averages alignment indicates short position is favorable",
             "risk_analysis": {
-              "volatility": 3.6614,
-              "max_drawdown": 2.8359,
-              "sharpe_ratio": 0.99
+              "volatility": 3.6107,
+              "max_drawdown": 9.8107,
+              "sharpe_ratio": 1.9584
             },
             "horizon_details": {
               "days": 1,
               "description": "Same day / Next day"
             },
-            "has_overfitting_risk": true,
+            "has_overfitting_risk": false,
             "data_quality": "sufficient",
-            "timestamp": "2026-01-10T11:31:29.869758"
+            "timestamp": "2026-01-19T17:59:42.624986"
           }
         ]
       },
@@ -224,40 +224,40 @@
             "intraday"
           ],
           "count": 1,
-          "average_confidence": 0.715,
+          "average_confidence": 0.6985,
           "consensus": "Strong HOLD - All horizons agree",
           "risk_parameters": {
             "stop_loss_pct": 2.0,
             "capital_risk_pct": 1.0,
             "drawdown_limit_pct": 5.0
           },
-          "timestamp": "2026-01-10T11:31:29.889252",
-          "request_id": "analyze_1768024889_24"
+          "timestamp": "2026-01-19T17:59:42.640073",
+          "request_id": "analyze_1768825782_745"
         },
         "predictions": [
           {
             "symbol": "AAPL",
             "horizon": "intraday",
             "action": "HOLD",
-            "confidence": 0.715,
-            "expected_return": -0.5393,
-            "predicted_return": -0.5393,
+            "confidence": 0.6985,
+            "expected_return": -0.6066,
+            "predicted_return": -0.6066,
             "current_price": 271.86,
-            "predicted_price": 270.39,
-            "score": 0.7536,
+            "predicted_price": 270.21,
+            "score": 0.7408,
             "reason": "Volume and volatility patterns support hold recommendation",
             "risk_analysis": {
-              "volatility": 1.0379,
-              "max_drawdown": 7.996,
-              "sharpe_ratio": 1.8502
+              "volatility": 2.3447,
+              "max_drawdown": 8.9897,
+              "sharpe_ratio": 0.8618
             },
             "horizon_details": {
               "days": 1,
               "description": "Same day / Next day"
             },
             "has_overfitting_risk": true,
-            "data_quality": "sufficient",
-            "timestamp": "2026-01-10T11:31:29.886271"
+            "data_quality": "limited",
+            "timestamp": "2026-01-19T17:59:42.637757"
           }
         ]
       },
@@ -275,8 +275,8 @@
           "period": "1d",
           "include_features": false,
           "force_refresh": false,
-          "timestamp": "2026-01-10T11:31:29.900380",
-          "request_id": "fetch_data_1768024889_25"
+          "timestamp": "2026-01-19T17:59:42.731842",
+          "request_id": "fetch_data_1768825782_746"
         },
         "results": [
           {
@@ -295,14 +295,34 @@
       "error": null
     },
     "feedback": {
-      "status_code": 400,
-      "success": false,
+      "status_code": 200,
+      "success": true,
       "response": {
-        "detail": {
-          "error": "string indices must be integers, not 'str'",
-          "validation_warning": null,
-          "suggested_feedback": null
-        }
+        "status": "success",
+        "message": "Feedback recorded for AAPL",
+        "feedback_entry": {
+          "symbol": "AAPL",
+          "predicted_action": "LONG",
+          "user_feedback": "correct",
+          "actual_return": 1.5,
+          "timestamp": "2026-01-19T17:59:42.749207"
+        },
+        "validation": null,
+        "statistics": {
+          "total_feedback_count": 7,
+          "symbol_feedback_count": 7,
+          "correct": 5,
+          "incorrect": 2,
+          "accuracy": 71.43
+        },
+        "next_steps": {
+          "message": "Feedback saved to memory",
+          "suggestion": "Use /tools/train_rl with force_retrain=true to fine-tune the model with this feedback"
+        },
+        "timestamp": "2026-01-19T17:59:42.749340",
+        "request_id": "feedback_1768825782_747",
+        "original_feedback_text": "correct",
+        "original_action": "LONG"
       },
       "error": null
     },
@@ -315,7 +335,7 @@
         "model_path": "models\\AAPL_intraday_dqn_agent.pt",
         "symbol": "AAPL",
         "horizon": "intraday",
-        "timestamp": "2026-01-10T11:31:29.924801"
+        "timestamp": "2026-01-19T17:59:42.758039"
       },
       "error": null
     },
@@ -324,12 +344,12 @@
       "success": true,
       "response": {
         "client_ip": "127.0.0.1",
-        "requests_last_minute": 7,
-        "requests_last_hour": 27,
+        "requests_last_minute": 9,
+        "requests_last_hour": 189,
         "limit_per_minute": 500,
         "limit_per_hour": 10000,
-        "remaining_minute": 493,
-        "remaining_hour": 9973
+        "remaining_minute": 491,
+        "remaining_hour": 9811
       },
       "error": null
     }

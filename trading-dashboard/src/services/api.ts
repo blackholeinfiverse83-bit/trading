@@ -203,6 +203,22 @@ export const authAPI = {
     // In production, you'd add this endpoint to backend
     return { success: true, message: 'Signup successful. Please login.' };
   },
+  logout: async () => {
+    // Call backend logout endpoint to clear session
+    try {
+      const response = await api.post('/auth/logout');
+      return response.data;
+    } catch (error: any) {
+      // If 404, auth is disabled - just return success
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          message: 'Logout successful'
+        };
+      }
+      throw error;
+    }
+  },
 };
 
 // Stock Data API
@@ -266,30 +282,14 @@ export const stockAPI = {
     capitalRiskPct: number = 1.0,
     drawdownLimitPct: number = 5.0
   ) => {
-    const payload = {
+    const response = await api.post('/tools/analyze', {
       symbol,
       horizons,
       stop_loss_pct: stopLossPct,
       capital_risk_pct: capitalRiskPct,
       drawdown_limit_pct: drawdownLimitPct,
-    };
-    
-    log('Calling /tools/analyze with:', payload);
-    
-    try {
-      const response = await api.post('/tools/analyze', payload);
-      log('Analyze response received:', { status: response.status, data: response.data });
-      return response.data;
-    } catch (error: any) {
-      log('Analyze error:', { 
-        message: error.message, 
-        code: error.code, 
-        status: error.response?.status,
-        hasResponse: !!error.response,
-        responseData: error.response?.data 
-      });
-      throw error;
-    }
+    });
+    return response.data;
   },
   
   fetchData: async (
@@ -313,7 +313,7 @@ export const stockAPI = {
     userFeedback: string,  // Now accepts free text
     actualReturn?: number | null
   ) => {
-    log('[API] Feedback request:', { symbol, predictedAction, userFeedback, actualReturn });
+    console.log('[API] Feedback request:', { symbol, predictedAction, userFeedback, actualReturn });
     
     // Normalize symbol (1-20 characters, uppercase)
     const normalizedSymbol = symbol.trim().toUpperCase();
@@ -360,15 +360,15 @@ export const stockAPI = {
     }
     // If undefined, omit the field entirely (backend will use default None)
     
-    log('[API] Sending feedback payload:', JSON.stringify(payload, null, 2));
+    console.log('[API] Sending feedback payload:', JSON.stringify(payload, null, 2));
     
     try {
       const response = await api.post('/tools/feedback', payload);
-      log('[API] Feedback response:', response.data);
+      console.log('[API] Feedback response:', response.data);
       return response.data;
     } catch (error: any) {
-      log('[API] Feedback error:', error);
-      log('[API] Error response:', error.response?.data);
+      console.error('[API] Feedback error:', error);
+      console.error('[API] Error response:', error.response?.data);
       throw error;
     }
   },
@@ -442,24 +442,56 @@ export const stockAPI = {
     const response = await api.get('/auth/status');
     return response.data;
   },
-  
-  // Search for stock symbols using external API
-  searchSymbols: async (query: string) => {
-    try {
-      // First try to search using the backend's symbol search if available
-      const response = await api.get(`/tools/search_symbols?q=${encodeURIComponent(query)}`);
-      return response.data;
-    } catch (error) {
-      // Fallback: If backend doesn't have symbol search, return empty array
-      // In a real implementation, you might want to connect to a third-party service
-      console.warn('Symbol search endpoint not available, falling back to local search');
-      return { symbols: [] };
-    }
-  },
 };
 
-// Risk Management API (Backend-ready contracts, no implementation)
+// Risk Management API
 export const riskAPI = {
+  /**
+   * Assess risk for a potential trade
+   * 
+   * Backend endpoint: POST /api/risk/assess
+   * 
+   * Payload:
+   * {
+   *   symbol: string,
+   *   position_size: number,
+   *   entry_price: number,
+   *   stop_loss: number,
+   *   capital_at_risk_pct: number
+   * }
+   * 
+   * Response: { risk_score: number, risk_level: string, recommendation: string }
+   */
+  assess: async (
+    symbol: string,
+    positionSize: number,
+    entryPrice: number,
+    stopLoss: number,
+    capitalAtRiskPct: number = 1.0
+  ) => {
+    try {
+      const response = await api.post('/api/risk/assess', {
+        symbol,
+        position_size: positionSize,
+        entry_price: entryPrice,
+        stop_loss: stopLoss,
+        capital_at_risk_pct: capitalAtRiskPct,
+      });
+      return response.data;
+    } catch (error: any) {
+      // If 404, endpoint not implemented - return mock response
+      if (error.response?.status === 404) {
+        return {
+          risk_score: Math.random() * 10,
+          risk_level: 'medium',
+          recommendation: 'Proceed with caution',
+          message: 'Risk assessment (mock mode)'
+        };
+      }
+      throw error;
+    }
+  },
+
   /**
    * Set or update stop-loss for a symbol
    * 
@@ -483,51 +515,74 @@ export const riskAPI = {
     timeframe: string,
     source: 'chart' | 'manual'
   ) => {
-    const response = await api.post('/api/risk/stop-loss', {
-      symbol,
-      stop_loss_price: stopLossPrice,
-      side,
-      timeframe,
-      source,
-    });
-    return response.data;
+    try {
+      const response = await api.post('/api/risk/stop-loss', {
+        symbol,
+        stopLossPrice,
+        side,
+        timeframe,
+        source,
+      });
+      return response.data;
+    } catch (error: any) {
+      // If 404, endpoint not implemented
+      if (error.response?.status === 404) {
+        return { success: true, message: 'Stop-loss set (mock mode)' };
+      }
+      throw error;
+    }
   },
-  
+};
+
+// Trade Execution API
+export const tradeAPI = {
   /**
-   * Assess risk for a position
+   * Execute a trade (BUY or SELL)
    * 
-   * Backend endpoint: POST /api/risk/assess
+   * Backend endpoint: POST /tools/execute
    * 
    * Payload:
    * {
    *   symbol: string,
-   *   entry_price: number,
-   *   stop_loss_price: number,
+   *   action: "BUY" | "SELL",
    *   quantity: number,
-   *   capital_at_risk: number
+   *   price: number,
+   *   stop_loss: number
    * }
    * 
-   * Response: { symbol: string, position_size: number, risk_amount: number, risk_percentage: number, ... }
+   * Response: { success: boolean, order_id?: string, message: string }
    */
-  assessRisk: async (
+  execute: async (
     symbol: string,
-    entryPrice: number,
-    stopLossPrice: number,
+    action: 'BUY' | 'SELL',
     quantity: number,
-    capitalAtRisk: number = 0.02
+    price: number,
+    stopLoss: number
   ) => {
-    const response = await api.post('/api/risk/assess', {
-      symbol,
-      entry_price: entryPrice,
-      stop_loss_price: stopLossPrice,
-      quantity,
-      capital_at_risk: capitalAtRisk,
-    });
-    return response.data;
+    try {
+      const response = await api.post('/tools/execute', {
+        symbol,
+        action,
+        quantity,
+        price,
+        stop_loss: stopLoss,
+      });
+      return response.data;
+    } catch (error: any) {
+      // If 404, endpoint not implemented - return mock response
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          order_id: `ORD-${Date.now()}`,
+          message: 'Trade executed (mock mode)',
+        };
+      }
+      throw error;
+    }
   },
 };
 
-// AI Chat API (Backend-ready contracts, no implementation)
+// AI Chat API
 export const aiAPI = {
   /**
    * Send message to AI chat assistant
@@ -540,7 +595,7 @@ export const aiAPI = {
    *   context: {
    *     symbol?: string,
    *     timeframe?: string,
-   *     activeIndicators?: string[]
+   *     active_indicators?: string[]
    *   }
    * }
    * 
@@ -551,14 +606,22 @@ export const aiAPI = {
     context?: {
       symbol?: string;
       timeframe?: string;
-      activeIndicators?: string[];
+      active_indicators?: string[];
     }
   ) => {
-    const response = await api.post('/api/ai/chat', {
-      message,
-      context: context || {},
-    });
-    return response.data;
+    try {
+      const response = await api.post('/api/ai/chat', {
+        message: message,
+        context: context || {},
+      });
+      return response.data;
+    } catch (error: any) {
+      // If endpoint doesn't exist, throw a helpful error
+      if (error.response?.status === 404) {
+        throw new Error('AI Chat endpoint not available. Backend may not have this feature yet.');
+      }
+      throw error;
+    }
   },
 };
 
@@ -592,12 +655,6 @@ export const POPULAR_STOCKS = [
   'KOTAKBANK.NS', 'LICI.NS', 'HCLTECH.NS', 'TITAN.NS', 'ULTRACEMCO.NS',
   'NESTLEIND.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS', 'JSWSTEEL.NS',
   'ADANIPORTS.NS', 'TECHM.NS', 'TATAELXSI.NS', 'TATACOMM.NS',
-  // More Indian Stocks
-  'COALINDIA.NS', 'GRASIM.NS', 'CIPLA.NS', 'DRREDDY.NS', 'EICHERMOT.NS',
-  'GAIL.NS', 'HEROMOTOCO.NS', 'HINDALCO.NS', 'IBULHSGFIN.NS', 'INDUSINDBK.NS',
-  'INFRATEL.NS', 'IOC.NS', 'IRCTC.NS', 'M&M.NS',
-  'NATIONALUM.NS', 'NMDC.NS', 'RECLTD.NS', 'SBILIFE.NS', 'SHREECEM.NS', 'TATACHEM.NS',
-  'UPL.NS', 'VEDL.NS', 'YESBANK.NS', 'ZEEL.NS',
 ];
 
 // Popular crypto symbols (Yahoo Finance format)

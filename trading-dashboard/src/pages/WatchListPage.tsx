@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Star, Plus, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { stockAPI, POPULAR_STOCKS } from '../services/api';
-import { convertUSDToINR, formatINR } from '../utils/currency';
-import { useTheme } from '../contexts/ThemeContext';
 
 const WatchListPage = () => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('watchlist');
     return saved ? JSON.parse(saved) : []; // No mock data - empty by default
@@ -110,11 +106,11 @@ const WatchListPage = () => {
     <Layout>
       <div className="space-y-4">
         <div>
-          <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} mb-1`}>Watch List</h1>
-          <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs`}>Monitor your favorite stocks</p>
+          <h1 className="text-xl font-bold text-white mb-1">Watch List</h1>
+          <p className="text-gray-400 text-xs">Monitor your favorite stocks</p>
         </div>
 
-        <div className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-3`}>
+        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
           <div className="flex items-center gap-2 mb-3">
             <div className="relative flex-1">
               <input
@@ -123,7 +119,7 @@ const WatchListPage = () => {
                 onChange={(e) => handleSymbolInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSelectSuggestion(newSymbol)}
                 placeholder="e.g., AAPL, TCS.NS"
-                className={`w-full px-3 py-1.5 text-sm ${isLight ? 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500' : 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'} border rounded focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                className="w-full px-3 py-1.5 text-sm bg-slate-700 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               
               {/* Suggestions Dropdown */}
@@ -152,7 +148,7 @@ const WatchListPage = () => {
           </div>
 
           <div className="mb-4">
-            <p className={`${isLight ? 'text-gray-700' : 'text-gray-300'} mb-2 text-sm`}>Quick Add:</p>
+            <p className="text-gray-300 mb-2 text-sm">Quick Add:</p>
             <div className="flex flex-wrap gap-2">
               {POPULAR_STOCKS.slice(0, 10).map((symbol) => (
                 <button
@@ -165,8 +161,8 @@ const WatchListPage = () => {
                   disabled={watchlist.includes(symbol)}
                   className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                     watchlist.includes(symbol)
-                      ? (isLight ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-slate-600 text-gray-400 cursor-not-allowed')
-                      : (isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-700 text-gray-300 hover:bg-slate-600')
+                      ? 'bg-slate-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
                   }`}
                 >
                   {symbol}
@@ -177,34 +173,34 @@ const WatchListPage = () => {
         </div>
 
         {loading ? (
-          <div className={`text-center py-8 ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>Loading...</div>
+          <div className="text-center py-8 text-gray-400">Loading...</div>
         ) : predictions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {predictions.map((pred, index) => {
               const symbol = watchlist[index];
               return (
-                <div key={symbol} className={`${isLight ? 'bg-white/50 border border-gray-200/50' : 'bg-slate-800/50 border border-slate-700/50'} rounded-lg p-6`}>
+                <div key={symbol} className="bg-slate-800 rounded-lg p-6 border border-slate-700">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                      <h3 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{symbol}</h3>
+                      <h3 className="text-xl font-bold text-white">{symbol}</h3>
                     </div>
                     <button
                       onClick={() => removeFromWatchlist(symbol)}
-                      className={`p-1 ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-700'} rounded transition-colors`}
+                      className="p-1 hover:bg-slate-700 rounded transition-colors"
                     >
-                      <X className={`w-4 h-4 ${isLight ? 'text-gray-500' : 'text-gray-400'}`} />
+                      <X className="w-4 h-4 text-gray-400" />
                     </button>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className={isLight ? 'text-gray-600' : 'text-gray-400'}>Price</span>
-                      <span className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold`}>
-                        {formatINR(convertUSDToINR(pred.predicted_price || pred.current_price || 0))}
+                      <span className="text-gray-400">Price</span>
+                      <span className="text-white font-semibold">
+                        ${pred.predicted_price?.toFixed(2) || pred.current_price?.toFixed(2) || 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className={isLight ? 'text-gray-600' : 'text-gray-400'}>Action</span>
+                      <span className="text-gray-400">Action</span>
                       <div className="flex items-center space-x-2">
                         {(pred.action === 'LONG' || pred.action === 'BUY') ? (
                           <TrendingUp className="w-4 h-4 text-green-400" />
@@ -225,14 +221,14 @@ const WatchListPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className={isLight ? 'text-gray-600' : 'text-gray-400'}>Confidence</span>
-                      <span className={`${isLight ? 'text-gray-900' : 'text-white'} font-semibold`}>
+                      <span className="text-gray-400">Confidence</span>
+                      <span className="text-white font-semibold">
                         {((pred.confidence || 0) * 100).toFixed(1)}%
                       </span>
                     </div>
                     {pred.predicted_return !== undefined && (
                       <div className="flex items-center justify-between">
-                        <span className={isLight ? 'text-gray-600' : 'text-gray-400'}>Return</span>
+                        <span className="text-gray-400">Return</span>
                         <span className={`font-semibold ${pred.predicted_return > 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {pred.predicted_return > 0 ? '+' : ''}{pred.predicted_return.toFixed(2)}%
                         </span>
@@ -244,7 +240,7 @@ const WatchListPage = () => {
             })}
           </div>
         ) : (
-          <div className={`text-center py-8 ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>No stocks in watchlist</div>
+          <div className="text-center py-8 text-gray-400">No stocks in watchlist</div>
         )}
       </div>
     </Layout>

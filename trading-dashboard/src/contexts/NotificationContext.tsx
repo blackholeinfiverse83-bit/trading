@@ -96,3 +96,20 @@ export const useNotifications = () => {
   return context;
 };
 
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotification must be used within NotificationProvider');
+  }
+  
+  return {
+    showNotification: (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
+      context.addNotification({
+        type,
+        title,
+        message,
+      });
+    },
+  };
+};
+

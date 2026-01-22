@@ -1,82 +1,69 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+/**
+ * Keyboard shortcuts utility
+ */
 
-interface KeyboardShortcuts {
-  onQuickPredict?: () => void;
-  onQuickScan?: () => void;
-  onFocusSearch?: () => void;
+export interface KeyboardShortcut {
+  key: string;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+  action: () => void;
+  description: string;
 }
 
-export const useKeyboardShortcuts = ({
-  onQuickPredict,
-  onQuickScan,
-  onFocusSearch
-}: KeyboardShortcuts = {}) => {
-  const navigate = useNavigate();
+const shortcuts: KeyboardShortcut[] = [];
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
-      ) {
+export const registerShortcut = (shortcut: KeyboardShortcut): (() => void) => {
+  shortcuts.push(shortcut);
+  
+  const handler = (e: KeyboardEvent) => {
+    if (
+      (shortcut.ctrlKey === undefined || e.ctrlKey === shortcut.ctrlKey) &&
+      (shortcut.shiftKey === undefined || e.shiftKey === shortcut.shiftKey) &&
+      (shortcut.altKey === undefined || e.altKey === shortcut.altKey) &&
+      e.key.toLowerCase() === shortcut.key.toLowerCase()
+    ) {
+      // Don't trigger if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
+      
+      e.preventDefault();
+      shortcut.action();
+    }
+  };
 
-      if (event.ctrlKey || event.metaKey) {
-        switch (event.key.toLowerCase()) {
-          case 'p':
-            event.preventDefault();
-            if (onQuickPredict) {
-              onQuickPredict();
-            } else {
-              navigate('/dashboard');
-            }
-            break;
-          case 's':
-            event.preventDefault();
-            if (onQuickScan) {
-              onQuickScan();
-            } else {
-              navigate('/market-scan');
-            }
-            break;
-          case 'k':
-            event.preventDefault();
-            if (onFocusSearch) {
-              onFocusSearch();
-            } else {
-              const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
-              if (searchInput) {
-                searchInput.focus();
-              }
-            }
-            break;
-        }
-      }
-
-      switch (event.key) {
-        case '/':
-          event.preventDefault();
-          if (onFocusSearch) {
-            onFocusSearch();
-          } else {
-            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
-            if (searchInput) {
-              searchInput.focus();
-            }
-          }
-          break;
-        case 'Escape':
-          if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-          }
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, onQuickPredict, onQuickScan, onFocusSearch]);
+  document.addEventListener('keydown', handler);
+  
+  // Return cleanup function
+  return () => {
+    document.removeEventListener('keydown', handler);
+    const index = shortcuts.indexOf(shortcut);
+    if (index > -1) {
+      shortcuts.splice(index, 1);
+    }
+  };
 };
+
+// Common shortcuts
+export const commonShortcuts = {
+  refresh: (action: () => void) => registerShortcut({
+    key: 'r',
+    ctrlKey: true,
+    action,
+    description: 'Refresh data',
+  }),
+  search: (action: () => void) => registerShortcut({
+    key: 'k',
+    ctrlKey: true,
+    action,
+    description: 'Focus search',
+  }),
+  close: (action: () => void) => registerShortcut({
+    key: 'Escape',
+    action,
+    description: 'Close modal/dialog',
+  }),
+};
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { useNavigate } from 'react-router-dom';
@@ -6,9 +6,6 @@ import { AssetTypeProvider, useAssetType } from '../contexts/AssetTypeContext';
 import { useTheme } from '../contexts/ThemeContext';
 import UniGuruBackground from './UniGuruBackground';
 import FloatingAIButton from './FloatingAIButton';
-import QuickActions from './QuickActions';
-import ToastContainer, { Toast } from './ToastContainer';
-import { useKeyboardShortcuts } from '../utils/keyboardShortcuts';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,8 +15,8 @@ const LayoutContent = ({ children }: LayoutProps) => {
   const { assetType, setAssetType } = useAssetType();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [, forceUpdate] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Close sidebar when route changes on mobile
   useEffect(() => {
@@ -30,6 +27,15 @@ const LayoutContent = ({ children }: LayoutProps) => {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Listen for theme changes to force re-render
+  useEffect(() => {
+    const handleThemeChange = () => {
+      forceUpdate({});
+    };
+    window.addEventListener('themechange', handleThemeChange);
+    return () => window.removeEventListener('themechange', handleThemeChange);
   }, []);
 
   const handleSearch = (query: string) => {
@@ -45,105 +51,32 @@ const LayoutContent = ({ children }: LayoutProps) => {
     }
   };
 
-  const addToast = (toast: Omit<Toast, 'id'>) => {
-    const id = Date.now().toString();
-    setToasts(prev => [...prev, { ...toast, id }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
-  const handleQuickPredict = () => {
-    navigate('/dashboard');
-    addToast({
-      type: 'info',
-      title: 'Quick Predict',
-      message: 'Navigate to dashboard to make predictions'
-    });
-  };
-
-  const handleQuickScan = () => {
-    navigate('/market-scan');
-    addToast({
-      type: 'info',
-      title: 'Market Scanner',
-      message: 'Opening market scanner'
-    });
-  };
-
-  const handleQuickSearch = () => {
-    // Focus on search input in navbar
-    const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
-    if (searchInput) {
-      searchInput.focus();
-    }
-  };
-
-  // Enable keyboard shortcuts
-  useKeyboardShortcuts({
-    onQuickPredict: handleQuickPredict,
-    onQuickScan: handleQuickScan,
-    onFocusSearch: handleQuickSearch
-  });
-
   return (
     <div 
-      className={`flex h-screen relative overflow-hidden ${
-        theme === 'light' ? 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50' : 
-        theme === 'space' ? 'bg-gradient-to-br from-black via-slate-900 to-black' :
-        'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+      key={theme} // Force re-render when theme changes
+      className={`flex h-screen relative ${
+        theme === 'light' ? 'bg-gray-100' : 
+        theme === 'space' ? 'bg-[#1b0725]' : // Deep purple-black matching Space theme
+        'bg-slate-900'
       }`}
+      style={theme === 'space' ? { backgroundColor: '#1b0725' } : undefined}
     >
-      {theme === 'space' && <UniGuruBackground />}
-      
-      {/* Smart Sidebar with Backdrop */}
-      <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${
-        sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-      }`}>
-        <div 
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      </div>
-      
+      {theme === 'space' && <UniGuruBackground key="uniguru-bg" />}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Smart Navbar */}
-        <div className="sticky top-0 z-30">
-          <Navbar 
-            onSearch={handleSearch} 
-            activeTab={assetType} 
-            onTabChange={handleTabChange}
-            onMenuClick={() => setSidebarOpen(true)}
-          />
-        </div>
-        
-        {/* Content Container with Smart Scrolling */}
-        <main className={`flex-1 overflow-y-auto custom-scrollbar relative ${
-          theme === 'light' ? 'bg-white/30' : 
-          theme === 'space' ? 'bg-black/20' : 'bg-slate-800/30'
-        } backdrop-blur-sm`}>
-          <div className="container mx-auto px-4 py-1 max-w-none min-h-full">
-            <div className="animate-fadeIn h-full">
-              {children}
-            </div>
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-0">
+        <Navbar 
+          onSearch={handleSearch} 
+          activeTab={assetType} 
+          onTabChange={handleTabChange}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+        <main className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6 relative z-10 w-full max-w-full overflow-x-hidden" style={{ paddingTop: '0' }}>
+          <div className="w-full max-w-7xl mx-auto">
+            {children}
           </div>
         </main>
-        
-        {/* Smart Floating Elements */}
         <FloatingAIButton />
-        <QuickActions 
-          onPredict={handleQuickPredict}
-          onScan={handleQuickScan}
-          onSearch={handleQuickSearch}
-        />
       </div>
-      
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };
