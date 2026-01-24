@@ -5,6 +5,7 @@ import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
 import { riskAPI, tradeAPI } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatUSDToINR } from '../utils/currencyConverter';
+import { Holding } from '../types';
 
 const PortfolioPage = () => {
   const { showNotification } = useNotification();

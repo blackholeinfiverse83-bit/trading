@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const TierSelector: React.FC = () => {
-  const activeTier = 'SEED';
+interface TierSelectorProps {
+  onTierChange?: (tier: 'SEED' | 'TREE' | 'SKY') => void;
+}
+
+const TierSelector: React.FC<TierSelectorProps> = ({ onTierChange }) => {
+  const [activeTier, setActiveTier] = useState<'SEED' | 'TREE' | 'SKY'>('SEED');
+
+  const handleTierChange = (tier: 'SEED' | 'TREE' | 'SKY') => {
+    setActiveTier(tier);
+    if (onTierChange) {
+      onTierChange(tier);
+    }
+  };
 
   return (
     <div className="flex gap-2 p-2 bg-gray-800 rounded-lg">
       <button
-        onClick={() => setActiveTier('SEED')}
+        onClick={() => handleTierChange('SEED')}
         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           activeTier === 'SEED'
             ? 'bg-blue-600 text-white'
@@ -16,7 +27,7 @@ const TierSelector: React.FC = () => {
         SEED
       </button>
       <button
-        onClick={() => setActiveTier('TREE')}
+        onClick={() => handleTierChange('TREE')}
         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           activeTier === 'TREE'
             ? 'bg-blue-600 text-white'
@@ -26,7 +37,7 @@ const TierSelector: React.FC = () => {
         TREE
       </button>
       <button
-        onClick={() => setActiveTier('SKY')}
+        onClick={() => handleTierChange('SKY')}
         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           activeTier === 'SKY'
             ? 'bg-blue-600 text-white'

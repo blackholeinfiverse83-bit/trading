@@ -19,11 +19,11 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  // Removed showThemeMenu state since we're now using a cycling button
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const themeMenuRef = useRef<HTMLDivElement>(null);
+  // Removed themeMenuRef since we're not using dropdown anymore
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Get appropriate symbol list based on active tab
@@ -81,25 +81,7 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
     }
   };
 
-  // Close theme menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (themeMenuRef.current && !themeMenuRef.current.contains(event.target as Node)) {
-        setShowThemeMenu(false);
-      }
-    };
-
-    if (showThemeMenu) {
-      // Use setTimeout to avoid immediate closure
-      const timer = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-      }, 10);
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [showThemeMenu]);
+  // Removed the effect that handles clicks outside theme menu since we're not using dropdown
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -117,17 +99,20 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
     }
   }, [showSuggestions]);
 
-  // Handle theme change
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'space') => {
+  // Cycle through themes
+  const cycleTheme = () => {
     try {
-      console.log('Changing theme to:', newTheme);
+      const themes: Array<'light' | 'dark' | 'space'> = ['light', 'dark', 'space'];
+      const currentIndex = themes.indexOf(theme);
+      const nextIndex = (currentIndex + 1) % themes.length;
+      const nextTheme = themes[nextIndex];
+      
+      console.log('Changing theme to:', nextTheme);
       if (setTheme && typeof setTheme === 'function') {
-        setTheme(newTheme);
+        setTheme(nextTheme);
       }
-      setShowThemeMenu(false);
     } catch (error) {
-      console.error('Error changing theme:', error);
-      setShowThemeMenu(false);
+      console.error('Error cycling theme:', error);
     }
   };
 
@@ -260,97 +245,27 @@ const Navbar = ({ onSearch, activeTab, onTabChange, onMenuClick }: NavbarProps) 
           </div>
 
 
-
-          {/* Theme Switcher - Completely rewritten */}
-          <div ref={themeMenuRef} className="relative theme-switcher-container">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowThemeMenu(!showThemeMenu);
-              }}
-              className={`p-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                isLight
-                  ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  : isSpace
-                    ? 'text-white/90 hover:text-white hover:bg-white/10 drop-shadow'
-                    : 'text-gray-300 hover:text-white hover:bg-slate-700'
-              }`}
-              title="Theme Switcher"
-            >
-              {theme === 'light' && <Sun className="w-4 h-4" />}
-              {theme === 'dark' && <Moon className="w-4 h-4" />}
-              {theme === 'space' && <Sparkles className="w-4 h-4" />}
-            </button>
-            
-            {showThemeMenu && (
-              <div 
-                className={`absolute right-0 mt-2 w-48 rounded-lg shadow-2xl z-[9999] overflow-hidden ${
-                  isLight
-                    ? 'bg-white border-2 border-gray-300'
-                    : isSpace
-                      ? 'bg-slate-800/98 backdrop-blur-md border-2 border-purple-900/50'
-                      : 'bg-slate-800 border-2 border-slate-700'
-                }`}
-                style={{ 
-                  position: 'absolute',
-                  zIndex: 9999,
-                }}
-              >
-                <div
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleThemeChange('light')}
-                    className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer ${
-                      theme === 'light'
-                        ? 'bg-blue-500/20 text-blue-600 font-semibold'
-                        : isLight
-                          ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                          : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <Sun className="w-4 h-4" />
-                    <span>Light</span>
-                    {theme === 'light' && <span className="ml-auto text-xs font-bold">✓</span>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleThemeChange('dark')}
-                    className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer ${
-                      theme === 'dark'
-                        ? 'bg-blue-500/20 text-blue-400 font-semibold'
-                        : isLight
-                          ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                          : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <Moon className="w-4 h-4" />
-                    <span>Dark</span>
-                    {theme === 'dark' && <span className="ml-auto text-xs font-bold">✓</span>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleThemeChange('space')}
-                    className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer ${
-                      theme === 'space'
-                        ? 'bg-blue-500/20 text-blue-400 font-semibold'
-                        : isLight
-                          ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                          : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Space</span>
-                    {theme === 'space' && <span className="ml-auto text-xs font-bold">✓</span>}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Theme Switcher - Cycling Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              cycleTheme();
+            }}
+            className={`p-1.5 rounded transition-colors flex items-center gap-1.5 ${
+              isLight
+                ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                : isSpace
+                  ? 'text-white/90 hover:text-white hover:bg-white/10 drop-shadow'
+                  : 'text-gray-300 hover:text-white hover:bg-slate-700'
+            }`}
+            title="Cycle Theme"
+          >
+            {theme === 'light' && <Sun className="w-4 h-4" />}
+            {theme === 'dark' && <Moon className="w-4 h-4" />}
+            {theme === 'space' && <Sparkles className="w-4 h-4" />}
+          </button>
 
           {/* User - Smaller on mobile */}
           <button 

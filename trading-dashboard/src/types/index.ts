@@ -40,3 +40,12 @@ export interface AnalyzeResponse {
   };
   error?: string;
 }
+
+// Portfolio Holding Type Definition
+export interface Holding {
+  symbol: string;
+  shares: number;
+  avgPrice: number;
+  currentPrice: number;
+  value: number;
+}

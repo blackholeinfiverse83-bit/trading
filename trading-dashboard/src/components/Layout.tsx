@@ -17,6 +17,7 @@ const LayoutContent = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [, forceUpdate] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Close sidebar when route changes on mobile
   useEffect(() => {
@@ -62,8 +63,13 @@ const LayoutContent = ({ children }: LayoutProps) => {
       style={theme === 'space' ? { backgroundColor: '#1b0725' } : undefined}
     >
       {theme === 'space' && <UniGuruBackground key="uniguru-bg" />}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-0">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <div className={`flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-0 ${sidebarCollapsed ? 'lg:ml-16' : ''}`}>
         <Navbar 
           onSearch={handleSearch} 
           activeTab={assetType} 
@@ -90,4 +96,3 @@ const Layout = ({ children }: LayoutProps) => {
 };
 
 export default Layout;
-
