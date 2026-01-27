@@ -18,6 +18,8 @@ export interface PortfolioHolding {
   avgPrice: number;
   currentPrice: number;
   value: number;
+  stopLossPrice?: number | null;
+  side?: 'long' | 'short';
 }
 
 export interface PortfolioState {
@@ -43,6 +45,7 @@ interface PortfolioContextType {
   updateHoldingPrice: (symbol: string, newPrice: number) => void;
   refreshPortfolio: () => Promise<void>;
   clearPortfolio: () => void;
+  updateHoldingStopLoss: (symbol: string, stopLossPrice: number | null) => void;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -165,7 +168,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       const newHolding: PortfolioHolding = {
         ...holding,
         currentPrice,
-        value: holding.shares * currentPrice
+        value: holding.shares * currentPrice,
+        stopLossPrice: holding.stopLossPrice || null,
+        side: holding.side || 'long'
       };
       
       const updatedHoldings = [...holdings, newHolding];
@@ -182,7 +187,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       const newHolding: PortfolioHolding = {
         ...holding,
         currentPrice: holding.avgPrice,
-        value: holding.shares * holding.avgPrice
+        value: holding.shares * holding.avgPrice,
+        stopLossPrice: holding.stopLossPrice || null,
+        side: holding.side || 'long'
       };
       
       const updatedHoldings = [...holdings, newHolding];
@@ -250,7 +257,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
             return {
               ...holding,
               currentPrice: newPrice,
-              value: holding.shares * newPrice
+              value: holding.shares * newPrice,
+              stopLossPrice: holding.stopLossPrice,
+              side: holding.side
             };
           }
           return holding;
@@ -282,6 +291,17 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
     savePortfolioToStorage(selectedPortfolio, []);
   };
 
+  const updateHoldingStopLoss = (symbol: string, stopLossPrice: number | null) => {
+    const updatedHoldings = holdings.map(h => 
+      h.symbol === symbol 
+        ? { ...h, stopLossPrice: stopLossPrice || null }
+        : h
+    );
+    setHoldings(updatedHoldings);
+    savePortfolioToStorage(selectedPortfolio, updatedHoldings);
+    calculatePortfolioMetrics(updatedHoldings);
+  };
+
   const portfolioState: PortfolioState = {
     selectedPortfolio,
     holdings,
@@ -301,7 +321,8 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
     removeHolding,
     updateHoldingPrice,
     refreshPortfolio,
-    clearPortfolio
+    clearPortfolio,
+    updateHoldingStopLoss
   };
 
   return (

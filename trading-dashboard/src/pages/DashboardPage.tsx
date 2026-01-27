@@ -1007,7 +1007,7 @@ const DashboardPage = () => {
                                 </p>
                                 {stock.predicted_return !== undefined && (
                                   <p className={`text-base font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                                    {isPositive ? '+' : ''}{stock.predicted_return.toFixed(2)}%
+                                    {isPositive ? '+' : ''}{(stock.predicted_return || 0).toFixed(2)}%
                                   </p>
                                 )}
                               </div>
@@ -1053,7 +1053,7 @@ const DashboardPage = () => {
                             {stock.predicted_return !== undefined && (
                               <p className={`text-xs font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
                                 {isPositive ? <TrendingUp className="w-3 h-3 inline mr-0.5" /> : <TrendingDown className="w-3 h-3 inline mr-0.5" />}
-                                {isPositive ? '+' : ''}{stock.predicted_return.toFixed(2)}%
+                                {isPositive ? '+' : ''}{(stock.predicted_return || 0).toFixed(2)}%
                               </p>
                             )}
                           </div>
@@ -1074,7 +1074,7 @@ const DashboardPage = () => {
                                 confidence > 50 ? 'text-yellow-400' :
                                 'text-red-400'
                               }`}>
-                                {confidence.toFixed(0)}%
+                                {(confidence || 0).toFixed(0)}%
                               </p>
                             </div>
                           </div>

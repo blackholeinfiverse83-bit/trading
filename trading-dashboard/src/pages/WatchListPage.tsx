@@ -230,7 +230,7 @@ const WatchListPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-gray-400">Return</span>
                         <span className={`font-semibold ${pred.predicted_return > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {pred.predicted_return > 0 ? '+' : ''}{pred.predicted_return.toFixed(2)}%
+                          {pred.predicted_return > 0 ? '+' : ''}{(pred.predicted_return || 0).toFixed(2)}%
                         </span>
                       </div>
                     )}

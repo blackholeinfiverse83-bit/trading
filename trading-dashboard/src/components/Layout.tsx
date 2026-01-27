@@ -55,7 +55,7 @@ const LayoutContent = ({ children }: LayoutProps) => {
   return (
     <div 
       key={theme} // Force re-render when theme changes
-      className={`flex h-screen relative ${
+      className={`flex flex-col lg:flex-row h-screen relative w-full overflow-hidden ${
         theme === 'light' ? 'bg-gray-100' : 
         theme === 'space' ? 'bg-[#1b0725]' : // Deep purple-black matching Space theme
         'bg-slate-900'
@@ -69,15 +69,15 @@ const LayoutContent = ({ children }: LayoutProps) => {
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <div className={`flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-0 ${sidebarCollapsed ? 'lg:ml-16' : ''}`}>
+      <div className={`flex-1 flex flex-col overflow-hidden relative z-10 w-full min-w-0`}>
         <Navbar 
           onSearch={handleSearch} 
           activeTab={assetType} 
           onTabChange={handleTabChange}
           onMenuClick={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6 relative z-10 w-full max-w-full overflow-x-hidden" style={{ paddingTop: '0' }}>
-          <div className="w-full max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 lg:px-6 lg:py-6 relative z-10 w-full h-full" style={{ paddingTop: '0' }}>
+          <div className="w-full h-full min-h-0">
             {children}
           </div>
         </main>
