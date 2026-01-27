@@ -12,6 +12,7 @@ interface HealthContextType {
   health: HealthStatus;
   isPolling: boolean;
   lastHealthCheck: Date | null;
+  checkHealth: () => Promise<void>;
 }
 
 const HealthContext = createContext<HealthContextType | undefined>(undefined);
@@ -31,7 +32,7 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const result = await stockAPI.health();
       
       setHealth({
-        healthy: result.status === 'ok' || result.healthy === true,
+        healthy: result.status === 'ok' || result.status === 'healthy' || result.healthy === true,
         status: result.status || 'unknown',
         timestamp: new Date(),
         message: result.message,
@@ -65,7 +66,7 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [checkHealth]);
 
   return (
-    <HealthContext.Provider value={{ health, isPolling, lastHealthCheck }}>
+    <HealthContext.Provider value={{ health, isPolling, lastHealthCheck, checkHealth }}>
       {children}
     </HealthContext.Provider>
   );

@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { TrendingUp, TrendingDown, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
-import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
-import { riskAPI, tradeAPI } from '../services/api';
+import PortfolioSelector from '../components/PortfolioSelector';
+import { usePortfolio } from '../contexts/PortfolioContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { TrendingUp, TrendingDown, Plus, AlertTriangle, CheckCircle, BookOpen, RotateCcw, Info } from 'lucide-react';
 import { formatUSDToINR } from '../utils/currencyConverter';
-import { Holding } from '../types';
 
 const PortfolioPage = () => {
   const { showNotification } = useNotification();
-  const [holdings, setHoldings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalValue, setTotalValue] = useState(0);
-  const [totalGain, setTotalGain] = useState(0);
+  const { 
+    portfolioState, 
+    availablePortfolios, 
+    isLoading, 
+    error, 
+    addHolding, 
+    removeHolding, 
+    refreshPortfolio,
+    clearPortfolio
+  } = usePortfolio();
+  
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPosition, setNewPosition] = useState({ symbol: '', shares: 0, avgPrice: 0 });
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -173,81 +179,71 @@ const PortfolioPage = () => {
     }
   };
 
-  const calculateGain = (holding: Holding) => {
+  const calculateGain = (holding: any) => {
     const gain = (holding.currentPrice - holding.avgPrice) * holding.shares;
     const gainPercent = ((holding.currentPrice - holding.avgPrice) / holding.avgPrice) * 100;
     return { gain, gainPercent };
   };
 
-  const addPosition = async () => {
+  const handleAddPosition = async () => {
     if (newPosition.symbol && newPosition.shares > 0 && newPosition.avgPrice > 0) {
-      // Fetch current price from backend
-      let currentPrice = newPosition.avgPrice;
       try {
-        const response = await stockAPI.predict([newPosition.symbol], 'intraday');
-        if (response.predictions && response.predictions.length > 0) {
-          const prediction = response.predictions.find((p: PredictionItem) => !p.error);
-          if (prediction) {
-            currentPrice = prediction.predicted_price || prediction.current_price || newPosition.avgPrice;
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch current price, using average price:', error);
+        await addHolding({
+          symbol: newPosition.symbol.toUpperCase(),
+          shares: newPosition.shares,
+          avgPrice: newPosition.avgPrice
+        });
+        
+        setNewPosition({ symbol: '', shares: 0, avgPrice: 0 });
+        setShowAddModal(false);
+        showNotification('success', 'Position Added', `Added ${newPosition.shares} shares of ${newPosition.symbol}`);
+      } catch (error: any) {
+        showNotification('error', 'Add Failed', error.message || 'Failed to add position');
       }
-      
-      const holding = {
-        symbol: newPosition.symbol.toUpperCase(),
-        shares: newPosition.shares,
-        avgPrice: newPosition.avgPrice,
-        currentPrice: currentPrice,
-        value: newPosition.shares * currentPrice,
-      };
-      
-      // Save to localStorage
-      const updatedHoldings = [...holdings, holding];
-      localStorage.setItem('portfolio_holdings', JSON.stringify(updatedHoldings));
-      setHoldings(updatedHoldings);
-      setNewPosition({ symbol: '', shares: 0, avgPrice: 0 });
-      setShowAddModal(false);
-      
-      // Update totals
-      const total = updatedHoldings.reduce((sum, h) => sum + h.value, 0);
-      const gain = updatedHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-      setTotalValue(total);
-      setTotalGain(gain);
     }
   };
 
-  const removePosition = (index: number) => {
-    const newHoldings = holdings.filter((_, i) => i !== index);
-    // Save to localStorage
-    localStorage.setItem('portfolio_holdings', JSON.stringify(newHoldings));
-    setHoldings(newHoldings);
-    // Update totals
-    const total = newHoldings.reduce((sum, h) => sum + h.value, 0);
-    const gain = newHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-    setTotalValue(total);
-    setTotalGain(gain);
+  const handleRemovePosition = (symbol: string) => {
+    removeHolding(symbol);
+    showNotification('info', 'Position Removed', `Removed ${symbol} from portfolio`);
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await refreshPortfolio();
+      showNotification('success', 'Portfolio Refreshed', 'Prices updated successfully');
+    } catch (error: any) {
+      showNotification('error', 'Refresh Failed', error.message || 'Failed to refresh portfolio');
+    }
+  };
+
+  const handleClearPortfolio = () => {
+    clearPortfolio();
+    showNotification('warning', 'Portfolio Cleared', 'All positions removed');
   };
 
   // Assess risk before executing trade
-  const handleAssessRisk = async (holding: any, action: 'BUY' | 'SELL') => {
+  const handleAssessRisk = async (holding: any, action: 'ADD' | 'REDUCE') => {
     setRiskChecking(true);
     setRiskError(null);
     setPendingTrade({ holding, action });
     
     try {
       // Calculate stop-loss (assume 5% below entry for risk assessment)
-      const stopLoss = holding.currentPrice * (action === 'BUY' ? 0.95 : 1.05);
+      const stopLoss = holding.currentPrice * (action === 'ADD' ? 0.95 : 1.05);
       
       // Call risk assessment endpoint
-      const riskResult = await riskAPI.assess(
-        holding.symbol,
-        holding.shares,
-        holding.currentPrice,
-        stopLoss,
-        1.0 // 1% capital at risk
-      );
+      const riskResult = await fetch(`http://127.0.0.1:8000/api/risk/assess`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: holding.symbol,
+          quantity: holding.shares,
+          entry_price: holding.currentPrice,
+          stop_loss: stopLoss,
+          risk_percent: 1.0 // 1% capital at risk
+        })
+      }).then(res => res.json());
       
       setRiskAssessment(riskResult);
       setShowRiskModal(true);
@@ -279,27 +275,31 @@ const PortfolioPage = () => {
       // Check if risk is too high (> 5%)
       if (riskAssessment?.risk_score > 5) {
         // Block trade if risk too high
-        const msg = `Trade blocked: Risk score ${riskAssessment.risk_score.toFixed(1)} exceeds maximum of 5%.`;
-        showNotification('error', 'Trade Blocked', msg);
+        const msg = `Action blocked: Risk score ${riskAssessment.risk_score.toFixed(1)} exceeds maximum of 5%.`;
+        showNotification('error', 'Action Blocked', msg);
         setRiskChecking(false);
         setShowConfirmModal(false);
         setShowRiskModal(false);
         return;
       }
       
-      // Execute trade
-      const stopLoss = holding.currentPrice * (action === 'BUY' ? 0.95 : 1.05);
-      const tradeResult = await tradeAPI.execute(
-        holding.symbol,
-        action,
-        holding.shares,
-        holding.currentPrice,
-        stopLoss
-      );
+      // Execute simulated action
+      const stopLoss = holding.currentPrice * (action === 'ADD' ? 0.95 : 1.05);
+      const result = await fetch(`http://127.0.0.1:8000/api/trade/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: holding.symbol,
+          action: action,
+          quantity: holding.shares,
+          price: holding.currentPrice,
+          stop_loss: stopLoss
+        })
+      }).then(res => res.json());
       
-      if (tradeResult.success) {
-        showNotification('success', `Trade ${action === 'BUY' ? 'Executed' : 'Closed'}`, 
-          `${holding.symbol} ${action} order placed. ID: ${tradeResult.order_id || 'pending'}`);
+      if (result.success) {
+        showNotification('success', `Portfolio Action Executed`, 
+          `${holding.symbol} ${action === 'ADD' ? 'added to' : 'reduced from'} portfolio. ID: ${result.order_id || 'simulated'}`);
         
         // Close modals
         setShowConfirmModal(false);
@@ -307,11 +307,11 @@ const PortfolioPage = () => {
         setPendingTrade(null);
         setRiskAssessment(null);
       } else {
-        throw new Error(tradeResult.message || 'Trade execution failed');
+        throw new Error(result.message || 'Portfolio action failed');
       }
     } catch (error: any) {
-      const msg = error.message || 'Failed to execute trade';
-      showNotification('error', 'Trade Failed', msg);
+      const msg = error.message || 'Failed to execute portfolio action';
+      showNotification('error', 'Action Failed', msg);
     } finally {
       setRiskChecking(false);
     }
@@ -323,41 +323,88 @@ const PortfolioPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white mb-1">Portfolio</h1>
-            <p className="text-gray-400 text-xs">Manage your holdings</p>
+            <p className="text-gray-400 text-xs">Educational portfolio management</p>
           </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Position</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1.5"
+            >
+              <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Position</span>
+            </button>
+          </div>
+        </div>
+        
+        <div className="mb-4">
+          <PortfolioSelector />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
             <p className="text-gray-400 text-xs mb-1">Total Value</p>
-            <p className="text-xl font-bold text-white">{formatUSDToINR(totalValue)}</p>
+            <p className="text-xl font-bold text-white">{formatUSDToINR(portfolioState.totalValue)}</p>
+            <p className="text-gray-500 text-xs mt-1">Educational Portfolio</p>
           </div>
           <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
             <p className="text-gray-400 text-xs mb-1">Total Gain/Loss</p>
-            <p className={`text-xl font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {totalGain >= 0 ? '+' : ''}{formatUSDToINR(totalGain)}
+            <p className={`text-xl font-bold ${portfolioState.totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {portfolioState.totalGain >= 0 ? '+' : ''}{formatUSDToINR(portfolioState.totalGain)}
+            </p>
+            <p className={`text-xs mt-1 ${portfolioState.totalGainPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {portfolioState.totalGainPercent >= 0 ? '+' : ''}{portfolioState.totalGainPercent.toFixed(2)}%
             </p>
           </div>
           <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
             <p className="text-gray-400 text-xs mb-1">Holdings</p>
-            <p className="text-xl font-bold text-white">{holdings.length}</p>
+            <p className="text-xl font-bold text-white">{portfolioState.holdings.length}</p>
+            <p className="text-gray-500 text-xs mt-1">Positions</p>
+          </div>
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+            <p className="text-gray-400 text-xs mb-1">Last Updated</p>
+            <p className="text-white text-sm font-medium">
+              {portfolioState.lastUpdated 
+                ? portfolioState.lastUpdated.toLocaleTimeString() 
+                : 'Never'}
+            </p>
+            <p className="text-gray-500 text-xs mt-1">Simulation Data</p>
           </div>
         </div>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="p-3 border-b border-slate-700">
+          <div className="p-3 border-b border-slate-700 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Holdings</h2>
+            {portfolioState.holdings.length > 0 && (
+              <button 
+                onClick={handleClearPortfolio}
+                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+              >
+                Clear All
+              </button>
+            )}
           </div>
-          {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading...</div>
-          ) : holdings.length > 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-400">Loading portfolio...</div>
+          ) : error ? (
+            <div className="p-8 text-center text-red-400">
+              <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+              <p>{error}</p>
+              <button 
+                onClick={handleRefresh}
+                className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          ) : portfolioState.holdings.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-700">
@@ -372,17 +419,17 @@ const PortfolioPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {holdings.map((holding, index) => {
+                  {portfolioState.holdings.map((holding, index) => {
                     const { gain, gainPercent } = calculateGain(holding);
                     return (
                       <tr key={index} className="hover:bg-slate-700/50">
                         <td className="px-3 py-2 whitespace-nowrap">
                           <span className="text-white font-semibold">{holding.symbol}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-300">{holding.shares}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-300">${holding.avgPrice.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-white">${holding.currentPrice.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-white">{formatUSDToINR(holding.value)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-300">{holding.shares}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-300">${holding.avgPrice.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-white">${holding.currentPrice.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-white">{formatUSDToINR(holding.value)}</td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             {gain >= 0 ? (
@@ -398,22 +445,25 @@ const PortfolioPage = () => {
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex space-x-2">
                             <button 
-                              onClick={() => handleAssessRisk(holding, 'BUY')}
+                              onClick={() => handleAssessRisk(holding, 'ADD')}
                               disabled={riskChecking}
-                              className="px-3 py-1 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white text-sm rounded transition-colors"
+                              className="px-3 py-1 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white text-xs rounded transition-colors"
+                              title="Add to Portfolio (Simulated)"
                             >
-                              Buy
+                              Add
                             </button>
                             <button 
-                              onClick={() => handleAssessRisk(holding, 'SELL')}
+                              onClick={() => handleAssessRisk(holding, 'REDUCE')}
                               disabled={riskChecking}
-                              className="px-3 py-1 bg-red-500 hover:bg-red-600 disabled:bg-red-400 text-white text-sm rounded transition-colors"
+                              className="px-3 py-1 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white text-xs rounded transition-colors"
+                              title="Reduce Exposure (Simulated)"
                             >
-                              Sell
+                              Reduce
                             </button>
                             <button 
-                              onClick={() => removePosition(index)}
-                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors"
+                              onClick={() => handleRemovePosition(holding.symbol)}
+                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs rounded transition-colors"
+                              title="Remove from Portfolio"
                             >
                               Remove
                             </button>
@@ -426,7 +476,17 @@ const PortfolioPage = () => {
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-400">No holdings found</div>
+            <div className="p-8 text-center text-gray-400">
+              <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+              <p className="mb-2">No holdings in this portfolio</p>
+              <p className="text-sm text-gray-500 mb-4">Add positions to start learning about portfolio management</p>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium"
+              >
+                Add First Position
+              </button>
+            </div>
           )}
         </div>
 
@@ -484,10 +544,11 @@ const PortfolioPage = () => {
                 </div>
                 <div className="flex space-x-3">
                   <button
-                    onClick={addPosition}
-                    className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+                    onClick={handleAddPosition}
+                    disabled={isLoading}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white rounded-lg font-medium"
                   >
-                    Add
+                    {isLoading ? 'Adding...' : 'Add to Portfolio'}
                   </button>
                   <button
                     onClick={() => {
@@ -498,6 +559,18 @@ const PortfolioPage = () => {
                   >
                     Cancel
                   </button>
+                </div>
+                
+                <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3 mt-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-yellow-200 text-xs font-medium mb-1">Educational Simulation</p>
+                      <p className="text-yellow-300 text-xs">
+                        This is a learning environment. No real money is involved. All transactions are simulated.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -577,7 +650,7 @@ const PortfolioPage = () => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 max-w-md w-full">
               <h3 className="text-xl font-semibold text-white mb-4">
-                Confirm {pendingTrade.action === 'BUY' ? 'Buy' : 'Sell'} Order
+                Confirm Portfolio Action
               </h3>
 
               <div className="space-y-3 mb-4">
@@ -587,10 +660,10 @@ const PortfolioPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Action:</span>
-                  <span className={`font-semibold ${
-                    pendingTrade.action === 'BUY' ? 'text-green-400' : 'text-red-400'
+                  <span className={`font-semibold $[
+                    pendingTrade.action === 'ADD' ? 'text-green-400' : 'text-orange-400'
                   }`}>
-                    {pendingTrade.action}
+                    {pendingTrade.action === 'ADD' ? 'Add to Portfolio' : 'Reduce Exposure'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -621,7 +694,7 @@ const PortfolioPage = () => {
                   disabled={riskChecking}
                   className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white rounded-lg font-semibold"
                 >
-                  {riskChecking ? 'Executing...' : 'Confirm & Execute'}
+                  {riskChecking ? 'Processing...' : 'Confirm Action'}
                 </button>
                 <button
                   onClick={() => {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { LogOut, User, Mail, Settings } from 'lucide-react';
 import Layout from '../components/Layout';
 
@@ -16,6 +17,7 @@ interface ConfirmModal {
 const UserProfilePage = () => {
   const { user, logout } = useAuth();
   const { showNotification } = useNotification();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmModal>({
@@ -25,6 +27,9 @@ const UserProfilePage = () => {
     onConfirm: () => {},
     onCancel: () => {},
   });
+
+  const isLight = theme === 'light';
+  const isSpace = theme === 'space';
 
   const handleLogoutClick = () => {
     setConfirmModal({
@@ -59,11 +64,19 @@ const UserProfilePage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-900 p-4 md:p-8">
+      <div className={`min-h-screen bg-gradient-to-br p-4 md:p-8 ${
+        isLight
+          ? 'from-slate-50 to-blue-50'
+          : isSpace
+            ? 'from-slate-900 to-blue-900'
+            : 'from-slate-900 to-blue-900'
+      }`}>
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className={`text-4xl font-bold mb-2 ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}>
               User Profile
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
@@ -72,7 +85,9 @@ const UserProfilePage = () => {
           </div>
 
           {/* Profile Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden">
+          <div className={`rounded-2xl shadow-lg overflow-hidden ${
+            isLight ? 'bg-white' : 'bg-slate-800'
+          }`}>
             {/* Header Section */}
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-8 text-white">
               <div className="flex items-center gap-4">
@@ -164,8 +179,12 @@ const UserProfilePage = () => {
         {/* Confirmation Modal */}
         {confirmModal.show && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+            <div className={`rounded-2xl shadow-2xl max-w-sm w-full p-6 ${
+              isLight ? 'bg-white' : 'bg-slate-800'
+            }`}>
+              <h3 className={`text-xl font-bold mb-3 ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
                 {confirmModal.title}
               </h3>
               <p className="text-slate-600 dark:text-slate-400 mb-6">

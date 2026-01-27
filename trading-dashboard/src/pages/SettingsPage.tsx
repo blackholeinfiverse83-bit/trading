@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Settings, RefreshCw, Moon, Sun, Sparkles, Bell, Download, Trash2, Save } from 'lucide-react';
+import { Settings, RefreshCw, Moon, Sun, Sparkles, Bell, Download, Trash2, Save, Activity } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useHealth } from '../contexts/HealthContext';
 import { notificationSettingsService, NotificationSettings } from '../services/alertsService';
 
 interface UserPreferences {
@@ -24,6 +25,7 @@ const defaultPreferences: UserPreferences = {
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const { settings: notificationSettings, updateSettings: updateNotificationSettings } = useNotifications();
+  const { health, checkHealth, isPolling } = useHealth();
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
   const [saved, setSaved] = useState(false);
 
@@ -255,6 +257,62 @@ const SettingsPage = () => {
               <Save className="w-4 h-4" />
               {saved ? 'Saved!' : 'Save Preferences'}
             </button>
+          </div>
+        </div>
+
+        {/* System Health Status */}
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            System Health
+          </h2>
+          <div className="space-y-4">
+            <div className={`p-4 rounded-lg border ${
+              health.healthy 
+                ? 'bg-green-500/10 border-green-500/30' 
+                : 'bg-red-500/10 border-red-500/30'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  health.healthy ? 'bg-green-400 animate-pulse' : 'bg-red-400'
+                }`}></div>
+                <div>
+                  <p className={`font-semibold ${
+                    health.healthy ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    System {health.healthy ? 'Healthy' : 'Offline'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {health.status || 'Checking status...'}
+                  </p>
+                </div>
+                <button
+                  onClick={checkHealth}
+                  disabled={isPolling}
+                  className="ml-auto p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh health status"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isPolling ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+            
+            {health.healthy && (health as any).system && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-700/50 p-3 rounded-lg">
+                  <p className="text-gray-400 text-sm">CPU Usage</p>
+                  <p className="text-white font-semibold text-lg">
+                    {(health as any).system.cpu_usage_percent?.toFixed(1) || 'N/A'}%
+                  </p>
+                </div>
+                <div className="bg-slate-700/50 p-3 rounded-lg">
+                  <p className="text-gray-400 text-sm">Memory Usage</p>
+                  <p className="text-white font-semibold text-lg">
+                    {(health as any).system.memory_percent?.toFixed(1) || 'N/A'}%
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

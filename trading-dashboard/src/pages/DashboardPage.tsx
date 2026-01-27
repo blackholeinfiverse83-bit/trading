@@ -1,21 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
+import PortfolioSelector from '../components/PortfolioSelector';
 import { stockAPI, POPULAR_STOCKS, TimeoutError, type PredictionItem } from '../services/api';
 import { useConnection } from '../contexts/ConnectionContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
+import { usePortfolio } from '../contexts/PortfolioContext';
+import { TrendingUp, TrendingDown, DollarSign, Activity, RefreshCw, AlertCircle, Sparkles, Plus, X, Search, Loader2, Trash2, CheckCircle2, BookOpen } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { formatUSDToINR } from '../utils/currencyConverter';
 
 const DashboardPage = () => {
   const { connectionState } = useConnection();
   const { theme } = useTheme();
+  const { portfolioState } = usePortfolio();
   const isLight = theme === 'light';
-  const [portfolioValue, setPortfolioValue] = useState(0);
+  
+  // Use portfolio context values instead of local state
+  const portfolioValue = portfolioState.totalValue;
+  const totalGain = portfolioState.totalGain;
+  const totalGainPercent = portfolioState.totalGainPercent;
+  
+  // Calculate daily change from portfolio movements
   const [dailyChange, setDailyChange] = useState(0);
   const [dailyChangePercent, setDailyChangePercent] = useState(0);
-  const [totalGain, setTotalGain] = useState(0);
-  const [totalGainPercent, setTotalGainPercent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [topStocks, setTopStocks] = useState<PredictionItem[]>([]);
@@ -28,9 +35,10 @@ const DashboardPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{symbol: string, isUserAdded: boolean} | null>(null);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [previousPortfolioValue, setPreviousPortfolioValue] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSymbols, setFilteredSymbols] = useState<string[]>([]);
+  const [previousPortfolioValue, setPreviousPortfolioValue] = useState<number | null>(null);
   const addTradeInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const prevConnectionStateRef = useRef<boolean>(true);
@@ -58,6 +66,21 @@ const DashboardPage = () => {
       }
     }
   }, []);
+
+  // Track portfolio value changes for daily change calculation
+  useEffect(() => {
+    if (previousPortfolioValue !== null && previousPortfolioValue > 0) {
+      const change = portfolioValue - previousPortfolioValue;
+      const changePercent = (change / previousPortfolioValue) * 100;
+      setDailyChange(change);
+      setDailyChangePercent(changePercent);
+    } else if (portfolioValue > 0) {
+      // First load - use small estimate
+      setDailyChange(portfolioValue * 0.001); // 0.1% estimate
+      setDailyChangePercent(0.1);
+    }
+    setPreviousPortfolioValue(portfolioValue);
+  }, [portfolioValue]);
 
   useEffect(() => {
     let isMounted = true;
@@ -143,6 +166,15 @@ const DashboardPage = () => {
       }
     };
   }, [connectionState.isConnected]); // Only re-run when connection state actually changes
+
+  // Live time display - updates every second
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every 1 second
+    
+    return () => clearInterval(timeInterval);
+  }, []);
 
   // Health check moved to separate useEffect - runs every 5 minutes instead of every refresh
   useEffect(() => {
@@ -341,11 +373,8 @@ const DashboardPage = () => {
           setDailyChangePercent(avgReturn);
         }
         
-        setPortfolioValue(totalValue);
-        setTotalGain(totalReturn);
-        // Guard against division by zero
-        setTotalGainPercent(totalValue > 0 ? (totalReturn / totalValue) * 100 : 0);
-        setPreviousPortfolioValue(totalValue);
+        // Portfolio context handles these calculations now
+        // setPortfolioValue, setTotalGain, setTotalGainPercent are managed by PortfolioContext
         
         console.log('[Dashboard] Portfolio Metrics:', {
           totalValue,
@@ -354,12 +383,7 @@ const DashboardPage = () => {
           predictionsCount: validPredictions.length,
         });
       } else {
-        // Reset to 0 if no predictions
-        setPortfolioValue(0);
-        setDailyChange(0);
-        setDailyChangePercent(0);
-        setTotalGain(0);
-        setTotalGainPercent(0);
+        // Portfolio context handles resetting values
       }
       
       setLastUpdated(new Date());
@@ -400,11 +424,9 @@ const DashboardPage = () => {
     localStorage.removeItem('visibleTopStocks');
     setUserAddedTrades([]);
     setTopStocks([]);
-    setPortfolioValue(0);
+    // Portfolio context handles value resets
     setDailyChange(0);
     setDailyChangePercent(0);
-    setTotalGain(0);
-    setTotalGainPercent(0);
     setError('Cache cleared. Add stocks to get started!');
     setTimeout(() => setError(null), 3000);
   };
@@ -642,10 +664,11 @@ const DashboardPage = () => {
     { 
       label: 'Portfolio Value', 
       value: formatUSDToINR(portfolioValue), 
-      icon: DollarSign, 
+      icon: BookOpen, 
       change: dailyChangePercent >= 0 ? `+${dailyChangePercent.toFixed(2)}%` : `${dailyChangePercent.toFixed(2)}%`,
       changeColor: dailyChangePercent >= 0 ? 'text-green-400' : 'text-red-400',
-      bgGradient: 'from-green-500/20 to-emerald-500/10'
+      bgGradient: 'from-blue-500/20 to-cyan-500/10',
+      subtitle: 'Educational Portfolio'
     },
     { 
       label: 'Daily Change', 
@@ -673,20 +696,28 @@ const DashboardPage = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h1 className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Dashboard</h1>
-              {connectionState.isConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/50 rounded-lg">
-                  <CheckCircle2 className="w-3 h-3 text-green-400" />
-                  <span className="text-green-400 text-xs font-medium">Connected</span>
+              <div className="flex items-center gap-2">
+                {connectionState.isConnected ? (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/50 rounded-lg">
+                    <CheckCircle2 className="w-3 h-3 text-green-400" />
+                    <span className="text-green-400 text-xs font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/20 border border-red-500/50 rounded-lg">
+                    <AlertCircle className="w-3 h-3 text-red-400" />
+                    <span className="text-red-400 text-xs font-medium">Offline</span>
+                  </div>
+                )}
+                <div className="hidden md:block">
+                  <PortfolioSelector />
                 </div>
-              ) : (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/20 border border-red-500/50 rounded-lg">
-                  <AlertCircle className="w-3 h-3 text-red-400" />
-                  <span className="text-red-400 text-xs font-medium">Offline</span>
-                </div>
-              )}
+              </div>
+            </div>
+            <div className="md:hidden mt-2">
+              <PortfolioSelector />
             </div>
             <p className={`text-xs md:text-sm ${isLight ? 'text-gray-600' : 'text-gray-400'}`}>
-              {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Overview of your trading portfolio'}
+              {lastUpdated ? `Updated ${currentTime.toLocaleTimeString()}` : 'Overview of your trading portfolio'}
             </p>
           </div>
           <button
@@ -721,29 +752,7 @@ const DashboardPage = () => {
           </div>
         )}
 
-        {/* Health Status - Compact chip on mobile, full bar on desktop */}
-        {healthStatus && !error && (
-          <div className="flex flex-col md:flex-row md:items-center gap-2">
-            {/* Mobile: Compact chip */}
-            <div className="md:hidden">
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
-                <span className="text-green-400 font-medium text-xs">System Healthy</span>
-              </div>
-            </div>
-            {/* Desktop: Full bar */}
-            <div className="hidden md:flex bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
-                <span className="text-green-400 font-semibold text-sm">System Healthy</span>
-                <span className="text-gray-400 text-xs">
-                  CPU: {healthStatus.system?.cpu_usage_percent?.toFixed(1) || 'N/A'}% • 
-                  Memory: {healthStatus.system?.memory_percent?.toFixed(1) || 'N/A'}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* General Error Banner */}
         {error && !error.includes('Unable to connect to backend') && (
@@ -814,6 +823,11 @@ const DashboardPage = () => {
                     </span>
                   </div>
                   <p className={`${isLight ? 'text-gray-600' : 'text-gray-400'} text-xs md:text-sm mb-1`}>{stat.label}</p>
+                  {stat.subtitle && (
+                    <p className={`${isLight ? 'text-gray-500' : 'text-gray-500'} text-xs mb-1`}>
+                      {stat.subtitle}
+                    </p>
+                  )}
                   <p className={`text-xl md:text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'} leading-tight`}>{stat.value}</p>
                 </div>
               );

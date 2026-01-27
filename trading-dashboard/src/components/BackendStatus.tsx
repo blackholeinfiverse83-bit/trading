@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, CheckCircle2, RefreshCw, Power, Terminal } from 'lucide-react';
 import { useConnection } from '../contexts/ConnectionContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface BackendStatusProps {
   className?: string;
@@ -8,9 +9,13 @@ interface BackendStatusProps {
 
 export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) => {
   const { connectionState, forceCheck } = useConnection();
+  const { theme } = useTheme();
   const [isRestarting, setIsRestarting] = useState(false);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const isLight = theme === 'light';
+  const isSpace = theme === 'space';
 
   const handleRestartClick = () => {
     setShowRestartModal(true);
@@ -67,8 +72,16 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) 
           flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm
           transition-all duration-200 cursor-pointer shadow-sm
           ${isOnline
-            ? 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800'
+            ? isLight
+              ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+              : isSpace
+                ? 'bg-green-900/40 text-green-300 border border-green-800'
+                : 'bg-green-900/40 text-green-300 border border-green-800'
+            : isLight
+              ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+              : isSpace
+                ? 'bg-red-900/40 text-red-300 border border-red-800'
+                : 'bg-red-900/40 text-red-300 border border-red-800'
           }
           ${className}
         `}
@@ -104,12 +117,22 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) 
       {/* Restart Modal */}
       {showRestartModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className={`rounded-lg shadow-xl max-w-md w-full mx-4 ${
+            isLight ? 'bg-white' : isSpace ? 'bg-slate-800' : 'bg-slate-800'
+          }`}>
             {/* Header */}
-            <div className="bg-red-50 dark:bg-red-900/30 px-6 py-4 border-b border-red-200 dark:border-red-800">
+            <div className={`px-6 py-4 border-b ${
+              isLight
+                ? 'bg-red-50 border-red-200'
+                : isSpace
+                  ? 'bg-red-900/30 border-red-800'
+                  : 'bg-red-900/30 border-red-800'
+            }`}>
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                <h2 className="text-lg font-bold text-red-900 dark:text-red-100">
+                <h2 className={`text-lg font-bold ${
+                  isLight ? 'text-red-900' : 'text-red-100'
+                }`}>
                   Backend Server Offline
                 </h2>
               </div>
@@ -117,18 +140,36 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) 
 
             {/* Content */}
             <div className="p-6">
-              <p className="text-gray-700 dark:text-gray-300 mb-4 font-medium">
+              <p className={`mb-4 font-medium ${
+                isLight ? 'text-gray-700' : 'text-gray-300'
+              }`}>
                 The backend server is offline. Click below to copy the restart command.
               </p>
-
-              <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg mb-4 border border-gray-300 dark:border-gray-700 overflow-x-auto">
-                <code className="text-xs text-gray-800 dark:text-gray-200 font-mono block whitespace-pre-wrap break-words">
+            
+              <div className={`p-4 rounded-lg mb-4 overflow-x-auto ${
+                isLight
+                  ? 'bg-gray-100 border border-gray-300'
+                  : isSpace
+                    ? 'bg-gray-900 border border-gray-700'
+                    : 'bg-gray-900 border border-gray-700'
+              }`}>
+                <code className={`text-xs font-mono block whitespace-pre-wrap break-words ${
+                  isLight ? 'text-gray-800' : 'text-gray-200'
+                }`}>
                   cd "d:\blackhole projects\blackhole-infevers trade\Multi-Asset Trading Dashboard\backend" && python api_server.py
                 </code>
               </div>
-
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-900 dark:text-blue-200">
+            
+              <div className={`rounded-lg p-3 mb-4 ${
+                isLight
+                  ? 'bg-blue-50 border border-blue-200'
+                  : isSpace
+                    ? 'bg-blue-900/30 border border-blue-800'
+                    : 'bg-blue-900/30 border border-blue-800'
+              }`}>
+                <p className={`text-sm ${
+                  isLight ? 'text-blue-900' : 'text-blue-200'
+                }`}>
                   <span className="font-semibold">📋 Steps:</span><br/>
                   1️⃣ Click "Copy & Restart" button below<br/>
                   2️⃣ Open PowerShell or Terminal<br/>
@@ -137,10 +178,18 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) 
                   5️⃣ Come back and button will turn green!
                 </p>
               </div>
-
+            
               {copySuccess && (
-                <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-green-900 dark:text-green-200">
+                <div className={`rounded-lg p-3 mb-4 ${
+                  isLight
+                    ? 'bg-green-50 border border-green-200'
+                    : isSpace
+                      ? 'bg-green-900/30 border border-green-800'
+                      : 'bg-green-900/30 border border-green-800'
+                }`}>
+                  <p className={`text-sm ${
+                    isLight ? 'text-green-900' : 'text-green-200'
+                  }`}>
                     ✅ Command copied to clipboard!
                   </p>
                 </div>
@@ -148,16 +197,28 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ className = '' }) 
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex gap-3 border-t border-gray-200 dark:border-gray-700">
+            <div className={`px-6 py-4 flex gap-3 border-t ${
+              isLight
+                ? 'bg-gray-50 border-gray-200'
+                : isSpace
+                  ? 'bg-gray-700/50 border-gray-700'
+                  : 'bg-gray-700/50 border-gray-700'
+            }`}>
               <button
                 onClick={() => setShowRestartModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isLight
+                    ? 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                    : isSpace
+                      ? 'border border-gray-600 text-gray-300 hover:bg-gray-700'
+                      : 'border border-gray-600 text-gray-300 hover:bg-gray-700'
+                }`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleRestartConfirm}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 dark:hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Terminal size={16} />
                 Copy & Restart
