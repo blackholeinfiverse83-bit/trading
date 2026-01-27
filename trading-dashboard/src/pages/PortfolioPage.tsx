@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import PortfolioSelector from '../components/PortfolioSelector';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { stockAPI, TimeoutError, type PredictionItem } from '../services/api';
 import { TrendingUp, TrendingDown, Plus, AlertTriangle, CheckCircle, BookOpen, RotateCcw, Info } from 'lucide-react';
 import { formatUSDToINR } from '../utils/currencyConverter';
 
@@ -74,109 +75,25 @@ const PortfolioPage = () => {
   };
 
   useEffect(() => {
-    loadPortfolio();
+    // Portfolio data is automatically managed by the PortfolioContext
+    // No need to manually load here since context handles it
+    // Just trigger a refresh to ensure fresh data
+    refreshPortfolio();
+    
     // Refresh every 120 seconds (2 minutes) to reduce API calls and avoid rate limits
     const interval = setInterval(() => {
-      loadPortfolio();
+      refreshPortfolio();
     }, 120000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshPortfolio]);
 
+  // Use the portfolio state from context instead of local state
   const loadPortfolio = async () => {
-    setLoading(true);
-    try {
-      // Load holdings from localStorage (user-managed portfolio)
-      const savedHoldings = localStorage.getItem('portfolio_holdings');
-      let userHoldings: Holding[] = savedHoldings ? JSON.parse(savedHoldings) : [];
-      
-      // If no holdings, show empty state
-      if (userHoldings.length === 0) {
-        setHoldings([]);
-        setTotalValue(0);
-        setTotalGain(0);
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch real-time prices from backend
-      const symbols = userHoldings.map(h => h.symbol);
-      
-      try {
-        const response = await stockAPI.predict(symbols, 'intraday');
-        
-        // Check for errors in metadata
-        if (response.metadata?.error) {
-          throw new Error(response.metadata.error);
-        }
-        
-        if (response.predictions) {
-          // Filter out predictions with errors and map to holdings
-          const validPredictions = response.predictions.filter((p: PredictionItem) => !p.error);
-          
-          // Update holdings with real-time prices
-          const updatedHoldings = userHoldings.map((holding) => {
-            const prediction = validPredictions.find((p: PredictionItem) => p.symbol === holding.symbol);
-            if (prediction) {
-              const currentPrice = prediction.predicted_price || prediction.current_price || holding.avgPrice;
-              return {
-                ...holding,
-                currentPrice: currentPrice,
-                value: holding.shares * currentPrice,
-              };
-            }
-            // If no prediction available, use stored price
-            return {
-              ...holding,
-              currentPrice: holding.currentPrice || holding.avgPrice,
-              value: holding.shares * (holding.currentPrice || holding.avgPrice),
-            };
-          });
-          
-          setHoldings(updatedHoldings);
-          
-          // Calculate totals using real prices
-          const total = updatedHoldings.reduce((sum, h) => sum + h.value, 0);
-          const gain = updatedHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-          setTotalValue(total);
-          setTotalGain(gain);
-        } else {
-          // No predictions, use stored data
-          setHoldings(userHoldings);
-          const total = userHoldings.reduce((sum, h) => sum + (h.value || h.shares * (h.currentPrice || h.avgPrice)), 0);
-          const gain = userHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-          setTotalValue(total);
-          setTotalGain(gain);
-        }
-      } catch (apiError: unknown) {
-        // Handle TimeoutError - backend is still processing
-        if (apiError instanceof TimeoutError) {
-          // Keep loading state active, use stored holdings for now
-          console.log('PortfolioPage: Request timed out but backend is still processing');
-          setHoldings(userHoldings);
-          const total = userHoldings.reduce((sum, h) => sum + (h.value || h.shares * (h.currentPrice || h.avgPrice)), 0);
-          const gain = userHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-          setTotalValue(total);
-          setTotalGain(gain);
-          // Don't clear loading - backend is still working
-          return;
-        }
-        
-        // Handle actual errors - use stored holdings without price updates
-        console.error('Failed to fetch real-time prices:', apiError);
-        setHoldings(userHoldings);
-        const total = userHoldings.reduce((sum, h) => sum + (h.value || h.shares * (h.currentPrice || h.avgPrice)), 0);
-        const gain = userHoldings.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-        setTotalValue(total);
-        setTotalGain(gain);
-      }
-      setLoading(false);
-    } catch (error: unknown) {
-      console.error('Failed to load portfolio:', error);
-      setHoldings([]);
-      setTotalValue(0);
-      setTotalGain(0);
-      setLoading(false);
-    }
+    // This function is no longer needed since the PortfolioContext manages all portfolio state
+    // The context handles loading, refreshing, and state management
+    // We just use the data from the context
+    refreshPortfolio();
   };
 
   const calculateGain = (holding: any) => {
@@ -660,7 +577,7 @@ const PortfolioPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Action:</span>
-                  <span className={`font-semibold $[
+                  <span className={`font-semibold ${
                     pendingTrade.action === 'ADD' ? 'text-green-400' : 'text-orange-400'
                   }`}>
                     {pendingTrade.action === 'ADD' ? 'Add to Portfolio' : 'Reduce Exposure'}

@@ -28,7 +28,7 @@ const PortfolioSelector = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative mt-4">
       {/* Selected Portfolio Display */}
       <button
         onClick={() => setIsOpen(!isOpen)}

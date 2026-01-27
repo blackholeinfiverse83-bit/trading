@@ -92,6 +92,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
 
   // Load portfolio data from localStorage on mount
   useEffect(() => {
@@ -190,7 +191,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       calculatePortfolioMetrics(updatedHoldings);
       setLastUpdated(new Date());
     } finally {
-      setIsLoading(false);
+      // Ensure loading state is only reset after a reasonable delay to prevent flickering
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300); // Small delay to prevent rapid state changes
     }
   };
 
@@ -214,6 +218,13 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const refreshPortfolio = async () => {
+    const now = Date.now();
+    // Prevent refresh if last refresh was less than 1 second ago to avoid rapid state changes
+    if (now - lastRefreshTime < 1000) {
+      return;
+    }
+    
+    setLastRefreshTime(now);
     setIsLoading(true);
     setError(null);
     
@@ -221,7 +232,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Refresh all holdings with current prices
       const symbols = holdings.map(h => h.symbol);
       if (symbols.length === 0) {
-        setIsLoading(false);
+        // Even if no holdings, still use timeout to prevent rapid state changes
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 300);
         return;
       }
       
@@ -252,7 +266,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.error('Failed to refresh portfolio:', err);
       setError('Failed to refresh portfolio prices');
     } finally {
-      setIsLoading(false);
+      // Ensure loading state is only reset after a reasonable delay to prevent flickering
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300); // Small delay to prevent rapid state changes
     }
   };
 
