@@ -135,8 +135,27 @@ class EnhancedDataIngester:
             return pd.DataFrame()
         
         # Create mock price data
-        np.random.seed(42)  # For reproducible results
-        base_price = 100 + np.random.random() * 50  # Random base price between 100-150
+        # Use symbol hash for unique but reproducible data per symbol
+        # This ensures different stocks have different charts, but the same stock stays consistent
+        seed_val = sum(ord(c) for c in symbol) 
+        np.random.seed(seed_val)
+        
+        # Realistic base prices for popular symbols (approximate current values)
+        price_map = {
+            'AAPL': 185.0, 'MSFT': 400.0, 'GOOGL': 145.0, 'TSLA': 190.0, 'NVDA': 700.0,
+            'TCS.NS': 3800.0, 'INFY.NS': 1600.0, 'RELIANCE.NS': 2900.0, 'SBIN.NS': 750.0,
+            'HDFCBANK.NS': 1450.0, 'ICICIBANK.NS': 1050.0, 'BHARTIARTL.NS': 1150.0
+        }
+        
+        # Varied base price based on symbol type
+        if symbol in price_map:
+            base_price = price_map[symbol]
+        elif symbol.endswith('.NS') or symbol.endswith('.BO'):
+            # Generic Indian stock range: ₹100 - ₹5000
+            base_price = 100 + (seed_val % 4900)
+        else:
+            # Generic US stock range: $10 - $1000
+            base_price = 10 + (seed_val % 990)
         
         prices = []
         current_price = base_price

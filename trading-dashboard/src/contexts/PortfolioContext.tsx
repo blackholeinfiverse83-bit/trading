@@ -37,7 +37,7 @@ interface PortfolioContextType {
   availablePortfolios: PortfolioInfo[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   selectPortfolio: (portfolioId: PortfolioType) => void;
   addHolding: (holding: Omit<PortfolioHolding, 'currentPrice' | 'value'>) => Promise<void>;
@@ -106,7 +106,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const key = `portfolio_${portfolioId}_holdings`;
       const savedHoldings = localStorage.getItem(key);
-      
+
       if (savedHoldings) {
         const parsedHoldings: PortfolioHolding[] = JSON.parse(savedHoldings);
         setHoldings(parsedHoldings);
@@ -137,7 +137,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   const calculatePortfolioMetrics = (holdingsToCalculate: PortfolioHolding[]) => {
     const total = holdingsToCalculate.reduce((sum, h) => sum + h.value, 0);
     const gain = holdingsToCalculate.reduce((sum, h) => sum + (h.currentPrice - h.avgPrice) * h.shares, 0);
-    
+
     setTotalValue(total);
     setTotalGain(gain);
     setTotalGainPercent(total > 0 ? (gain / total) * 100 : 0);
@@ -151,12 +151,11 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   const addHolding = async (holding: Omit<PortfolioHolding, 'currentPrice' | 'value'>) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // Fetch current price from backend
-      const response = await fetch(`http://127.0.0.1:8000/tools/predict?symbols=${holding.symbol}&horizon=intraday`);
-      const data = await response.json();
-      
+      // Fetch current price from backend using stockAPI
+      const data = await stockAPI.predict([holding.symbol], 'intraday');
+
       let currentPrice = holding.avgPrice;
       if (data.predictions && data.predictions.length > 0) {
         const prediction = data.predictions.find((p: any) => !p.error);
@@ -164,7 +163,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
           currentPrice = prediction.predicted_price || prediction.current_price || holding.avgPrice;
         }
       }
-      
+
       const newHolding: PortfolioHolding = {
         ...holding,
         currentPrice,
@@ -172,17 +171,17 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         stopLossPrice: holding.stopLossPrice || null,
         side: holding.side || 'long'
       };
-      
+
       const updatedHoldings = [...holdings, newHolding];
       setHoldings(updatedHoldings);
       savePortfolioToStorage(selectedPortfolio, updatedHoldings);
       calculatePortfolioMetrics(updatedHoldings);
       setLastUpdated(new Date());
-      
+
     } catch (err) {
       console.error('Failed to add holding:', err);
       setError('Failed to fetch current price. Using average price.');
-      
+
       // Fallback: use average price
       const newHolding: PortfolioHolding = {
         ...holding,
@@ -191,7 +190,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         stopLossPrice: holding.stopLossPrice || null,
         side: holding.side || 'long'
       };
-      
+
       const updatedHoldings = [...holdings, newHolding];
       setHoldings(updatedHoldings);
       savePortfolioToStorage(selectedPortfolio, updatedHoldings);
@@ -214,8 +213,8 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const updateHoldingPrice = (symbol: string, newPrice: number) => {
-    const updatedHoldings = holdings.map(h => 
-      h.symbol === symbol 
+    const updatedHoldings = holdings.map(h =>
+      h.symbol === symbol
         ? { ...h, currentPrice: newPrice, value: h.shares * newPrice }
         : h
     );
@@ -230,11 +229,11 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (now - lastRefreshTime < 1000) {
       return;
     }
-    
+
     setLastRefreshTime(now);
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Refresh all holdings with current prices
       const symbols = holdings.map(h => h.symbol);
@@ -245,10 +244,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         }, 300);
         return;
       }
-      
-      const response = await fetch(`http://127.0.0.1:8000/tools/predict?symbols=${symbols.join(',')}&horizon=intraday`);
-      const data = await response.json();
-      
+
+
+      const data = await stockAPI.predict(symbols, 'intraday');
+
       if (data.predictions) {
         const updatedHoldings = holdings.map(holding => {
           const prediction = data.predictions.find((p: any) => p.symbol === holding.symbol && !p.error);
@@ -264,12 +263,12 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           return holding;
         });
-        
+
         setHoldings(updatedHoldings);
         savePortfolioToStorage(selectedPortfolio, updatedHoldings);
         calculatePortfolioMetrics(updatedHoldings);
       }
-      
+
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to refresh portfolio:', err);
@@ -292,8 +291,8 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const updateHoldingStopLoss = (symbol: string, stopLossPrice: number | null) => {
-    const updatedHoldings = holdings.map(h => 
-      h.symbol === symbol 
+    const updatedHoldings = holdings.map(h =>
+      h.symbol === symbol
         ? { ...h, stopLossPrice: stopLossPrice || null }
         : h
     );
