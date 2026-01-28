@@ -189,8 +189,11 @@ class EnhancedDataIngester:
     
     def _save_to_cache(self, data: Dict[str, Any], cache_path: Path):
         """
-        Save data to cache in JSON format
+        Save data to cache in JSON format using atomic write to prevent corruption
         """
+        import tempfile
+        import os
+        
         # Convert DataFrame to dict for JSON serialization
         serializable_data = {}
         for key, value in data.items():
@@ -208,8 +211,24 @@ class EnhancedDataIngester:
             else:
                 serializable_data[key] = value
         
-        with open(cache_path, 'w') as f:
-            json.dump(serializable_data, f, default=str, indent=2)
+        # Use atomic write: write to temp file then rename
+        # This prevents corrupted files if the process is interrupted
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_fd, temp_path = tempfile.mkstemp(dir=cache_path.parent, suffix='.tmp')
+            try:
+                with os.fdopen(temp_fd, 'w') as f:
+                    json.dump(serializable_data, f, default=str, indent=2)
+                # Atomic rename (on same filesystem)
+                os.replace(temp_path, cache_path)
+                logger.info(f"Successfully saved cache to {cache_path}")
+            except Exception as e:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise e
+        except Exception as e:
+            logger.error(f"Failed to save cache to {cache_path}: {e}")
     
     def _load_from_cache(self, cache_path: Path) -> Dict[str, Any]:
         """

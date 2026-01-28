@@ -81,42 +81,66 @@ def predict_stock_price(symbol: str, horizon: str = "intraday", verbose: bool = 
     current_price = 100.0  # Default fallback
     try:
         from pathlib import Path
+        import os
         data_file = Path('data/cache') / f"{symbol}_all_data.json"
         if data_file.exists():
-            with open(data_file, 'r') as f:
-                data = json.load(f)
-                # Get the last price from price_history
-                if 'price_history' in data and data['price_history']:
-                    price_data = data['price_history']
-                    # Handle both list-of-dicts and dict-of-dicts formats
-                    if isinstance(price_data, dict):
-                        # NEW: Check for orient='list' format (column-major) - keys are columns, values are lists
-                        if 'Close' in price_data and isinstance(price_data['Close'], list):
-                            prices = price_data['Close']
-                            if prices:
-                                current_price = float(prices[-1])
-                        # Fallback for orient='index' (timestamp keys) - keys are timestamps, values are row dicts
+            # Check file size to detect corrupted/incomplete files
+            file_size = os.path.getsize(data_file)
+            if file_size < 100:  # Files less than 100 bytes are likely corrupted
+                logger.warning(f"Cache file for {symbol} appears corrupted (only {file_size} bytes), deleting it")
+                os.unlink(data_file)
+            else:
+                with open(data_file, 'r') as f:
+                    data = json.load(f)
+                    # Get the last price from price_history
+                    if 'price_history' in data and data['price_history']:
+                        price_data = data['price_history']
+                        extracted_price = None
+                        
+                        if isinstance(price_data, dict):
+                            # Format 1: orient='list' (column-major) - keys are column names, values are lists
+                            # Example: {"Date": [...], "Open": [...], "Close": [...]}
+                            if 'Close' in price_data and isinstance(price_data['Close'], list):
+                                prices = price_data['Close']
+                                if prices and len(prices) > 0:
+                                    extracted_price = float(prices[-1])
+                                    logger.debug(f"Extracted price from orient='list' format: {extracted_price}")
+                            # Format 2: orient='index' (timestamp keys) - keys are timestamps, values are row dicts
+                            # Example: {"2024-01-01": {"Open": 100, "Close": 101}, ...}
+                            elif not any(isinstance(v, list) for v in price_data.values()):
+                                # All values are NOT lists, so this is likely orient='index'
+                                keys = sorted(price_data.keys())
+                                if keys:
+                                    last_key = keys[-1]
+                                    last_entry = price_data[last_key]
+                                    if isinstance(last_entry, dict):
+                                        for k in ['Close', 'close', 'ClosePrice', 'close_price', 'price']:
+                                            if k in last_entry:
+                                                extracted_price = float(last_entry[k])
+                                                logger.debug(f"Extracted price from orient='index' format: {extracted_price}")
+                                                break
+                        elif isinstance(price_data, list) and len(price_data) > 0:
+                            # Format 3: List of records
+                            # Example: [{"Date": "2024-01-01", "Open": 100, "Close": 101}, ...]
+                            last_entry = price_data[-1]
+                            if isinstance(last_entry, dict):
+                                for k in ['Close', 'close', 'ClosePrice', 'close_price', 'price']:
+                                    if k in last_entry:
+                                        extracted_price = float(last_entry[k])
+                                        logger.debug(f"Extracted price from list-of-records format: {extracted_price}")
+                                        break
+                        
+                        if extracted_price is not None and extracted_price > 0:
+                            current_price = extracted_price
                         else:
-                            keys = sorted(price_data.keys())
-                            if keys:
-                                last_key = keys[-1]
-                                last_entry = price_data[last_key]
-                                if isinstance(last_entry, dict):
-                                    # Try various close price keys
-                                    for k in ['Close', 'close', 'ClosePrice', 'close_price', 'price']:
-                                        if k in last_entry:
-                                            current_price = float(last_entry[k])
-                                            break
-                    elif isinstance(price_data, list) and len(price_data) > 0:
-                        # Assuming it's a list of records
-                        last_entry = price_data[-1]
-                        if isinstance(last_entry, dict):
-                            # Try various close price keys
-                            for k in ['Close', 'close', 'ClosePrice', 'close_price', 'price']:
-                                if k in last_entry:
-                                    current_price = float(last_entry[k])
-                                    break
+                            logger.warning(f"Could not extract valid price from cache for {symbol}")
 
+    except json.JSONDecodeError as e:
+        logger.warning(f"Corrupted JSON cache for {symbol}, removing file: {e}")
+        try:
+            os.unlink(data_file)
+        except:
+            pass
     except Exception as e:
         logger.info(f"Failed to get current price for {symbol}: {e}")
     
