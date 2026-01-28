@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Directory configuration
 DATA_DIR = Path("data")
 DATA_CACHE_DIR = DATA_DIR / "cache"
-NSE_BHAV_CACHE_DIR = DATA_CACHE_DIR / "nse_bhav"
+NSE_BHAV_CACHE_DIR = DATA_DIR / "nse_bhav"
 
 # Create directories if they don't exist
 for directory in [DATA_CACHE_DIR, NSE_BHAV_CACHE_DIR]:
@@ -24,10 +24,10 @@ for directory in [DATA_CACHE_DIR, NSE_BHAV_CACHE_DIR]:
 
 class EnhancedDataIngester:
     """
-    Enhanced data ingester that fetches from Yahoo Finance with fallback to NSE Bhav Copy
+    Enhanced data ingester that fetches from Yahoo Finance with fallback to cache.
     """
     def __init__(self):
-        self.data_sources = ['yfinance', 'nse_bhav']
+        self.data_sources = ['yfinance']
     
     def fetch_all_data(self, symbol: str, period: str = "2y") -> Dict[str, Any]:
         """
@@ -74,109 +74,18 @@ class EnhancedDataIngester:
                 
                 return all_data
             else:
-                logger.warning(f"Insufficient data from yfinance, trying NSE Bhav Copy for {symbol}")
+                logger.warning(f"Insufficient data from yfinance for {symbol}. Will try to load from cache if available.")
         except Exception as e:
-            logger.warning(f"yfinance failed for {symbol}: {e}, trying NSE Bhav Copy")
+            logger.warning(f"yfinance failed for {symbol}: {e}. Will try to load from cache if available.")
         
-        # Fallback to NSE Bhav Copy for Indian stocks
-        if symbol.endswith('.NS'):
-            try:
-                logger.info(f"Fetching from NSE Bhav Copy for {symbol}")
-                hist = self.fetch_nse_bhav_historical(symbol.replace('.NS', ''), 
-                                                    datetime.now() - timedelta(days=730), 
-                                                    datetime.now())
-                
-                if len(hist) > 50:
-                    logger.info(f"Successfully fetched {len(hist)} rows from NSE Bhav for {symbol}")
-                    
-                    all_data = {
-                        'price_history': hist,
-                        'price_history_metadata': {
-                            'data_source': 'nse_bhav',
-                            'fetched_at': datetime.now().isoformat(),
-                            'rows': len(hist)
-                        },
-                        'company_info': {},
-                        'financials': {},
-                        'recommendations': None,
-                        'news': []  # NSE Bhav doesn't provide news
-                    }
-                    
-                    # Cache the data
-                    cache_path = DATA_CACHE_DIR / f"{symbol}_all_data.json"
-                    self._save_to_cache(all_data, cache_path)
-                    
-                    return all_data
-            except Exception as e:
-                logger.error(f"NSE Bhav Copy also failed for {symbol}: {e}")
-        
-        # If both methods fail, try to load from cache
+        # If yfinance fails, try to load from cache
         cache_path = DATA_CACHE_DIR / f"{symbol}_all_data.json"
         if cache_path.exists():
             logger.info(f"Loading cached data for {symbol}")
             return self._load_from_cache(cache_path)
         
-        logger.error(f"Could not fetch data for {symbol} from any source")
+        logger.error(f"Could not fetch data for {symbol} from any source and no cache available.")
         return None
-    
-    def fetch_nse_bhav_historical(self, symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        """
-        Fetch historical data from NSE Bhav Copy (simplified implementation)
-        """
-        logger.info(f"Fetching NSE Bhav data for {symbol} from {start_date.date()} to {end_date.date()}")
-        
-        # This is a simplified implementation - in a real scenario, this would fetch from NSE
-        # For now, we'll create a mock DataFrame
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
-        # Filter out weekends
-        dates = dates[dates.weekday < 5]
-        
-        if len(dates) == 0:
-            return pd.DataFrame()
-        
-        # Create mock price data
-        # Use symbol hash for unique but reproducible data per symbol
-        # This ensures different stocks have different charts, but the same stock stays consistent
-        seed_val = sum(ord(c) for c in symbol) 
-        np.random.seed(seed_val)
-        
-        # Realistic base prices for popular symbols (approximate current values)
-        price_map = {
-            'AAPL': 185.0, 'MSFT': 400.0, 'GOOGL': 145.0, 'TSLA': 190.0, 'NVDA': 700.0,
-            'TCS.NS': 3800.0, 'INFY.NS': 1600.0, 'RELIANCE.NS': 2900.0, 'SBIN.NS': 750.0,
-            'HDFCBANK.NS': 1450.0, 'ICICIBANK.NS': 1050.0, 'BHARTIARTL.NS': 1150.0
-        }
-        
-        # Varied base price based on symbol type
-        if symbol in price_map:
-            base_price = price_map[symbol]
-        elif symbol.endswith('.NS') or symbol.endswith('.BO'):
-            # Generic Indian stock range: ₹100 - ₹5000
-            base_price = 100 + (seed_val % 4900)
-        else:
-            # Generic US stock range: $10 - $1000
-            base_price = 10 + (seed_val % 990)
-        
-        prices = []
-        current_price = base_price
-        for _ in dates:
-            change = np.random.normal(0, 2)  # Random daily change
-            current_price = max(1, current_price + change)  # Ensure price doesn't go below 1
-            prices.append(current_price)
-        
-        df = pd.DataFrame({
-            'Open': prices,
-            'High': [p * (1 + abs(np.random.normal(0, 0.02))) for p in prices],
-            'Low': [p * (1 - abs(np.random.normal(0, 0.02))) for p in prices],
-            'Close': prices,
-            'Volume': np.random.randint(100000, 10000000, size=len(dates)),
-            'Dividends': [0.0] * len(dates),
-            'Stock Splits': [0.0] * len(dates)
-        }, index=dates)
-        
-        df.index.name = 'Date'
-        logger.info(f"Created mock NSE Bhav data with {len(df)} rows for {symbol}")
-        return df
     
     def load_all_data(self, symbol: str) -> Dict[str, Any]:
         """
@@ -255,4 +164,3 @@ class EnhancedDataIngester:
             data['price_history'] = df
         
         return data
-
